@@ -1,0 +1,5 @@
+kahinah
+conf/*
+!conf/*.conf.example
+*~
+data.sqlite

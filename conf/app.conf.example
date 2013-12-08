@@ -1,0 +1,13 @@
+appname = kahinah
+httpport = 8080
+runmode = dev
+db_prefix = kh_
+db_name = data.sqlite
+orm.debug = true
+sessionon = true
+abf_user = <USERNAME>
+abf_pass = <API KEY>
+abf_platforms = openmandriva2013.0;cooker
+
+upperkarma = 3
+lowerkarma = -3
