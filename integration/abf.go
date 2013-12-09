@@ -17,7 +17,7 @@ import (
 )
 
 const (
-	ABF_URL = "https://abf.rosalinux.ru/api/v1"
+	ABF_URL = "https://abf.io/api/v1"
 )
 
 var (
@@ -322,7 +322,7 @@ func (a ABF) getBuildList(id uint64) (models.BuildList, error) {
 		Submitter:     dig.String(&list, "user", "name"),
 		Type:          dig.String(&list, "update_type"),
 		Status:        models.STATUS_TESTING,
-		Url:           "https://abf.rosalinux.ru/build_lists/" + to.String(dig.Uint64(&list, "id")),
+		Url:           "https://abf.io/build_lists/" + to.String(dig.Uint64(&list, "id")),
 		Changelog:     changelog, // url
 		PublishHandle: "abf",
 		RejectHandle:  "abf",
