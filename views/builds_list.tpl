@@ -4,7 +4,7 @@
         <table class="table">
           <thead>
             <tr>
-              <th>Build ID</th>
+              <th>Update ID</th>
               <th>Name</th>
               <th>Submitter</th>
               <th>Platform</th>
@@ -18,9 +18,9 @@
             {{with .Packages}}
               {{range .}}
               <tr>
-                <td><a href="/builds/{{.ListId}}">{{.ListId}}</a></td>
+                <td><a href="/builds/{{.Id}}">{{.Id}}</a></td>
                 <td>{{.Name}}</td>
-                <td>{{.Submitter}}</td>
+                <td>{{.Submitter.Email | emailat}}</td>
                 <td>{{.Platform}}</td>
                 <td>{{.Repo}}</td>
                 <td>{{.Architecture}}</td>

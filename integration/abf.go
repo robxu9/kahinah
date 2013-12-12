@@ -17,13 +17,14 @@ import (
 )
 
 const (
-	ABF_URL = "https://abf.io/api/v1"
+	ABF_URL          = "https://abf.io/api/v1"
+	ABF_HANDLER_NAME = "abf"
 )
 
 var (
 	user      = beego.AppConfig.String("abf_user")
 	pass      = beego.AppConfig.String("abf_pass")
-	platforms util.Set
+	platforms *util.Set
 	client    = &http.Client{}
 )
 
@@ -95,10 +96,9 @@ func (a ABF) pingBuildCompleted() error {
 		asserted := v.(map[string]interface{})
 		id := dig.Uint64(&asserted, "id")
 
-		var list models.BuildList
-		err := o.QueryTable(new(models.BuildList)).Filter("ListId", id).One(&list)
-		if err != nil {
-			list, err = a.getBuildList(id)
+		num, err := o.QueryTable(new(models.BuildList)).Filter("Handler", ABF_HANDLER_NAME).Filter("HandleId", id).Count()
+		if num <= 0 || err != nil {
+			list, err := a.getBuildList(id)
 			if err != nil {
 				log.Printf("abf: Error retrieving build list %s: %s\n", id, err)
 			}
@@ -111,9 +111,14 @@ func (a ABF) pingBuildCompleted() error {
 			// Now send it to testing
 			go a.sendToTesting(id)
 
-			_, err = o.Insert(&list)
+			_, err = o.Insert(list)
 			if err != nil {
 				log.Printf("abf: Error saving build list %s: %s\n", id, err)
+			}
+
+			for _, listpkg := range list.Packages {
+				listpkg.List = list
+				o.Insert(listpkg)
 			}
 		}
 	}
@@ -161,10 +166,9 @@ func (a ABF) pingTestingBuilds() error {
 		asserted := v.(map[string]interface{})
 		id := dig.Uint64(&asserted, "id")
 
-		var list models.BuildList
-		err := o.QueryTable(new(models.BuildList)).Filter("ListId", id).One(&list)
-		if err != nil {
-			list, err = a.getBuildList(id)
+		num, err := o.QueryTable(new(models.BuildList)).Filter("Handler", ABF_HANDLER_NAME).Filter("HandleId", id).Count()
+		if num <= 0 || err != nil {
+			list, err := a.getBuildList(id)
 			if err != nil {
 				log.Printf("abf: Error retrieving build list %s: %s\n", id, err)
 			}
@@ -174,9 +178,14 @@ func (a ABF) pingTestingBuilds() error {
 				continue
 			}
 
-			_, err = o.Insert(&list)
+			_, err = o.Insert(list)
 			if err != nil {
 				log.Printf("abf: Error saving build list %s: %s\n", id, err)
+			}
+
+			for _, listpkg := range list.Packages {
+				listpkg.List = list
+				o.Insert(listpkg)
 			}
 		}
 	}
@@ -188,7 +197,12 @@ func (a ABF) PingParams(m map[string]string) error {
 	return fmt.Errorf("abf: PingParams not supported yet.")
 }
 
-func (a ABF) Publish(id uint64) error {
+func (a ABF) Url(sid string) string {
+	return "https://abf.io/build_lists/" + sid
+}
+
+func (a ABF) Publish(sid string) error {
+	id := to.Uint64(sid)
 	req, err := http.NewRequest("PUT", ABF_URL+"/build_lists/"+to.String(id)+"/publish.json", nil)
 	if err != nil {
 		return err
@@ -205,7 +219,8 @@ func (a ABF) Publish(id uint64) error {
 	return nil
 }
 
-func (a ABF) Reject(id uint64) error {
+func (a ABF) Reject(sid string) error {
+	id := to.Uint64(sid)
 	req, err := http.NewRequest("PUT", ABF_URL+"/build_lists/"+to.String(id)+"/reject_publish.json", nil)
 	if err != nil {
 		return err
@@ -239,30 +254,30 @@ func (a ABF) sendToTesting(id uint64) error {
 	return nil
 }
 
-func (a ABF) getBuildList(id uint64) (models.BuildList, error) {
+func (a ABF) getBuildList(id uint64) (*models.BuildList, error) {
 	req, err := http.NewRequest("GET", ABF_URL+"/build_lists/"+to.String(id)+".json", nil)
 	if err != nil {
-		return models.BuildList{}, err
+		return nil, err
 	}
 
 	req.SetBasicAuth(user, pass)
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return models.BuildList{}, err
+		return nil, err
 	}
 
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return models.BuildList{}, err
+		return nil, err
 	}
 
 	var result map[string]interface{}
 
 	err = json.Unmarshal(body, &result)
 	if err != nil {
-		return models.BuildList{}, err
+		return nil, err
 	}
 
 	var list map[string]interface{}
@@ -272,32 +287,27 @@ func (a ABF) getBuildList(id uint64) (models.BuildList, error) {
 	pkgs := make([]interface{}, 0)
 	dig.Get(&list, &pkgs, "packages")
 
-	pkg := ""
+	pkg := make([]*models.BuildListPkg, 0)
 
-	pkgrep := func(m map[string]interface{}) string {
-		res := dig.String(&m, "name") + " "
-		if dig.String(&m, "epoch") != "" {
-			res += dig.String(&m, "epoch")
-			res += ":"
+	pkgrep := func(m map[string]interface{}) *models.BuildListPkg {
+		pkgType := dig.String(&m, "type")
+		if strings.HasSuffix(dig.String(&m, "name"), "-debuginfo") {
+			pkgType = "debuginfo"
 		}
-		res += dig.String(&m, "version") + "-"
-		res += dig.String(&m, "release")
-		return res
+
+		return &models.BuildListPkg{
+			Name:    dig.String(&m, "name"),
+			Type:    pkgType,
+			Epoch:   dig.Int64(&m, "epoch"),
+			Version: dig.String(&m, "version"),
+			Release: dig.String(&m, "release"),
+			Url:     dig.String(&m, "url"),
+		}
 	}
 
 	for _, v := range pkgs {
 		asserted := v.(map[string]interface{})
-		if dig.String(&asserted, "type") == "source" {
-			continue // no source packages
-		}
-		if strings.HasSuffix(dig.String(&asserted, "name"), "-debuginfo") {
-			continue // no debuginfo packages
-		}
-		if pkg == "" {
-			pkg = pkgrep(asserted)
-		} else {
-			pkg = pkg + ";" + pkgrep(asserted)
-		}
+		pkg = append(pkg, pkgrep(asserted))
 	}
 
 	changelog := ""
@@ -313,22 +323,88 @@ func (a ABF) getBuildList(id uint64) (models.BuildList, error) {
 		}
 	}
 
-	bl := models.BuildList{ListId: dig.Uint64(&list, "id"),
-		//Platform:     dig.String(&list, "build_for_platform", "name"),
-		Platform:      dig.String(&list, "save_to_repository", "platform", "name"),
-		Repo:          dig.String(&list, "save_to_repository", "name"),
-		Architecture:  dig.String(&list, "arch", "name"),
-		Name:          dig.String(&list, "project", "name"),
-		Submitter:     dig.String(&list, "user", "name"),
-		Type:          dig.String(&list, "update_type"),
-		Status:        models.STATUS_TESTING,
-		Url:           "https://abf.io/build_lists/" + to.String(dig.Uint64(&list, "id")),
-		Changelog:     changelog, // url
-		PublishHandle: "abf",
-		RejectHandle:  "abf",
-		Packages:      pkg,
-		BuildDate:     time.Unix(dig.Int64(&list, "updated_at"), 0)}
+	user := a.getUser(dig.Uint64(&list, "user", "id"))
 
-	return bl, nil
+	bl := models.BuildList{
+		HandleId: to.String(dig.Uint64(&list, "id")),
+		Handler:  ABF_HANDLER_NAME,
+
+		//Platform:     dig.String(&list, "build_for_platform", "name"),
+		Platform:     dig.String(&list, "save_to_repository", "platform", "name"),
+		Repo:         dig.String(&list, "save_to_repository", "name"),
+		Architecture: dig.String(&list, "arch", "name"),
+		Name:         dig.String(&list, "project", "name"),
+		Submitter:    user,
+		Type:         dig.String(&list, "update_type"),
+		Status:       models.STATUS_TESTING,
+		Changelog:    changelog, // url
+		Packages:     pkg,
+		BuildDate:    time.Unix(dig.Int64(&list, "updated_at"), 0)}
+
+	return &bl, nil
+
+}
+
+func (a ABF) getUser(id uint64) *models.User {
+
+	o := orm.NewOrm()
+
+	var userModel *models.User
+
+	var userIntegration models.UserIntegration
+	err := o.QueryTable(new(models.UserIntegration)).Filter("Service", ABF_HANDLER_NAME).Filter("ServiceUserId", id).One(&userIntegration)
+	if err == orm.ErrNoRows {
+
+		req, err := http.NewRequest("GET", ABF_URL+"/users/"+to.String(id)+".json", nil)
+		if err != nil {
+			return nil
+		}
+
+		req.SetBasicAuth(user, pass)
+
+		resp, err := client.Do(req)
+		if err != nil {
+			return nil
+		}
+
+		defer resp.Body.Close()
+		body, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return nil
+		}
+
+		var result map[string]interface{}
+
+		err = json.Unmarshal(body, &result)
+		if err != nil {
+			return nil
+		}
+
+		email := dig.String(&result, "user", "email")
+
+		userModel = models.FindUser(email)
+		if userModel.Integration == nil {
+			userModel.Integration = make([]*models.UserIntegration, 0)
+		}
+
+		integration := models.UserIntegration{
+			User:          userModel,
+			Service:       ABF_HANDLER_NAME,
+			ServiceUserId: to.String(id),
+		}
+
+		o.Insert(&integration)
+
+		userModel.Integration = append(userModel.Integration, &integration)
+		userModel.Save()
+
+	} else if err != nil {
+		panic(err)
+	} else {
+		o.LoadRelated(&userIntegration, "User")
+		userModel = userIntegration.User
+	}
+
+	return userModel
 
 }

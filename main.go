@@ -1,15 +1,19 @@
 package main
 
 import (
+	"fmt"
 	"github.com/astaxie/beego"
 	"github.com/robxu9/kahinah/controllers"
 	"github.com/robxu9/kahinah/integration"
 	"github.com/robxu9/kahinah/util"
+	"html/template"
+	"net/http"
 	"strings"
 	"time"
 )
 
 func main() {
+	beego.SessionOn = true
 
 	beego.Router("/", &controllers.MainController{})
 
@@ -32,7 +36,7 @@ func main() {
 
 	// builds
 	beego.Router("/builds", &controllers.BuildsController{}) // show all testing, published, rejected (all sorted by date, linking respectively to above)
-	beego.Router("/builds/:buildid:int", &controllers.BuildController{})
+	beego.Router("/builds/:id:int", &controllers.BuildController{})
 
 	// platform
 	//beego.Router("/platforms", &controllers.PlatformsController{})
@@ -49,19 +53,30 @@ func main() {
 	beego.Router("/auth/login", &util.PersonaLoginController{})
 	beego.Router("/auth/logout", &util.PersonaLogoutController{})
 
+	// admin
+	beego.Router("/admin", &controllers.AdminController{})
+
 	// templating
-	beego.AddFuncMap("since", func(t time.Time) time.Duration {
-		return time.Since(t)
+	beego.AddFuncMap("since", func(t time.Time) string {
+		return fmt.Sprintf("%0.2fhrs", time.Since(t).Hours())
 	})
 
 	beego.AddFuncMap("emailat", func(s string) string {
-		return strings.Replace(s, "@", " [aT] ", -1)
+		return strings.Replace(s, "@", " [@T] ", -1)
+	})
+
+	// error handling
+	beego.Errorhandler("550", func(rw http.ResponseWriter, r *http.Request) {
+		t, _ := template.New("beegoerrortemp").ParseFiles(beego.ViewsPath + "/permissions_error.tpl")
+		data := make(map[string]interface{})
+		data["Permission"] = r.Form.Get("permission")
+		t.Execute(rw, data)
 	})
 
 	// integration
 	stop := make(chan bool)
 
-	integration.Integrate("abf", integration.ABF(1))
+	integration.Integrate(integration.ABF_HANDLER_NAME, integration.ABF(1))
 
 	go func() {
 		timeout := make(chan bool)

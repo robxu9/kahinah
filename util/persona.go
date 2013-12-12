@@ -10,7 +10,7 @@ import (
 	"net/url"
 )
 
-func IsLoggedIn(controller beego.Controller) string {
+func IsLoggedIn(controller *beego.Controller) string {
 	session := controller.GetSession("persona")
 	if session == nil {
 		return ""

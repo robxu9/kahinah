@@ -7,8 +7,9 @@ import (
 type Integration interface {
 	Ping() error
 	PingParams(map[string]string) error
-	Publish(listid uint64) error
-	Reject(listid uint64) error
+	Url(string) string
+	Publish(string) error
+	Reject(string) error
 }
 
 var integrated map[string]Integration
@@ -43,14 +44,18 @@ func PingParams(m map[string]string) {
 	}
 }
 
-func Publish(handle string, id uint64) {
+func Url(handle, id string) string {
+	return integrated[handle].Url(id)
+}
+
+func Publish(handle, id string) {
 	err := integrated[handle].Publish(id)
 	if err != nil {
 		log.Printf("Error publishing integrator %s with parameters %s: %s\n", handle, id, err)
 	}
 }
 
-func Reject(handle string, id uint64) {
+func Reject(handle, id string) {
 	err := integrated[handle].Reject(id)
 	if err != nil {
 		log.Printf("Error rejecting integrator %s with parameters %s: %s\n", handle, id, err)

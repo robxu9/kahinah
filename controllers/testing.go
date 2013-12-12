@@ -8,7 +8,7 @@ import (
 	"sort"
 )
 
-type ByTimeTP []models.BuildList
+type ByTimeTP []*models.BuildList
 
 func (b ByTimeTP) Len() int {
 	return len(b)
@@ -25,7 +25,7 @@ type TestingController struct {
 }
 
 func (this *TestingController) Get() {
-	var packages []models.BuildList
+	var packages []*models.BuildList
 
 	o := orm.NewOrm()
 	qt := o.QueryTable(new(models.BuildList))
@@ -34,6 +34,10 @@ func (this *TestingController) Get() {
 	if err != nil && err != orm.ErrNoRows {
 		log.Println(err)
 		this.Abort("500")
+	}
+
+	for _, v := range packages {
+		o.LoadRelated(v, "Submitter")
 	}
 
 	sort.Sort(ByTimeTP(packages))

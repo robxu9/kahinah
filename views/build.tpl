@@ -13,6 +13,14 @@
           params['type'] = "Down"
           post_to_url(window.location.href, params, "POST")
         }
+
+        {{if .MaintainerControls}}
+        function postMaintainer() {
+          var params = new Array();
+          params['type'] = "Maintainer"
+          post_to_url(window.location.href, params, "POST")
+        }
+        {{end}}
       </script>{{end}}
 
       <div class="row">
@@ -23,17 +31,21 @@
           {{if eq .Package.Status "published"}}<div class="panel panel-success">{{else}}
           <div class="panel panel-primary">{{end}}{{end}}{{end}}
             <div class="panel-heading">
-              <h1>{{.Package.Name}} <small>OMV-{{.Package.BuildDate.Year}}-{{.Package.Id}} {{.Header}}</small><div class="pull-right">{{if .KarmaControls}}<a href="#" class="btn" onclick="postUp()"><i class="fa fa-3x {{if .KarmaUpYes}}fa-thumbs-up{{else}}fa-thumbs-o-up{{end}}"></i></a>{{end}} {{.Karma}} {{if .KarmaControls}}<a href="#" class="btn" onclick="postDown()"><i class="fa fa-3x {{if .KarmaDownYes}}fa-thumbs-down{{else}}fa-thumbs-o-down{{end}}"></i></a>{{end}}</div></h1>
+              <h1>{{.Package.Name}} <small>OMV-{{.Package.BuildDate.Year}}-{{.Package.Id}} {{.Header}}</small><div class="pull-right">{{if .KarmaControls}}<a href="#" class="btn" onclick="postUp()"><i class="fa fa-3x {{if .KarmaUpYes}}fa-thumbs-up{{else}}fa-thumbs-o-up{{end}}"></i></a>{{end}} {{.Karma}} {{if .KarmaControls}}<a href="#" class="btn" onclick="postDown()"><i class="fa fa-3x {{if .KarmaDownYes}}fa-thumbs-down{{else}}fa-thumbs-o-down{{end}}"></i></a>{{if .MaintainerControls}}<a href="#" class="btn" onclick="postMaintainer()"><i class="fa fa-3x {{if .KarmaMaintainerYes}}fa-check-square{{else}}fa-check-square-o{{end}}"></i></a>{{end}}{{end}}</div></h1>
             </div>
             <table class="table">
               <tbody>
                 <tr>
-                  <td><b>Build List ID</b></td>
-                  <td>{{.Package.ListId}}</td>
+                  <td><b>Source</b></td>
+                  <td>{{.Package.Handler}}</td>
+                </tr>
+                <tr>
+                  <td><b>Handler ID</b></td>
+                  <td>{{.Package.HandleId}}</td>
                 </tr>
                 <tr>
                   <td><b>Submitter</b></td>
-                  <td>{{.Package.Submitter}}</td>
+                  <td>{{.Package.Submitter.Email | emailat}}</td>
                 </tr>
                 <tr>
                   <td><b>Platform<b></td>
@@ -59,17 +71,34 @@
                 </tr>
                 <tr>
                   <td><b>URL<b></td>
-                  <td><a href="{{.Package.Url}}">{{.Package.Url}}</a></td>
+                  <td><a href="{{.Url}}">{{.Url}}</a></td>
                 </tr>
                 <tr>
                   <td><b>Packages<b></td>
                   <td>
                     <table class="table table-bordered">
-                      {{with .Packages}}
-                        {{range .}}
-                      <tr><td>{{.}}</td><tr>
+                      <thead>
+                        <tr>
+                          <th>Type</th>
+                          <th>Name</th>
+                          <th>Epoch</th>
+                          <th>Version</th>
+                          <th>Release</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {{with .Package.Packages}}
+                          {{range .}}
+                        <tr>
+                          <td>{{.Type}}</td>
+                          <td>{{.Name}}</td>
+                          <td>{{.Epoch}}</td>
+                          <td>{{.Version}}</td>
+                          <td>{{.Release}}</td>
+                        </tr>
+                          {{end}}
                         {{end}}
-                      {{end}}
+                      </tbody>
                     </table>
                   </td>
                 </tr>
@@ -93,7 +122,7 @@
             <div class="panel-heading">Want to test?</div>
             <div class="panel-body">
               On your <code>{{.Package.Platform}}/{{.Package.Architecture}}</code> machine, do:
-              <pre>kahup {{.Package.ListId}}</pre>
+              <pre>kahup {{.Package.Id}}</pre>
               to install the above packages from the testing repository onto your computer.<br/>
               <br/>
               When you're done, you can use <code>urpmi --downgrade</code> to revert back to previous versions.
@@ -110,7 +139,7 @@
             <table class="table">
               {{with .YayVotes}}
                 {{range .}}
-              <tr><td>{{.User | emailat}}</td><tr>
+              <tr><td>{{.User.Email | emailat}}</td><tr>
                 {{end}}
               {{end}}
             </table>
@@ -122,7 +151,7 @@
             <table class="table">
               {{with .NayVotes}}
                 {{range .}}
-              <tr><td>{{.User | emailat}}</td><tr>
+              <tr><td>{{.User.Email | emailat}}</td><tr>
                 {{end}}
               {{end}}
             </table>

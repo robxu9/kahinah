@@ -11,7 +11,12 @@ import (
 	"menteslibres.net/gosexy/to"
 	"net/http"
 	"sort"
-	"strings"
+	"time"
+)
+
+var (
+	maintainer_karma = to.Int64(beego.AppConfig.String("maintainerkarma"))
+	maintainer_hours = to.Int64(beego.AppConfig.String("maintainerhours"))
 )
 
 type BuildsController struct {
@@ -26,7 +31,7 @@ func (this *BuildsController) Get() {
 		page = 1
 	}
 
-	var packages []models.BuildList
+	var packages []*models.BuildList
 
 	o := orm.NewOrm()
 
@@ -53,6 +58,10 @@ func (this *BuildsController) Get() {
 		this.Abort("500")
 	}
 
+	for _, v := range packages {
+		o.LoadRelated(v, "Submitter")
+	}
+
 	sort.Sort(ByTimeTP(packages))
 
 	this.Data["Title"] = "Builds"
@@ -70,14 +79,14 @@ type BuildController struct {
 }
 
 func (this *BuildController) Get() {
-	id := to.Uint64(this.Ctx.Input.Param(":buildid"))
+	id := to.Uint64(this.Ctx.Input.Param(":id"))
 
 	var pkg models.BuildList
 
 	o := orm.NewOrm()
 	qt := o.QueryTable(new(models.BuildList))
 
-	err := qt.Filter("ListId", id).One(&pkg)
+	err := qt.Filter("Id", id).One(&pkg)
 	if err == orm.ErrNoRows {
 		this.Abort("404")
 	} else if err != nil {
@@ -94,30 +103,47 @@ func (this *BuildController) Get() {
 		}
 	}
 
-	// karma controls
-	kt := o.QueryTable(new(models.Karma))
+	this.Data["Url"] = integration.Url(pkg.Handler, pkg.HandleId)
 
-	var upkarma []models.Karma
-	karmaup, _ := kt.Filter("ListId", id).Filter("Vote", models.KARMA_UP).All(&upkarma)
+	// karma controls
+	totalKarma := 0
+	upkarma := make([]*models.Karma, 0)
+	downkarma := make([]*models.Karma, 0)
+
+	o.LoadRelated(&pkg, "Submitter")
+	o.LoadRelated(&pkg, "Karma")
+	o.LoadRelated(&pkg, "Packages")
+
+	for _, karma := range pkg.Karma {
+		o.LoadRelated(karma, "User")
+		if karma.Vote == models.KARMA_UP {
+			totalKarma++
+			upkarma = append(upkarma, karma)
+		} else if karma.Vote == models.KARMA_DOWN {
+			totalKarma--
+			downkarma = append(downkarma, karma)
+		} else if karma.Vote == models.KARMA_MAINTAINER {
+			totalKarma += int(maintainer_karma)
+			upkarma = append(upkarma, karma)
+		}
+	}
 
 	this.Data["YayVotes"] = upkarma
-
-	var downkarma []models.Karma
-	karmadown, _ := kt.Filter("ListId", id).Filter("Vote", models.KARMA_DOWN).All(&downkarma)
-
 	this.Data["NayVotes"] = downkarma
+	this.Data["Karma"] = totalKarma
 
-	this.Data["Karma"] = karmaup - karmadown
-
-	user := util.IsLoggedIn(this.Controller)
+	user := util.IsLoggedIn(&this.Controller)
 	if user != "" {
+		kt := o.QueryTable(new(models.Karma))
 		var userkarma models.Karma
-		err = kt.Filter("ListId", id).One(&userkarma)
+		err = kt.Filter("List__Id", id).One(&userkarma)
 		if err != orm.ErrNoRows && err != nil {
 			log.Println(err)
 		} else if err == nil {
 			if userkarma.Vote == models.KARMA_UP {
 				this.Data["KarmaUpYes"] = true
+			} else if userkarma.Vote == models.KARMA_MAINTAINER {
+				this.Data["KarmaMaintainerYes"] = true
 			} else {
 				this.Data["KarmaDownYes"] = true
 			}
@@ -133,6 +159,11 @@ func (this *BuildController) Get() {
 		this.Data["Header"] = "Testing"
 		if user != "" {
 			this.Data["KarmaControls"] = true
+			if pkg.Submitter != nil && pkg.Submitter.Email == user {
+				if time.Since(pkg.BuildDate).Hours() >= float64(maintainer_hours) {
+					this.Data["MaintainerControls"] = true
+				}
+			}
 		}
 	} else if pkg.Status == models.STATUS_PUBLISHED {
 		this.Data["Tab"] = 2
@@ -145,19 +176,18 @@ func (this *BuildController) Get() {
 		this.Data["Header"] = "Unknown"
 	}
 	this.Data["Package"] = pkg
-	this.Data["Packages"] = strings.Split(pkg.Packages, ";")
 	this.TplNames = "build.tpl"
 }
 
 func (this *BuildController) Post() {
-	id := to.Uint64(this.Ctx.Input.Param(":buildid"))
+	id := to.Uint64(this.Ctx.Input.Param(":id"))
 
 	postType := this.GetString("type")
-	if postType != "Up" && postType != "Down" {
+	if postType != "Up" && postType != "Down" && postType != "Maintainer" {
 		this.Abort("400")
 	}
 
-	user := util.IsLoggedIn(this.Controller)
+	user := util.IsLoggedIn(&this.Controller)
 	if user == "" {
 		this.Abort("403") // MUST be logged in
 	}
@@ -167,7 +197,7 @@ func (this *BuildController) Post() {
 	o := orm.NewOrm()
 	qt := o.QueryTable(new(models.BuildList))
 
-	err := qt.Filter("ListId", id).One(&pkg)
+	err := qt.Filter("Id", id).One(&pkg)
 	if err == orm.ErrNoRows {
 		this.Abort("404")
 	} else if err != nil {
@@ -175,10 +205,34 @@ func (this *BuildController) Post() {
 		this.Abort("500")
 	}
 
+	o.LoadRelated(&pkg, "Submitter")
+
+	if postType == "Maintainer" {
+		if pkg.Submitter.Email != user {
+			this.Abort("403")
+		} else {
+			if time.Since(pkg.BuildDate).Hours() < float64(maintainer_hours) { // week
+				this.Abort("400")
+			}
+		}
+	} else {
+		// whitelist stuff
+		if Whitelist {
+			perm := models.PermCheck(&this.Controller, PERMISSION_WHITELIST)
+			if !perm {
+				flash := beego.NewFlash()
+				flash.Warning("Sorry, the whitelist is on and you are not allowed to vote.")
+				flash.Store(&this.Controller)
+				this.Get()
+				return
+			}
+		}
+	}
+
 	kt := o.QueryTable(new(models.Karma))
 
 	var userkarma models.Karma
-	err = kt.Filter("ListId", id).Filter("User", user).One(&userkarma)
+	err = kt.Filter("List__Id", id).Filter("User__Email", user).One(&userkarma)
 	if err != orm.ErrNoRows && err != nil {
 		log.Println(err)
 	} else if err == nil { // already has entry
@@ -187,6 +241,13 @@ func (this *BuildController) Post() {
 				o.Delete(&userkarma)
 			} else {
 				userkarma.Vote = models.KARMA_UP
+				o.Update(&userkarma)
+			}
+		} else if postType == "Maintainer" {
+			if userkarma.Vote == models.KARMA_MAINTAINER {
+				o.Delete(&userkarma)
+			} else {
+				userkarma.Vote = models.KARMA_MAINTAINER
 				o.Update(&userkarma)
 			}
 		} else {
@@ -198,41 +259,42 @@ func (this *BuildController) Post() {
 			}
 		}
 	} else {
-		userkarma.ListId = id
-		userkarma.User = user
+		userkarma.List = &pkg
+		userkarma.User = models.FindUser(user)
 		if postType == "Up" {
 			userkarma.Vote = models.KARMA_UP
+		} else if postType == "Maintainer" {
+			userkarma.Vote = models.KARMA_MAINTAINER
 		} else {
 			userkarma.Vote = models.KARMA_DOWN
 		}
 		o.Insert(&userkarma)
 	}
 
-	karmaup, _ := kt.Filter("ListId", id).Filter("Vote", models.KARMA_UP).Count()
-	karmadown, _ := kt.Filter("ListId", id).Filter("Vote", models.KARMA_DOWN).Count()
+	karmaup, _ := kt.Filter("List__Id", id).Filter("Vote", models.KARMA_UP).Count()
+	karmadown, _ := kt.Filter("List__Id", id).Filter("Vote", models.KARMA_DOWN).Count()
+	karmamaintainer, _ := kt.Filter("List__Id", id).Filter("Vote", models.KARMA_MAINTAINER).Count()
 
-	this.Data["Karma"] = karmaup - karmadown
+	karmaTotal := karmaup - karmadown + (maintainer_karma * karmamaintainer)
 
 	upthreshold, err := beego.AppConfig.Int64("upperkarma")
 	if err != nil {
-		// assume reasonable default
-		upthreshold = 3
+		panic(err)
 	}
 
 	downthreshold, err := beego.AppConfig.Int64("lowerkarma")
 	if err != nil {
-		// assume reasonable default
-		downthreshold = -3
+		panic(err)
 	}
 
-	if karmaup-karmadown >= upthreshold {
+	if karmaTotal >= upthreshold {
 		pkg.Status = models.STATUS_PUBLISHED
 		o.Update(&pkg)
-		go integration.Publish(pkg.PublishHandle, pkg.ListId)
-	} else if karmaup-karmadown <= downthreshold {
+		go integration.Publish(pkg.Handler, pkg.HandleId)
+	} else if karmaTotal <= downthreshold {
 		pkg.Status = models.STATUS_REJECTED
 		o.Update(&pkg)
-		go integration.Reject(pkg.RejectHandle, pkg.ListId)
+		go integration.Reject(pkg.Handler, pkg.HandleId)
 	}
 
 	this.Get()

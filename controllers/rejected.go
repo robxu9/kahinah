@@ -20,7 +20,7 @@ func (this *RejectedController) Get() {
 		page = 1
 	}
 
-	var packages []models.BuildList
+	var packages []*models.BuildList
 
 	o := orm.NewOrm()
 	qt := o.QueryTable(new(models.BuildList))
@@ -44,6 +44,10 @@ func (this *RejectedController) Get() {
 	if err != nil && err != orm.ErrNoRows {
 		log.Println(err)
 		this.Abort("500")
+	}
+
+	for _, v := range packages {
+		o.LoadRelated(v, "Submitter")
 	}
 
 	sort.Sort(ByTimeTP(packages))

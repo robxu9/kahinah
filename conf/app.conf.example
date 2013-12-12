@@ -1,13 +1,23 @@
 appname = kahinah
 httpport = 8080
 runmode = dev
+
 db_prefix = kh_
+db_type = sqlite3
 db_name = data.sqlite
-orm.debug = true
-sessionon = true
+db_host = localhost:3306
+db_user = root
+db_pass = toor
+
 abf_user = <USERNAME>
 abf_pass = <API KEY>
 abf_platforms = openmandriva2013.0;cooker
 
 upperkarma = 3
 lowerkarma = -3
+maintainerkarma = 3
+maintainerhours = 168
+
+whitelist = false
+adminwhitelist = robxu9@gmail.com
+requireqa = true

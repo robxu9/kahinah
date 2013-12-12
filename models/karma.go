@@ -1,13 +1,14 @@
 package models
 
 const (
-	KARMA_UP   = "+"
-	KARMA_DOWN = "-"
+	KARMA_UP         = "+"
+	KARMA_DOWN       = "-"
+	KARMA_MAINTAINER = "*"
 )
 
 type Karma struct {
-	Id     uint64 `orm:"auto;pk"`
-	ListId uint64
-	User   string `orm:"type(text)"`
-	Vote   string
+	Id   uint64     `orm:"auto;pk"`
+	List *BuildList `orm:"rel(fk)"`
+	User *User      `orm:"rel(fk)"`
+	Vote string
 }

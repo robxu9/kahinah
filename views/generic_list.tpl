@@ -55,10 +55,12 @@
       </script>
 
       <div class="row">
+        <br/>
+        <center><span class="label label-default">{{.Entries}} {{if eq .Entries 1}}entry{{else}}entries returned.{{end}}</span></center>
         <table class="table" id="pkgtable">
           <thead>
             <tr>
-              <th>Build ID</th>
+              <th>Update ID</th>
               <th>Name</th>
               <th>Submitter</th>
               <th>Platform</th>
@@ -71,9 +73,9 @@
             {{with .Packages}}
               {{range .}}
               <tr>
-                <td><a href="/builds/{{.ListId}}">{{.ListId}}</a></td>
+                <td><a href="/builds/{{.Id}}">{{.Id}}</a></td>
                 <td>{{.Name}}</td>
-                <td>{{.Submitter}}</td>
+                <td>{{.Submitter.Email | emailat}}</td>
                 <td>{{.Platform}}</td>
                 <td>{{.Repo}}</td>
                 <td>{{.Architecture}}</td>
@@ -82,7 +84,7 @@
               {{end}}
             {{end}}
         </table>
-        <p><span class="label label-default">{{.Entries}} {{if eq .Entries 1}}entry{{else}}entries returned.{{end}}</span></p>
+        <center><span class="label label-default">{{.Entries}} {{if eq .Entries 1}}entry{{else}}entries returned.{{end}}</span></center>
       </div>
 
 {{template "footer.tpl" .}}
