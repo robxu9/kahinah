@@ -1,3 +1,5 @@
-Kahinah is now monitoring openmandriva2013.0. You must use Persona to login. Login is required for karma voting. Currently the thresholds are slightly lower, with 2 required for publishing and -2 required for rejection. Please be aware that they will be increased when Kahinah exits alpha.
+Kahinah is now monitoring openmandriva2013.0. You must use Persona to login. Login is required for karma voting. Thresholds are at 3 and -3 for publication and rejection, respectively.
+
+There is a whitelist in place - the system admin must have you in the whitelist to vote.
 
 Logout is being a bit wonky - if you're having trouble logging out go to a build page and try there (you may have to do it twice or more).

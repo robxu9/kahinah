@@ -52,7 +52,7 @@ func (this *BuildsController) Get() {
 		page = totalpages
 	}
 
-	_, err = qt.Limit(50, (page-1)*50).All(&packages)
+	_, err = qt.Limit(50, (page-1)*50).OrderBy("-BuildDate").All(&packages)
 	if err != nil && err != orm.ErrNoRows {
 		log.Println(err)
 		this.Abort("500")

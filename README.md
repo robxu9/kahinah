@@ -37,3 +37,8 @@ The rest should be self-explainatory. Hopefully.
 
 No major database changes are expected, I think. Maybe we'll introduce migrations with hood or goose
 when the time comes to change the database schema, but I don't anticipate major changes anytime soon.
+
+News
+----
+
+It's a simple text file... That's pretty much it. Nothing fancy, no HTML will be rendered, etc.
