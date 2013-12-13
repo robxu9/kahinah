@@ -76,30 +76,32 @@
                 <tr>
                   <td><b>Packages<b></td>
                   <td>
-                    <table class="table table-bordered">
-                      <thead>
-                        <tr>
-                          <th>Type</th>
-                          <th>Name</th>
-                          <th>Epoch</th>
-                          <th>Version</th>
-                          <th>Release</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {{with .Package.Packages}}
-                          {{range .}}
-                        <tr>
-                          <td>{{.Type}}</td>
-                          <td>{{.Name}}</td>
-                          <td>{{.Epoch}}</td>
-                          <td>{{.Version}}</td>
-                          <td>{{.Release}}</td>
-                        </tr>
+                    <div class="table-responsive">
+                      <table class="table table-bordered">
+                        <thead>
+                          <tr>
+                            <th>Type</th>
+                            <th>Name</th>
+                            <th>Epoch</th>
+                            <th>Version</th>
+                            <th>Release</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {{with .Package.Packages}}
+                            {{range .}}
+                          <tr>
+                            <td>{{.Type}}</td>
+                            <td>{{.Name}}</td>
+                            <td>{{.Epoch}}</td>
+                            <td>{{.Version}}</td>
+                            <td>{{.Release}}</td>
+                          </tr>
+                            {{end}}
                           {{end}}
-                        {{end}}
-                      </tbody>
-                    </table>
+                        </tbody>
+                      </table>
+                    </div>
                   </td>
                 </tr>
                 <tr>

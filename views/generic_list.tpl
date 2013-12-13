@@ -54,7 +54,7 @@
         });
       </script>
 
-      <div class="row">
+      <div class="row table-responsive">
         <br/>
         <center><span class="label label-default">{{.Entries}} {{if eq .Entries 1}}entry{{else}}entries returned.{{end}}</span></center>
         <table class="table" id="pkgtable">

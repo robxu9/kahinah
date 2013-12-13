@@ -1,6 +1,6 @@
 {{template "header.tpl" .}}
 
-      <div class="row">
+      <div class="row table-responsive">
         <table class="table">
           <thead>
             <tr>

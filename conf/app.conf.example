@@ -1,6 +1,11 @@
+; This is an ini file.
+; Sadly, it's not named as .ini but it'll do for now.
+
 appname = kahinah
+httpaddr = 0.0.0.0
 httpport = 8080
 runmode = dev
+usefcgi = false
 
 db_prefix = kh_
 db_type = sqlite3
