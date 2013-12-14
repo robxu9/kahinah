@@ -4,7 +4,6 @@ import (
 	"github.com/astaxie/beego"
 	"github.com/astaxie/beego/orm"
 	"github.com/robxu9/kahinah/models"
-	"github.com/robxu9/kahinah/util"
 	"menteslibres.net/gosexy/to"
 	"strings"
 )
@@ -27,7 +26,7 @@ func init() {
 }
 
 func adminCheck(this *beego.Controller) {
-	user := util.IsLoggedIn(this)
+	user := models.IsLoggedIn(this)
 
 	if user == "" {
 		this.Abort("403")

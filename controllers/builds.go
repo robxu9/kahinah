@@ -5,7 +5,6 @@ import (
 	"github.com/astaxie/beego/orm"
 	"github.com/robxu9/kahinah/integration"
 	"github.com/robxu9/kahinah/models"
-	"github.com/robxu9/kahinah/util"
 	"io/ioutil"
 	"log"
 	"menteslibres.net/gosexy/to"
@@ -132,11 +131,11 @@ func (this *BuildController) Get() {
 	this.Data["NayVotes"] = downkarma
 	this.Data["Karma"] = totalKarma
 
-	user := util.IsLoggedIn(&this.Controller)
+	user := models.IsLoggedIn(&this.Controller)
 	if user != "" {
 		kt := o.QueryTable(new(models.Karma))
 		var userkarma models.Karma
-		err = kt.Filter("List__Id", id).One(&userkarma)
+		err = kt.Filter("User__Email", user).Filter("List__Id", id).One(&userkarma)
 		if err != orm.ErrNoRows && err != nil {
 			log.Println(err)
 		} else if err == nil {
@@ -187,7 +186,7 @@ func (this *BuildController) Post() {
 		this.Abort("400")
 	}
 
-	user := util.IsLoggedIn(&this.Controller)
+	user := models.IsLoggedIn(&this.Controller)
 	if user == "" {
 		this.Abort("403") // MUST be logged in
 	}
