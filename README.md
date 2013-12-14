@@ -3,6 +3,14 @@ Kahinah
 
 Kahinah is the QA system for OpenMandriva. It hooks into ABF to retrieve packages that have been recently built and automates the QA portion of the package process (pushing to testing, karma, pushing to updates).
 
+Setup
+-----
+
+1. Configure your application in conf/app.conf (use conf/app.conf.example as a template.)
+1. Configure news.txt.
+1. Make sure your databases are created, if needed.
+1. Run it.
+
 Administration
 --------------
 
