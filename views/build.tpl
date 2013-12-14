@@ -4,21 +4,29 @@
       <script>
         function postUp() {
           var params = new Array();
-          params['type'] = "Up"
-          post_to_url(window.location.href, params, "POST")
+          params['type'] = "Up";
+          post_to_url(window.location.href, params, "POST");
         }
 
         function postDown() {
           var params = new Array();
-          params['type'] = "Down"
-          post_to_url(window.location.href, params, "POST")
+          params['type'] = "Down";
+          post_to_url(window.location.href, params, "POST");
         }
 
         {{if .MaintainerControls}}
         function postMaintainer() {
           var params = new Array();
-          params['type'] = "Maintainer"
-          post_to_url(window.location.href, params, "POST")
+          params['type'] = "Maintainer";
+          post_to_url(window.location.href, params, "POST");
+        }
+        {{end}}
+
+        {{if .QAControls}}
+        function postQA() {
+          var params = new Array();
+          params['type'] = "QABlock";
+          post_to_url(window.location.href, params, "POST");
         }
         {{end}}
       </script>{{end}}
@@ -31,7 +39,7 @@
           {{if eq .Package.Status "published"}}<div class="panel panel-success">{{else}}
           <div class="panel panel-primary">{{end}}{{end}}{{end}}
             <div class="panel-heading">
-              <h1>{{.Package.Name}} <small>OMV-{{.Package.BuildDate.Year}}-{{.Package.Id}} {{.Header}}</small><div class="pull-right">{{if .KarmaControls}}<a href="#" class="btn" onclick="postUp()"><i class="fa fa-3x {{if .KarmaUpYes}}fa-thumbs-up{{else}}fa-thumbs-o-up{{end}}"></i></a>{{end}} {{.Karma}} {{if .KarmaControls}}<a href="#" class="btn" onclick="postDown()"><i class="fa fa-3x {{if .KarmaDownYes}}fa-thumbs-down{{else}}fa-thumbs-o-down{{end}}"></i></a>{{if .MaintainerControls}}<a href="#" class="btn" onclick="postMaintainer()"><i class="fa fa-3x {{if .KarmaMaintainerYes}}fa-check-square{{else}}fa-check-square-o{{end}}"></i></a>{{end}}{{end}}</div></h1>
+              <h1>{{.Package.Name}} <small>OMV-{{.Package.BuildDate.Year}}-{{.Package.Id}} {{.Header}}</small><div class="pull-right">{{if .KarmaControls}}<a href="#" class="btn" onclick="postUp()"><i class="fa fa-3x {{if .KarmaUpYes}}fa-thumbs-up{{else}}fa-thumbs-o-up{{end}}"></i></a>{{end}} {{.Karma}} {{if .KarmaControls}}<a href="#" class="btn" onclick="postDown()"><i class="fa fa-3x {{if .KarmaDownYes}}fa-thumbs-down{{else}}fa-thumbs-o-down{{end}}"></i></a>{{if .MaintainerControls}}<a href="#" class="btn" onclick="postMaintainer()"><i class="fa fa-3x {{if .KarmaMaintainerYes}}fa-check-square{{else}}fa-check-square-o{{end}}"></i></a>{{end}}{{if .QAControls}}<a href="#" class="btn" onclick="postQA()"><i class="fa fa-3x fa-sort-amount-desc"></i></a>{{end}}{{end}}</div></h1>
             </div>
             <table class="table">
               <tbody>

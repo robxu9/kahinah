@@ -13,6 +13,10 @@ import (
 	"time"
 )
 
+const (
+	block_karma = 9999
+)
+
 var (
 	maintainer_karma = to.Int64(beego.AppConfig.String("maintainerkarma"))
 	maintainer_hours = to.Int64(beego.AppConfig.String("maintainerhours"))
@@ -124,6 +128,9 @@ func (this *BuildController) Get() {
 		} else if karma.Vote == models.KARMA_MAINTAINER {
 			totalKarma += int(maintainer_karma)
 			upkarma = append(upkarma, karma)
+		} else if karma.Vote == models.KARMA_BLOCK {
+			totalKarma -= int(block_karma)
+			downkarma = append(downkarma, karma)
 		}
 	}
 
@@ -146,6 +153,10 @@ func (this *BuildController) Get() {
 			} else {
 				this.Data["KarmaDownYes"] = true
 			}
+		}
+
+		if models.PermCheck(&this.Controller, PERMISSION_QA) {
+			this.Data["QAControls"] = true
 		}
 
 	}
@@ -182,7 +193,7 @@ func (this *BuildController) Post() {
 	id := to.Uint64(this.Ctx.Input.Param(":id"))
 
 	postType := this.GetString("type")
-	if postType != "Up" && postType != "Down" && postType != "Maintainer" {
+	if postType != "Up" && postType != "Down" && postType != "Maintainer" && postType != "QABlock" {
 		this.Abort("400")
 	}
 
@@ -214,6 +225,8 @@ func (this *BuildController) Post() {
 				this.Abort("400")
 			}
 		}
+	} else if postType == "QABlock" {
+		models.PermAbortCheck(&this.Controller, PERMISSION_QA)
 	} else {
 		// whitelist stuff
 		if Whitelist {
@@ -249,6 +262,13 @@ func (this *BuildController) Post() {
 				userkarma.Vote = models.KARMA_MAINTAINER
 				o.Update(&userkarma)
 			}
+		} else if postType == "QABlock" {
+			if userkarma.Vote == models.KARMA_BLOCK {
+				o.Delete(&userkarma)
+			} else {
+				userkarma.Vote = models.KARMA_BLOCK
+				o.Update(&userkarma)
+			}
 		} else {
 			if userkarma.Vote == models.KARMA_DOWN {
 				o.Delete(&userkarma)
@@ -264,6 +284,8 @@ func (this *BuildController) Post() {
 			userkarma.Vote = models.KARMA_UP
 		} else if postType == "Maintainer" {
 			userkarma.Vote = models.KARMA_MAINTAINER
+		} else if postType == "QABlock" {
+			userkarma.Vote = models.KARMA_BLOCK
 		} else {
 			userkarma.Vote = models.KARMA_DOWN
 		}
@@ -273,8 +295,9 @@ func (this *BuildController) Post() {
 	karmaup, _ := kt.Filter("List__Id", id).Filter("Vote", models.KARMA_UP).Count()
 	karmadown, _ := kt.Filter("List__Id", id).Filter("Vote", models.KARMA_DOWN).Count()
 	karmamaintainer, _ := kt.Filter("List__Id", id).Filter("Vote", models.KARMA_MAINTAINER).Count()
+	karmablock, _ := kt.Filter("List__Id", id).Filter("Vote", models.KARMA_BLOCK).Count()
 
-	karmaTotal := karmaup - karmadown + (maintainer_karma * karmamaintainer)
+	karmaTotal := karmaup - karmadown + (maintainer_karma * karmamaintainer) - (block_karma * karmablock)
 
 	upthreshold, err := beego.AppConfig.Int64("upperkarma")
 	if err != nil {

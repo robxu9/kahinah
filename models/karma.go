@@ -4,6 +4,7 @@ const (
 	KARMA_UP         = "+"
 	KARMA_DOWN       = "-"
 	KARMA_MAINTAINER = "*"
+	KARMA_BLOCK      = "v"
 )
 
 type Karma struct {
