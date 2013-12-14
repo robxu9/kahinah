@@ -1,4 +1,4 @@
-package util
+package models
 
 import (
 	"encoding/json"
@@ -89,6 +89,8 @@ func (this *PersonaLoginController) Post() {
 	if pr.Status == "failure" {
 		this.Abort("403")
 	}
+
+	go FindUser(pr.Email)
 
 	this.SetSession("persona", body)
 

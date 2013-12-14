@@ -3,7 +3,6 @@ package models
 import (
 	"github.com/astaxie/beego"
 	"github.com/astaxie/beego/orm"
-	"github.com/robxu9/kahinah/util"
 )
 
 type User struct {
@@ -97,7 +96,7 @@ func FindUserNoCreate(email string) *User {
 }
 
 func PermAbortCheck(c *beego.Controller, perm string) {
-	user := util.IsLoggedIn(c)
+	user := IsLoggedIn(c)
 	if user != "" {
 
 		model := FindUser(user)
@@ -113,7 +112,7 @@ func PermAbortCheck(c *beego.Controller, perm string) {
 }
 
 func PermCheck(c *beego.Controller, perm string) bool {
-	user := util.IsLoggedIn(c)
+	user := IsLoggedIn(c)
 	if user != "" {
 
 		model := FindUser(user)
