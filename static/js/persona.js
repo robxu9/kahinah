@@ -20,9 +20,12 @@ $("document").ready(function(){
 
   $("#logout").on("click", function(e) {
     e.preventDefault();
-    $.get('/auth/logout', loggedOut);
-    location.reload(true);
+    $.get('/auth/logout', onlogout);
   });
+
+  function onlogout() {
+    location.reload(true);
+  }
 
   function mailVerified(assertion){
     $.ajax({
