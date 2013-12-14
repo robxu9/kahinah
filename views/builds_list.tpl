@@ -33,16 +33,16 @@
       </div>
       <div class="row">
         <div class="col-md-6 col-md-offset-3">
-          <form name="input" action="/builds" method="get">
+          <form name="input" method="get">
             <div class="input-group">
               <span class="input-group-btn">
-                <a href="/builds?page={{.PrevPage}}"><button class="btn btn-default" type="button">&lt;&lt;</button></a>
+                <a href="?page={{.PrevPage}}"><button class="btn btn-default" type="button">&lt;&lt;</button></a>
               </span>
               <span class="input-group-addon">Page</span>
               <input type="text" name="page" class="form-control" placeholder="{{.Page}}">
               <span class="input-group-addon">/ {{.Pages}}</span>
               <span class="input-group-btn">
-                <a href="/builds?page={{.NextPage}}"><button class="btn btn-default" type="button">&gt;&gt;</button></a>
+                <a href="?page={{.NextPage}}"><button class="btn btn-default" type="button">&gt;&gt;</button></a>
               </span>
             </div>
           </form>
