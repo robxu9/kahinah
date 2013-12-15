@@ -24,9 +24,11 @@
 
         {{if .QAControls}}
         function postQA() {
-          var params = new Array();
-          params['type'] = "QABlock";
-          post_to_url(window.location.href, params, "POST");
+          if (confirm("This is irreversible! Are you sure you want to block with -9999 karma?")) {
+            var params = new Array();
+            params['type'] = "QABlock";
+            post_to_url(window.location.href, params, "POST");
+          }
         }
         {{end}}
       </script>{{end}}
