@@ -209,7 +209,7 @@ func (a ABF) Publish(sid string) error {
 	}
 
 	req.SetBasicAuth(user, pass)
-	req.Header.Add("Content-Length", 0)
+	req.Header.Add("Content-Length", "0")
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -228,7 +228,7 @@ func (a ABF) Reject(sid string) error {
 	}
 
 	req.SetBasicAuth(user, pass)
-	req.Header.Add("Content-Length", 0)
+	req.Header.Add("Content-Length", "0")
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -246,7 +246,7 @@ func (a ABF) sendToTesting(id uint64) error {
 	}
 
 	req.SetBasicAuth(user, pass)
-	req.Header.Add("Content-Length", 0)
+	req.Header.Add("Content-Length", "0")
 
 	resp, err := client.Do(req)
 	if err != nil {
