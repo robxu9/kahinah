@@ -59,7 +59,7 @@ func main() {
 	// templating
 	beego.AddFuncMap("since", func(t time.Time) string {
 		hrs := time.Since(t).Hours()
-		return fmt.Sprintf("%dd %2dhrs", int(hrs)/24, int(hrs)%24)
+		return fmt.Sprintf("%dd %02dhrs", int(hrs)/24, int(hrs)%24)
 	})
 
 	beego.AddFuncMap("emailat", func(s string) string {
