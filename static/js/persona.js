@@ -15,7 +15,7 @@ $("document").ready(function(){
 
   $("#login").on("click", function(e) {
     e.preventDefault();
-    navigator.id.get(mailVerified);
+    navigator.id.get(mailVerified, {siteName: "Kahinah"});
   });
 
   $("#logout").on("click", function(e) {
