@@ -50,7 +50,7 @@ func (this *PublishedController) Get() {
 		o.LoadRelated(v, "Submitter")
 	}
 
-	sort.Sort(ByTimeTP(packages))
+	sort.Sort(ByUpdateDate(packages))
 
 	this.Data["Title"] = "Published"
 	this.Data["Tab"] = 2

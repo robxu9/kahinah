@@ -11,7 +11,7 @@
               <th>Repository</th>
               <th>Architecture</th>
               <th>Status</th>
-              <th>Date</th>
+              <th>Updated</th>
             </tr>
           </thead>
           <tbody>
@@ -25,7 +25,7 @@
                 <td>{{.Repo}}</td>
                 <td>{{.Architecture}}</td>
                 <td>{{.Status}}</td>
-                <td>{{.BuildDate | since}}</td>
+                <td>{{.Updated | since}}</td>
               </tr>
               {{end}}
             {{end}}

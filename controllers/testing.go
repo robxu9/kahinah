@@ -8,15 +8,15 @@ import (
 	"sort"
 )
 
-type ByTimeTP []*models.BuildList
+type ByBuildDate []*models.BuildList
 
-func (b ByTimeTP) Len() int {
+func (b ByBuildDate) Len() int {
 	return len(b)
 }
-func (b ByTimeTP) Swap(i, j int) {
+func (b ByBuildDate) Swap(i, j int) {
 	b[i], b[j] = b[j], b[i]
 }
-func (b ByTimeTP) Less(i, j int) bool {
+func (b ByBuildDate) Less(i, j int) bool {
 	return b[i].BuildDate.Unix() > b[j].BuildDate.Unix()
 }
 
@@ -40,7 +40,7 @@ func (this *TestingController) Get() {
 		o.LoadRelated(v, "Submitter")
 	}
 
-	sort.Sort(ByTimeTP(packages))
+	sort.Sort(ByBuildDate(packages))
 
 	this.Data["Title"] = "Testing"
 	this.Data["Tab"] = 1

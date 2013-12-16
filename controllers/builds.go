@@ -22,6 +22,18 @@ var (
 	maintainer_hours = to.Int64(beego.AppConfig.String("maintainerhours"))
 )
 
+type ByUpdateDate []*models.BuildList
+
+func (b ByUpdateDate) Len() int {
+	return len(b)
+}
+func (b ByUpdateDate) Swap(i, j int) {
+	b[i], b[j] = b[j], b[i]
+}
+func (b ByUpdateDate) Less(i, j int) bool {
+	return b[i].Updated.Unix() > b[j].Updated.Unix()
+}
+
 type BuildsController struct {
 	beego.Controller
 }
@@ -65,7 +77,7 @@ func (this *BuildsController) Get() {
 		o.LoadRelated(v, "Submitter")
 	}
 
-	sort.Sort(ByTimeTP(packages))
+	sort.Sort(ByUpdateDate(packages))
 
 	this.Data["Title"] = "Builds"
 	this.Data["Tab"] = 4

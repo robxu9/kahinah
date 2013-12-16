@@ -50,7 +50,7 @@ func (this *RejectedController) Get() {
 		o.LoadRelated(v, "Submitter")
 	}
 
-	sort.Sort(ByTimeTP(packages))
+	sort.Sort(ByUpdateDate(packages))
 
 	this.Data["Title"] = "Rejected"
 	this.Data["Tab"] = 3
