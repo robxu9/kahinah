@@ -5,7 +5,7 @@ import (
 	"github.com/astaxie/beego"
 	"github.com/robxu9/kahinah/controllers"
 	"github.com/robxu9/kahinah/integration"
-	"github.com/robxu9/kahinah/util"
+	"github.com/robxu9/kahinah/models"
 	"html/template"
 	"net/http"
 	"strings"
@@ -49,9 +49,9 @@ func main() {
 	//beego.Router("/ping", &controllers.PingController{})
 
 	// persona
-	beego.Router("/auth/check", &util.PersonaCheckController{})
-	beego.Router("/auth/login", &util.PersonaLoginController{})
-	beego.Router("/auth/logout", &util.PersonaLogoutController{})
+	beego.Router("/auth/check", &models.PersonaCheckController{})
+	beego.Router("/auth/login", &models.PersonaLoginController{})
+	beego.Router("/auth/logout", &models.PersonaLogoutController{})
 
 	// admin
 	beego.Router("/admin", &controllers.AdminController{})
