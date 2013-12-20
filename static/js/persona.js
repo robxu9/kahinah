@@ -14,37 +14,63 @@ $("document").ready(function(){
     $("#persona-user").text("");
   }
 
+  var user = null;
+
+  $.ajax({
+    url: '/auth/check',
+    success: function(res, status, xhr) {
+      if (res === "") {
+        loggedOut();
+      }
+      else {
+        loggedIn(res);
+        user = res;
+      }
+    },
+    async: false
+  });
+
+  navigator.id.watch({
+    loggedInUser: user,
+    onlogin: function(assertion) {
+      $("#login").text("Logging in...");
+      $.ajax({
+        type: 'POST',
+        url: '/auth/login',
+        data: {assertion: assertion},
+        success: function(res, status, xhr) {
+          location.reload(true);
+        },
+        error: function(xhr, status, err) { 
+          $("#login").text("Failed!");
+          $("#login").attr("class","btn btn-danger navbar-btn");
+          navigator.id.logout();
+        },
+      });
+    },
+    onlogout: function() {
+      $.get('/auth/logout', function() {
+        location.reload(true);
+      });
+    }
+  });
+
   $("#login").on("click", function(e) {
     e.preventDefault();
-    navigator.id.get(mailVerified, {siteName: "Kahinah"});
+    $("#login").text("[Popup Appeared]");
+    $("#login").attr("class", "btn btn-info navbar-btn");
+    navigator.id.request({
+      siteName: "Kahinah",
+      oncancel: function() {
+        $("#login").text("Login Canceled");
+        $("#login").attr("class","btn btn-danger navbar-btn");
+      },
+    });
   });
 
   $("#logout").on("click", function(e) {
     e.preventDefault();
-    $.get('/auth/logout', onlogout);
+    navigator.id.logout();
   });
 
-  function onlogout() {
-    location.reload(true);
-  }
-
-  function mailVerified(assertion){
-    $("#login").text("Logging in...");
-    $.ajax({
-      type: 'POST',
-      url: '/auth/login',
-      data: {assertion: assertion},
-      success: function(res, status, xhr) {
-        location.reload(true);
-      },
-      error: function(xhr, status, err) { 
-        $("#login").text("Failed to login! Try again?");
-      },
-    });
-  }
-
-  $.get('/auth/check', function (res) {
-    if (res === "") loggedOut();
-    else loggedIn(res);
-  });
 });
