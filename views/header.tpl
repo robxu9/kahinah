@@ -16,7 +16,6 @@
     <!-- Font Awesome -->
     <link href="//netdna.bootstrapcdn.com/font-awesome/4.0.3/css/font-awesome.min.css" rel="stylesheet">
 
-    <!-- Custom styles for this template -->
     <link href="/static/css/justified-nav.css" rel="stylesheet">
 
     <!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
@@ -36,17 +35,34 @@
 
     <div class="container">
 
-      <div class="masthead">
-        <h3 class="text-muted">Kahinah<button type="button" class="btn btn-success pull-right" style="display: none" id="login">Persona Login</button><button type="button" class="btn btn-warning pull-right" style="display: none" id="logout">Logout</button></h3>
-        <ul class="nav nav-justified">
-          <li{{if eq .Tab 0}} class="active"{{end}}><a href="/">Home</a></li>
-          <li{{if eq .Tab 1}} class="active"{{end}}><a href="/testing">Testing Updates</a></li>
-          <li{{if eq .Tab 2}} class="active"{{end}}><a href="/published">Published Updates</a></li>
-          <li{{if eq .Tab 3}} class="active"{{end}}><a href="/rejected">Rejected Updates</a></li>
-          <li{{if eq .Tab 4}} class="active"{{end}}><a href="/builds">All Updates</a></li>
-          <li{{if eq .Tab 5}} class="active"{{end}}><a href="/about">About</a></li>
-        </ul>
-      </div>
+      <nav class="navbar navbar-default" role="navigation">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#navbar-collapse">
+            <span class="sr-only">Toggle Navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a href="/" class="navbar-brand">Kahinah</a>
+        </div>
+
+        <div class="collapse navbar-collapse" id="navbar-collapse">
+          <ul class="nav navbar-nav">
+            <li{{if eq .Tab 0}} class="active"{{end}}><a href="/">Home</a></li>
+            <li{{if eq .Tab 1}} class="active"{{end}}><a href="/testing">Testing</a></li>
+            <li{{if eq .Tab 2}} class="active"{{end}}><a href="/published">Published</a></li>
+            <li{{if eq .Tab 3}} class="active"{{end}}><a href="/rejected">Rejected</a></li>
+            <li{{if eq .Tab 4}} class="active"{{end}}><a href="/builds">All</a></li>
+            <li{{if eq .Tab 5}} class="active"{{end}}><a href="/about">About</a></li>
+          </ul>
+
+          <!-- login -->
+          <div class="navbar-right">
+            <p class="navbar-text" id="persona-user"></p>
+            <button type="button" class="btn btn-success navbar-btn" style="display: none" id="login">Persona Login</button><button type="button" class="btn btn-warning navbar-btn" style="display: none" id="logout">Logout</button>
+          </div>
+        </div>
+      </nav>
 
       {{if .flash.error}}<div class="alert alert-danger">{{.flash.error}}</div>{{end}}
       {{if .flash.warning}}<div class="alert alert-warning">{{.flash.warning}}</div>{{end}}

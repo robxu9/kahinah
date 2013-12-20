@@ -5,12 +5,13 @@ $("document").ready(function(){
   function loggedIn(email){
     $("#login").hide();
     $("#logout").show();
-    $("#logout").text("Logout [" + email + "]");
+    $("#persona-user").text(email);
   }
 
   function loggedOut(){
     $("#logout").hide();
     $("#login").show();
+    $("#persona-user").text("");
   }
 
   $("#login").on("click", function(e) {
@@ -28,6 +29,7 @@ $("document").ready(function(){
   }
 
   function mailVerified(assertion){
+    $("#login").text("Logging in...");
     $.ajax({
       type: 'POST',
       url: '/auth/login',
@@ -35,7 +37,9 @@ $("document").ready(function(){
       success: function(res, status, xhr) {
         location.reload(true);
       },
-      //error: function(xhr, status, err) { alert("Didn't login: " + err); }
+      error: function(xhr, status, err) { 
+        $("#login").text("Failed to login! Try again?");
+      },
     });
   }
 
