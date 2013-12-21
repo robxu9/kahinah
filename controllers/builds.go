@@ -39,6 +39,8 @@ type BuildsController struct {
 }
 
 func (this *BuildsController) Get() {
+	this.Data["xsrf_token"] = this.XsrfToken()
+
 	page, err := this.GetInt("page")
 	if err != nil {
 		page = 1
@@ -94,6 +96,8 @@ type BuildController struct {
 }
 
 func (this *BuildController) Get() {
+	this.Data["xsrf_token"] = this.XsrfToken()
+
 	id := to.Uint64(this.Ctx.Input.Param(":id"))
 
 	var pkg models.BuildList

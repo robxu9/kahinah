@@ -13,6 +13,8 @@ type RejectedController struct {
 }
 
 func (this *RejectedController) Get() {
+	this.Data["xsrf_token"] = this.XsrfToken()
+
 	page, err := this.GetInt("page")
 	if err != nil {
 		page = 1

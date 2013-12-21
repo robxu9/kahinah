@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/rand"
 	"fmt"
 	"github.com/astaxie/beego"
 	"github.com/robxu9/kahinah/controllers"
@@ -14,6 +15,10 @@ import (
 
 func main() {
 	beego.SessionOn = true
+
+	beego.EnableXSRF = true
+	beego.XSRFKEY = getRandomString(50)
+	beego.XSRFExpire = 3600
 
 	beego.Router("/", &controllers.MainController{})
 
@@ -99,4 +104,14 @@ func main() {
 
 	beego.Run()
 	<-stop
+}
+
+func getRandomString(n int) string {
+	const alphanum = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+	var bytes = make([]byte, n)
+	rand.Read(bytes)
+	for i, b := range bytes {
+		bytes[i] = alphanum[b%byte(len(alphanum))]
+	}
+	return string(bytes)
 }

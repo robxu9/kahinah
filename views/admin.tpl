@@ -11,6 +11,7 @@
         <div class="col-lg-6">
           <h3>Users</h3>
           <form class="form-inline" role="form" method="get">
+            {{ .xsrf_data }}
             <div class="form-group">
               <label class="sr-only" for="email">Email Address</label>
               <input type="email" class="form-control" name="email" id="email" placeholder="{{if .User}}{{.User.Email}}{{else}}Email Address{{end}}">
@@ -19,6 +20,7 @@
           </form>
           {{if .User}}
           <form class="form-inline" role="form" method="get">
+            {{ .xsrf_data }}
             <div class="form-group">
               <label class="sr-only" for="add">Add Permission</label>
               <input type="text" class="form-control" name="add" id="add" placeholder="Add Permission">
@@ -27,6 +29,7 @@
             <button type="submit" class="btn btn-default">Add</button>
           </form>
           <form class="form-inline" role="form" method="get">
+            {{ .xsrf_data }}
             <div class="form-group">
               <input type="hidden" name="email" value="{{.User.Email}}">
               <label class="sr-only" for="add">Remove Permission</label>

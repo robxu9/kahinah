@@ -13,6 +13,8 @@ type PublishedController struct {
 }
 
 func (this *PublishedController) Get() {
+	this.Data["xsrf_token"] = this.XsrfToken()
+
 	page, err := this.GetInt("page")
 	if err != nil {
 		page = 1

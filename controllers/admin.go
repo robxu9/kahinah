@@ -4,6 +4,7 @@ import (
 	"github.com/astaxie/beego"
 	"github.com/astaxie/beego/orm"
 	"github.com/robxu9/kahinah/models"
+	"html/template"
 	"menteslibres.net/gosexy/to"
 	"strings"
 )
@@ -51,6 +52,9 @@ type AdminController struct {
 
 func (this *AdminController) Get() {
 	adminCheck(&this.Controller)
+
+	this.Data["xsrf_token"] = this.XsrfToken()
+	this.Data["xsrf_data"] = template.HTML(this.XsrfFormHtml())
 
 	if this.GetString("email") != "" {
 		user := models.FindUserNoCreate(this.GetString("email"))

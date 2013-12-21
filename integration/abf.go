@@ -373,7 +373,7 @@ func (a ABF) getDiff(gitUrl, fromHash, toHash string) string {
 		return "No diff available: " + err.Error()
 	}
 
-	return string(gitdiff)
+	return fmt.Sprintf("$ git diff --patch-with-stat --summary %s..%s\n\n%s", fromHash, toHash, string(gitdiff))
 }
 
 func (a ABF) getUser(id uint64) *models.User {

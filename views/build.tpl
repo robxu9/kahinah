@@ -5,12 +5,14 @@
         function postUp() {
           var params = new Array();
           params['type'] = "Up";
+          params['_xsrf'] = "{{.xsrf_token}}";
           post_to_url(window.location.href, params, "POST");
         }
 
         function postDown() {
           var params = new Array();
           params['type'] = "Down";
+          params['_xsrf'] = "{{.xsrf_token}}";
           post_to_url(window.location.href, params, "POST");
         }
 
@@ -18,6 +20,7 @@
         function postMaintainer() {
           var params = new Array();
           params['type'] = "Maintainer";
+          params['_xsrf'] = "{{.xsrf_token}}";
           post_to_url(window.location.href, params, "POST");
         }
         {{end}}
@@ -27,6 +30,7 @@
           if (confirm("This is irreversible! Are you sure you want to block with -9999 karma?")) {
             var params = new Array();
             params['type'] = "QABlock";
+            params['_xsrf'] = "{{.xsrf_token}}";
             post_to_url(window.location.href, params, "POST");
           }
         }

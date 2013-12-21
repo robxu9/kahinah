@@ -6,6 +6,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="">
     <meta name="author" content="">
+
+    <meta name="_xsrf" content="{{.xsrf_token}}" />
+    
     <link rel="shortcut icon" href="../../docs-assets/ico/favicon.png">
 
     <title>{{.Title}} | Kahinah</title>
@@ -26,6 +29,8 @@
 
     <!-- Bootstrap core JavaScript -->
     <script src="//code.jquery.com/jquery-2.0.3.min.js"></script>
+    <script src="/static/js/xsrf.js"></script>
+
     <script src="//login.persona.org/include.js"></script>
     <script src="/static/js/persona.js"></script>
 

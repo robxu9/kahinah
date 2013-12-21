@@ -25,6 +25,8 @@ type TestingController struct {
 }
 
 func (this *TestingController) Get() {
+	this.Data["xsrf_token"] = this.XsrfToken()
+
 	var packages []*models.BuildList
 
 	o := orm.NewOrm()
