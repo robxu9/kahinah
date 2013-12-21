@@ -118,7 +118,7 @@ func (this *BuildController) Get() {
 		}
 	}
 
-	this.Data["Url"] = integration.Url(pkg.Handler, pkg.HandleId)
+	this.Data["Url"] = integration.Url(&pkg)
 
 	// karma controls
 	totalKarma := 0
@@ -178,7 +178,6 @@ func (this *BuildController) Get() {
 	this.Data["Title"] = "Build " + to.String(id) + ": " + pkg.Name
 	if pkg.Status == models.STATUS_TESTING {
 		this.Data["Tab"] = 1
-		this.Data["Header"] = "Testing"
 		if user != "" {
 			this.Data["KarmaControls"] = true
 			if pkg.Submitter != nil && pkg.Submitter.Email == user {
@@ -189,13 +188,10 @@ func (this *BuildController) Get() {
 		}
 	} else if pkg.Status == models.STATUS_PUBLISHED {
 		this.Data["Tab"] = 2
-		this.Data["Header"] = "Published"
 	} else if pkg.Status == models.STATUS_REJECTED {
 		this.Data["Tab"] = 3
-		this.Data["Header"] = "Rejected"
 	} else {
 		this.Data["Tab"] = 4
-		this.Data["Header"] = "Unknown"
 	}
 	this.Data["Package"] = pkg
 	this.TplNames = "build.tpl"
@@ -324,11 +320,11 @@ func (this *BuildController) Post() {
 	if karmaTotal >= upthreshold {
 		pkg.Status = models.STATUS_PUBLISHED
 		o.Update(&pkg)
-		go integration.Publish(pkg.Handler, pkg.HandleId)
+		go integration.Publish(&pkg)
 	} else if karmaTotal <= downthreshold {
 		pkg.Status = models.STATUS_REJECTED
 		o.Update(&pkg)
-		go integration.Reject(pkg.Handler, pkg.HandleId)
+		go integration.Reject(&pkg)
 	}
 
 	this.Get()

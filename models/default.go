@@ -29,7 +29,6 @@ func init() {
 
 	orm.RegisterModelWithPrefix(Prefix, new(User))
 	orm.RegisterModelWithPrefix(Prefix, new(UserPermission))
-	orm.RegisterModelWithPrefix(Prefix, new(UserIntegration))
 
 	if DbType == "mysql" {
 		orm.RegisterDataBase("default", "mysql", fmt.Sprintf("%s:%s@tcp(%s)/%s", DbUser, DbPass, DbHost, DbName), 30)

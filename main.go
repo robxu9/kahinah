@@ -77,7 +77,7 @@ func main() {
 	// integration
 	stop := make(chan bool)
 
-	integration.Integrate(integration.ABF_HANDLER_NAME, integration.ABF(1))
+	integration.Integrate(integration.ABF(1))
 
 	go func() {
 		timeout := make(chan bool)

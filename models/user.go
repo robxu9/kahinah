@@ -6,11 +6,11 @@ import (
 )
 
 type User struct {
-	Id          uint64             `orm:"auto;pk"`
-	Email       string             `orm:"type(text)"`
-	Integration []*UserIntegration `orm:"reverse(many);on_delete(set_null)"`
-	Permissions []*UserPermission  `orm:"rel(m2m);on_delete(set_null)"`
-	Karma       []*Karma           `orm:"reverse(many);on_delete(set_null)"`
+	Id          uint64            `orm:"auto;pk"`
+	Email       string            `orm:"type(text)"`
+	Integration string            `orm:"type(text)"` // abf service user id
+	Permissions []*UserPermission `orm:"rel(m2m);on_delete(set_null)"`
+	Karma       []*Karma          `orm:"reverse(many);on_delete(set_null)"`
 
 	BuildLists []*BuildList `orm:"reverse(many);on_delete(set_null)"`
 }
@@ -35,18 +35,6 @@ func (u *UserPermission) Save() {
 	o.Update(u)
 }
 
-type UserIntegration struct {
-	Id            uint64 `orm:"auto;pk"`
-	User          *User  `orm:"rel(fk)"`
-	Service       string
-	ServiceUserId string
-}
-
-func (u *UserIntegration) Save() {
-	o := orm.NewOrm()
-	o.Update(u)
-}
-
 // Finds the user with the given email address. If a user doesn't exist,
 // it creates one and returns it.
 //
@@ -66,7 +54,6 @@ func FindUser(email string) *User {
 		}
 		o.Insert(&user)
 	} else {
-		o.LoadRelated(&user, "Integration")
 		o.LoadRelated(&user, "Permissions")
 		o.LoadRelated(&user, "Karma")
 		o.LoadRelated(&user, "BuildLists")
@@ -86,7 +73,6 @@ func FindUserNoCreate(email string) *User {
 	} else if err != nil {
 		return nil
 	} else {
-		o.LoadRelated(&user, "Integration")
 		o.LoadRelated(&user, "Permissions")
 		o.LoadRelated(&user, "Karma")
 		o.LoadRelated(&user, "BuildLists")

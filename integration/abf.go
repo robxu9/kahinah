@@ -12,13 +12,14 @@ import (
 	"menteslibres.net/gosexy/dig"
 	"menteslibres.net/gosexy/to"
 	"net/http"
+	"os"
+	"os/exec"
 	"strings"
 	"time"
 )
 
 const (
-	ABF_URL          = "https://abf.io/api/v1"
-	ABF_HANDLER_NAME = "abf"
+	ABF_URL = "https://abf.io/api/v1"
 )
 
 var (
@@ -96,7 +97,7 @@ func (a ABF) pingBuildCompleted() error {
 		asserted := v.(map[string]interface{})
 		id := dig.Uint64(&asserted, "id")
 
-		num, err := o.QueryTable(new(models.BuildList)).Filter("Handler", ABF_HANDLER_NAME).Filter("HandleId", id).Count()
+		num, err := o.QueryTable(new(models.BuildList)).Filter("HandleId", id).Count()
 		if num <= 0 || err != nil {
 			list, err := a.getBuildList(id)
 			if err != nil {
@@ -166,7 +167,7 @@ func (a ABF) pingTestingBuilds() error {
 		asserted := v.(map[string]interface{})
 		id := dig.Uint64(&asserted, "id")
 
-		num, err := o.QueryTable(new(models.BuildList)).Filter("Handler", ABF_HANDLER_NAME).Filter("HandleId", id).Count()
+		num, err := o.QueryTable(new(models.BuildList)).Filter("HandleId", id).Count()
 		if num <= 0 || err != nil {
 			list, err := a.getBuildList(id)
 			if err != nil {
@@ -197,12 +198,12 @@ func (a ABF) PingParams(m map[string]string) error {
 	return fmt.Errorf("abf: PingParams not supported yet.")
 }
 
-func (a ABF) Url(sid string) string {
-	return "https://abf.io/build_lists/" + sid
+func (a ABF) Url(m *models.BuildList) string {
+	return "https://abf.io/build_lists/" + m.HandleId
 }
 
-func (a ABF) Publish(sid string) error {
-	id := to.Uint64(sid)
+func (a ABF) Publish(m *models.BuildList) error {
+	id := to.Uint64(m.HandleId)
 	req, err := http.NewRequest("PUT", ABF_URL+"/build_lists/"+to.String(id)+"/publish.json", nil)
 	if err != nil {
 		return err
@@ -220,8 +221,8 @@ func (a ABF) Publish(sid string) error {
 	return nil
 }
 
-func (a ABF) Reject(sid string) error {
-	id := to.Uint64(sid)
+func (a ABF) Reject(m *models.BuildList) error {
+	id := to.Uint64(m.HandleId)
 	req, err := http.NewRequest("PUT", ABF_URL+"/build_lists/"+to.String(id)+"/reject_publish.json", nil)
 	if err != nil {
 		return err
@@ -329,8 +330,9 @@ func (a ABF) getBuildList(id uint64) (*models.BuildList, error) {
 	user := a.getUser(dig.Uint64(&list, "user", "id"))
 
 	bl := models.BuildList{
-		HandleId: to.String(dig.Uint64(&list, "id")),
-		Handler:  ABF_HANDLER_NAME,
+		HandleId:      to.String(dig.Uint64(&list, "id")),
+		HandleProject: dig.String(&list, "project", "fullname"),
+		Diff:          a.getDiff(dig.String(&list, "project", "git_url"), dig.String(&list, "last_published_commit_hash"), dig.String("commit_hash")),
 
 		//Platform:     dig.String(&list, "build_for_platform", "name"),
 		Platform:     dig.String(&list, "save_to_repository", "platform", "name"),
@@ -342,10 +344,36 @@ func (a ABF) getBuildList(id uint64) (*models.BuildList, error) {
 		Status:       models.STATUS_TESTING,
 		Changelog:    changelog, // url
 		Packages:     pkg,
-		BuildDate:    time.Unix(dig.Int64(&list, "updated_at"), 0)}
+		BuildDate:    time.Unix(dig.Int64(&list, "updated_at"), 0),
+	}
 
 	return &bl, nil
 
+}
+
+func (a ABF) getDiff(gitUrl, fromHash, toHash string) string {
+	// ugh, looks like we'll have to do this the sadly hard way
+	tmpdir, err := ioutil.TempDir("", "kahinah_")
+	if err != nil {
+		return "Error creating directory for diff creation: " + err.Error()
+	}
+
+	defer os.RemoveAll(tmpdir)
+
+	gitresult := exec.Command("git", "clone", gitUrl, tmpdir).Run()
+	if gitresult != nil { // git better exit with status zero
+		return "Repository could not be cloned for diff: " + gitresult.Error()
+	}
+
+	gitdiffcmd := exec.Command("git", "diff", "--patch-with-stat", "--summary", fromHash+".."+toHash)
+	gitdiffcmd.Dir = tmpdir
+
+	gitdiff, err := gitdiffcmd.Output()
+	if err != nil {
+		return "No diff available: " + err.Error()
+	}
+
+	return string(gitdiff)
 }
 
 func (a ABF) getUser(id uint64) *models.User {
@@ -354,8 +382,8 @@ func (a ABF) getUser(id uint64) *models.User {
 
 	var userModel *models.User
 
-	var userIntegration models.UserIntegration
-	err := o.QueryTable(new(models.UserIntegration)).Filter("Service", ABF_HANDLER_NAME).Filter("ServiceUserId", id).One(&userIntegration)
+	var userIntegration models.User
+	err := o.QueryTable(new(models.User)).Filter("Integration", id).One(&userIntegration)
 	if err == orm.ErrNoRows {
 
 		req, err := http.NewRequest("GET", ABF_URL+"/users/"+to.String(id)+".json", nil)
@@ -386,28 +414,14 @@ func (a ABF) getUser(id uint64) *models.User {
 		email := dig.String(&result, "user", "email")
 
 		userModel = models.FindUser(email)
-		if userModel.Integration == nil {
-			userModel.Integration = make([]*models.UserIntegration, 0)
-		}
-
-		integration := models.UserIntegration{
-			User:          userModel,
-			Service:       ABF_HANDLER_NAME,
-			ServiceUserId: to.String(id),
-		}
-
-		o.Insert(&integration)
-
-		userModel.Integration = append(userModel.Integration, &integration)
+		userModel.Integration = to.String(id)
 		userModel.Save()
 
 	} else if err != nil {
 		panic(err)
 	} else {
-		o.LoadRelated(&userIntegration, "User")
-		userModel = userIntegration.User
+		userModel = &userIntegration
 	}
 
 	return userModel
-
 }

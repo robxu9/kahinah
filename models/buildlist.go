@@ -11,23 +11,38 @@ const (
 )
 
 type BuildList struct {
-	Id           uint64          `xml:"id,attr" orm:"auto;pk"`
-	Platform     string          `xml:"info>platform"`
-	Repo         string          `xml:"info>platform>repo"`
-	Architecture string          `xml:"info>platform>arch"`
-	Name         string          `xml:"info>name"`
-	Submitter    *User           `xml:"info>submitter" orm:"rel(fk)"`
-	Type         string          `xml:"type"`
-	Status       string          `xml:"status"`
-	Packages     []*BuildListPkg `xml:"packages" orm:"reverse(many)"` // semicolon-separated (damn orm)
-	Changelog    string          `xml:"changelog" orm:"type(text)"`   // url
-	BuildDate    time.Time       `xml:"time"`
-	Updated      time.Time       `xml:"updated" orm:"auto_now"`
-	Karma        []*Karma        `xml:"karma" orm:"reverse(many)"`
+	// represent unique id
+	Id uint64 `xml:"id,attr" orm:"auto;pk"`
+	// represent platform
+	Platform string `xml:"info>platform"`
+	// represent the repo it's being saved to
+	Repo string `xml:"info>platform>repo"`
+	// represent the arch
+	Architecture string `xml:"info>platform>arch"`
+	// represent its name
+	Name string `xml:"info>name"`
+	// represents the user
+	Submitter *User `xml:"info>submitter" orm:"rel(fk)"`
+	// represents the update type (bugfix, new package, security, etc)
+	Type string `xml:"type"`
+	// represents the current status of this update
+	Status string `xml:"status"`
+	// lists packages
+	Packages []*BuildListPkg `xml:"packages" orm:"reverse(many)"`
+	// lists the changelog url
+	Changelog string `xml:"changelog" orm:"type(text)"` // url
+	// lists the builddate
+	BuildDate time.Time `xml:"time"`
+	// lists the updatetime
+	Updated time.Time `xml:"updated" orm:"auto_now"`
+	// lists the karma
+	Karma []*Karma `xml:"karma" orm:"reverse(many)"`
+	// shows the diff
+	Diff string `xml:"diff" orm:"type(text)"`
 
-	// handler specifics
-	Handler  string `xml:"info>handle,attr"` // what handler should this use?
-	HandleId string `xml:"info>id,attr"`     // for the handler to identify the package in the buildsystem
+	// abf specifics (abf is represented as the handler)
+	HandleId      string `xml:"handle>id,attr"` // for the handler to identify the package in the buildsystem
+	HandleProject string `xml:"handle>project" orm:"type(text)"`
 	// end handler specifics
 }
 

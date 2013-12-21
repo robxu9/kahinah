@@ -1,63 +1,61 @@
 package integration
 
 import (
+	"github.com/robxu9/kahinah/models"
 	"log"
 )
 
 type Integration interface {
+	// Check for new packages to add to the buildsystem
 	Ping() error
+	// Check for new packages to add to the buildsystem, with parameters
 	PingParams(map[string]string) error
-	Url(string) string
-	Publish(string) error
-	Reject(string) error
+	// Retrieve the url of the corresponding buildlist
+	Url(*models.BuildList) string
+	// Publish the buildlist
+	Publish(*models.BuildList) error
+	// Reject the buildlist
+	Reject(*models.BuildList) error
 }
 
-var integrated map[string]Integration
+var handler Integration
 
-func init() {
-	integrated = make(map[string]Integration)
-}
-
-func Integrate(k string, i Integration) {
-	integrated[k] = i
+func Integrate(i Integration) {
+	handler = i
 }
 
 func Ping() {
-	for k, v := range integrated {
-		go func() {
-			err := v.Ping()
-			if err != nil {
-				log.Printf("Error pinging integrator %s: %s\n", k, err)
-			}
-		}()
-	}
+	go func() {
+		err := handler.Ping()
+		if err != nil {
+			log.Printf("Error pinging integrator: %s\n", err)
+		}
+	}()
 }
 
 func PingParams(m map[string]string) {
-	for k, v := range integrated {
-		go func() {
-			err := v.PingParams(m)
-			if err != nil {
-				log.Printf("Error pinging integrator %s with parameters: %s\n", k, err)
-			}
-		}()
+	go func() {
+		err := handler.PingParams(m)
+		if err != nil {
+			log.Printf("Error pinging integrator with parameters: %s\n", err)
+		}
+	}()
+}
+
+func Url(m *models.BuildList) string {
+	return handler.Url(m)
+}
+
+func Publish(m *models.BuildList) {
+	err := handler.Publish(m)
+	if err != nil {
+		log.Printf("Error calling publishing integrator for id %s: %s\n", m.HandleId, err)
 	}
 }
 
-func Url(handle, id string) string {
-	return integrated[handle].Url(id)
-}
-
-func Publish(handle, id string) {
-	err := integrated[handle].Publish(id)
+func Reject(m *models.BuildList) {
+	err := handler.Reject(m)
 	if err != nil {
-		log.Printf("Error publishing integrator %s with parameters %s: %s\n", handle, id, err)
-	}
-}
-
-func Reject(handle, id string) {
-	err := integrated[handle].Reject(id)
-	if err != nil {
-		log.Printf("Error rejecting integrator %s with parameters %s: %s\n", handle, id, err)
+		log.Printf("Error calling rejecting integrator for id %s: %s\n", m.HandleId, err)
 	}
 }

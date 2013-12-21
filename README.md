@@ -3,6 +3,14 @@ Kahinah
 
 Kahinah is the QA system for OpenMandriva. It hooks into ABF to retrieve packages that have been recently built and automates the QA portion of the package process (pushing to testing, karma, pushing to updates).
 
+Requirements
+------------
+
+* Git
+* mktemp -d
+* Go 1.2+
+* sqlite3 or mysql
+
 Setup
 -----
 
@@ -10,6 +18,14 @@ Setup
 1. Configure news.txt.
 1. Make sure your databases are created, if needed.
 1. Run it.
+
+Tips
+----
+
+* Make sure to run `go clean -i -r -x` before every build.
+** go run tends to link to old static libraries... somehow.
+* Update the source every time with `go get -u`.
+** If you get errors, the above cleaning command helps.
 
 Administration
 --------------
