@@ -122,8 +122,7 @@ func (this *BuildController) Get() {
 
 	// karma controls
 	totalKarma := 0
-	upkarma := make([]*models.Karma, 0)
-	downkarma := make([]*models.Karma, 0)
+	votes := make(map[string]bool)
 
 	o.LoadRelated(&pkg, "Submitter")
 	o.LoadRelated(&pkg, "Karma")
@@ -133,21 +132,20 @@ func (this *BuildController) Get() {
 		o.LoadRelated(karma, "User")
 		if karma.Vote == models.KARMA_UP {
 			totalKarma++
-			upkarma = append(upkarma, karma)
+			votes[karma.User.Email] = true
 		} else if karma.Vote == models.KARMA_DOWN {
 			totalKarma--
-			downkarma = append(downkarma, karma)
+			votes[karma.User.Email] = false
 		} else if karma.Vote == models.KARMA_MAINTAINER {
 			totalKarma += int(maintainer_karma)
-			upkarma = append(upkarma, karma)
+			votes[karma.User.Email] = true
 		} else if karma.Vote == models.KARMA_BLOCK {
 			totalKarma -= int(block_karma)
-			downkarma = append(downkarma, karma)
+			votes[karma.User.Email] = false
 		}
 	}
 
-	this.Data["YayVotes"] = upkarma
-	this.Data["NayVotes"] = downkarma
+	this.Data["Votes"] = votes
 	this.Data["Karma"] = totalKarma
 
 	user := models.IsLoggedIn(&this.Controller)

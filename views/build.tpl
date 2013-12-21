@@ -118,52 +118,39 @@
             </div>
           </div>
 
-        </div>
-      </div>
-
-      <!-- want to test? -->
-      {{if eq .Package.Status "testing"}}
-      <div class="row">
-        <div class="col-md-8 col-md-offset-2">
-          <div class="panel panel-info">
-            <div class="panel-heading">Want to test?</div>
-            <div class="panel-body">
-              On your <code>{{.Package.Platform}}/{{.Package.Architecture}}</code> machine, do:
-              <pre>kahup {{.Package.Id}}</pre>
-              to install the above packages from the testing repository onto your computer.<br/>
-              <br/>
-              When you're done, you can use <code>urpmi --downgrade</code> to revert back to previous versions.
+          <!-- want to test? -->
+          {{if eq .Package.Status "testing"}}
+          <div class="panel panel-warning">
+            <div class="panel-heading"><button class="btn btn-warning" data-toggle="collapse" href="#testinfo">Want to test?</button></div>
+            <div id="testinfo" class="panel-collapse collapse">
+              <div class="panel-body">
+                On your <code>{{.Package.Platform}}/{{.Package.Architecture}}</code> machine, do:
+                <pre>kahup {{.Package.Id}}</pre>
+                to install the above packages from the testing repository onto your computer.<br/>
+                <br/>
+                When you're done, you can use <code>urpmi --downgrade</code> to revert back to previous versions.
+              </div>
             </div>
           </div>
-        </div>
-      </div>
-      {{end}}
+          {{end}}
 
-      <!-- results -->
-      <div class="row">
-        <div class="col-md-3 col-md-offset-3">
-          <div class="panel panel-success">
-            <div class="panel-heading">Yay</div>
-            <table class="table">
-              {{with .YayVotes}}
-                {{range .}}
-              <tr><td>{{.User.Email | emailat}}</td><tr>
+          <div class="panel panel-default">
+            <div class="panel-heading"><button class="btn btn-default">Votes</button></div>
+            <div class="panel-body">
+              {{if .Votes}}
+              <table class="table table-condensed table-responsive table-bordered">
+                {{with .Votes}}
+                  {{range $key, $value := .}}
+                <tr class="{{if $value}}success{{else}}danger{{end}}"><td>{{$key | emailat}}</td></tr>
+                  {{end}}
                 {{end}}
+              </table>
+              {{else}}
+              Nobody's voted yet.
               {{end}}
-            </table>
+            </div>
           </div>
-        </div>
-        <div class="col-md-3">
-          <div class="panel panel-danger">
-            <div class="panel-heading">Nay</div>
-            <table class="table">
-              {{with .NayVotes}}
-                {{range .}}
-              <tr><td>{{.User.Email | emailat}}</td><tr>
-                {{end}}
-              {{end}}
-            </table>
-          </div>
+
         </div>
       </div>
 
