@@ -35,12 +35,10 @@ func (b ByUpdateDate) Less(i, j int) bool {
 }
 
 type BuildsController struct {
-	beego.Controller
+	BaseController
 }
 
 func (this *BuildsController) Get() {
-	this.Data["xsrf_token"] = this.XsrfToken()
-
 	page, err := this.GetInt("page")
 	if err != nil {
 		page = 1
@@ -92,12 +90,10 @@ func (this *BuildsController) Get() {
 }
 
 type BuildController struct {
-	beego.Controller
+	BaseController
 }
 
 func (this *BuildController) Get() {
-	this.Data["xsrf_token"] = this.XsrfToken()
-
 	id := to.Uint64(this.Ctx.Input.Param(":id"))
 
 	var pkg models.BuildList

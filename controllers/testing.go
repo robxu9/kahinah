@@ -1,7 +1,6 @@
 package controllers
 
 import (
-	"github.com/astaxie/beego"
 	"github.com/astaxie/beego/orm"
 	"github.com/robxu9/kahinah/models"
 	"log"
@@ -21,12 +20,10 @@ func (b ByBuildDate) Less(i, j int) bool {
 }
 
 type TestingController struct {
-	beego.Controller
+	BaseController
 }
 
 func (this *TestingController) Get() {
-	this.Data["xsrf_token"] = this.XsrfToken()
-
 	var packages []*models.BuildList
 
 	o := orm.NewOrm()

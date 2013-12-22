@@ -1,7 +1,6 @@
 package controllers
 
 import (
-	"github.com/astaxie/beego"
 	"github.com/astaxie/beego/orm"
 	"github.com/robxu9/kahinah/models"
 	"log"
@@ -9,12 +8,10 @@ import (
 )
 
 type PublishedController struct {
-	beego.Controller
+	BaseController
 }
 
 func (this *PublishedController) Get() {
-	this.Data["xsrf_token"] = this.XsrfToken()
-
 	page, err := this.GetInt("page")
 	if err != nil {
 		page = 1
