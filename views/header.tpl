@@ -9,7 +9,7 @@
 
     <meta name="_xsrf" content="{{.xsrf_token}}" />
     
-    <link rel="shortcut icon" href="../../docs-assets/ico/favicon.png">
+    <link rel="shortcut icon" href="{{url "/static/img/favicon.png"}}">
 
     <title>{{.Title}} | Kahinah</title>
 
@@ -19,7 +19,7 @@
     <!-- Font Awesome -->
     <link href="//netdna.bootstrapcdn.com/font-awesome/4.0.3/css/font-awesome.min.css" rel="stylesheet">
 
-    <link href="/static/css/justified-nav.css" rel="stylesheet">
+    <link href="{{url "/static/css/justified-nav.css"}}" rel="stylesheet">
 
     <!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!--[if lt IE 9]>
@@ -28,11 +28,12 @@
     <![endif]-->
 
     <!-- Bootstrap core JavaScript -->
+    <script>window.urlPrefix = "{{url ""}}";</script>
     <script src="//code.jquery.com/jquery-2.0.3.min.js"></script>
-    <script src="/static/js/xsrf.js"></script>
+    <script src="{{url "/static/js/xsrf.js"}}"></script>
 
     <script src="//login.persona.org/include.js"></script>
-    <script src="/static/js/persona.js"></script>
+    <script src="{{url "/static/js/persona.js"}}"></script>
 
   </head>
 
@@ -48,17 +49,17 @@
             <span class="icon-bar"></span>
             <span class="icon-bar"></span>
           </button>
-          <a href="/" class="navbar-brand">Kahinah</a>
+          <a href="{{url "/"}}" class="navbar-brand">Kahinah</a>
         </div>
 
         <div class="collapse navbar-collapse" id="navbar-collapse">
           <ul class="nav navbar-nav">
-            <li{{if eq .Tab 0}} class="active"{{end}}><a href="/">Home</a></li>
-            <li{{if eq .Tab 1}} class="active"{{end}}><a href="/testing">Testing</a></li>
-            <li{{if eq .Tab 2}} class="active"{{end}}><a href="/published">Published</a></li>
-            <li{{if eq .Tab 3}} class="active"{{end}}><a href="/rejected">Rejected</a></li>
-            <li{{if eq .Tab 4}} class="active"{{end}}><a href="/builds">All</a></li>
-            <li{{if eq .Tab 5}} class="active"{{end}}><a href="/about">About</a></li>
+            <li{{if eq .Tab 0}} class="active"{{end}}><a href="{{url "/"}}">Home</a></li>
+            <li{{if eq .Tab 1}} class="active"{{end}}><a href="{{url "/testing"}}">Testing</a></li>
+            <li{{if eq .Tab 2}} class="active"{{end}}><a href="{{url "/published"}}">Published</a></li>
+            <li{{if eq .Tab 3}} class="active"{{end}}><a href="{{url "/rejected"}}">Rejected</a></li>
+            <li{{if eq .Tab 4}} class="active"{{end}}><a href="{{url "/builds"}}">All</a></li>
+            <li{{if eq .Tab 5}} class="active"{{end}}><a href="{{url "/about"}}">About</a></li>
           </ul>
 
           <!-- login -->

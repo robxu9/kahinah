@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"crypto/rand"
 	"fmt"
 	"github.com/astaxie/beego"
@@ -13,6 +14,10 @@ import (
 	"time"
 )
 
+var (
+	PREFIX = beego.AppConfig.String("urlprefix")
+)
+
 func main() {
 	beego.SessionOn = true
 
@@ -20,15 +25,17 @@ func main() {
 	beego.XSRFKEY = getRandomString(50)
 	beego.XSRFExpire = 3600
 
-	beego.Router("/", &controllers.MainController{})
+	beego.SetStaticPath(getPrefixString("/static"), "static")
+
+	beego.Router(getPrefixString("/"), &controllers.MainController{})
 
 	// testing
-	beego.Router("/testing", &controllers.TestingController{}) // lists testing updates
+	beego.Router(getPrefixString("/testing"), &controllers.TestingController{}) // lists testing updates
 	//beego.Router("/testing/:buildid:int", &controllers.TestingPkgController{}) // shows specific testing update
 	// ^ now use below BuildSpecificController
 
 	// published
-	beego.Router("/published", &controllers.PublishedController{}) // lists years
+	beego.Router(getPrefixString("/published"), &controllers.PublishedController{}) // lists years
 
 	// below: TODO in future update
 	//beego.Router("/published/:year:int", &controllers.PublishedListController{})        // lists updates in said years
@@ -36,12 +43,12 @@ func main() {
 	// ^ redirect to below build specific controller
 
 	// rejected
-	beego.Router("/rejected", &controllers.RejectedController{}) // lists all rejected updates
+	beego.Router(getPrefixString("/rejected"), &controllers.RejectedController{}) // lists all rejected updates
 	//beego.Router("/rejected/:before:int", &controllers.RejectedController{}) // list all rejected updates before this date
 
 	// builds
-	beego.Router("/builds", &controllers.BuildsController{}) // show all testing, published, rejected (all sorted by date, linking respectively to above)
-	beego.Router("/builds/:id:int", &controllers.BuildController{})
+	beego.Router(getPrefixString("/builds"), &controllers.BuildsController{}) // show all testing, published, rejected (all sorted by date, linking respectively to above)
+	beego.Router(getPrefixString("/builds/:id:int"), &controllers.BuildController{})
 
 	// platform
 	//beego.Router("/platforms", &controllers.PlatformsController{})
@@ -54,12 +61,12 @@ func main() {
 	//beego.Router("/ping", &controllers.PingController{})
 
 	// persona
-	beego.Router("/auth/check", &models.PersonaCheckController{})
-	beego.Router("/auth/login", &models.PersonaLoginController{})
-	beego.Router("/auth/logout", &models.PersonaLogoutController{})
+	beego.Router(getPrefixString("/auth/check"), &models.PersonaCheckController{})
+	beego.Router(getPrefixString("/auth/login"), &models.PersonaLoginController{})
+	beego.Router(getPrefixString("/auth/logout"), &models.PersonaLogoutController{})
 
 	// admin
-	beego.Router("/admin", &controllers.AdminController{})
+	beego.Router(getPrefixString("/admin"), &controllers.AdminController{})
 
 	// templating
 	beego.AddFuncMap("since", func(t time.Time) string {
@@ -71,9 +78,12 @@ func main() {
 		return strings.Replace(s, "@", " [@T] ", -1)
 	})
 
+	beego.AddFuncMap("url", getPrefixString)
+	beego.AddFuncMap("urldata", getPrefixStringWithData)
+
 	// error handling
 	beego.Errorhandler("550", func(rw http.ResponseWriter, r *http.Request) {
-		t, _ := template.New("beegoerrortemp").ParseFiles(beego.ViewsPath + "/permissions_error.tpl")
+		t := template.Must(template.New("permerror").ParseFiles(beego.ViewsPath + "/permissions_error.tpl"))
 		data := make(map[string]interface{})
 		data["Permission"] = r.Form.Get("permission")
 		t.Execute(rw, data)
@@ -104,6 +114,24 @@ func main() {
 
 	beego.Run()
 	<-stop
+}
+
+func getPrefixStringWithData(dest string, data interface{}) string {
+	// no need to prefix if the dest has no / before it
+	temp := template.Must(template.New("prefixTemplate").Parse(dest))
+	var b bytes.Buffer
+
+	err := temp.Execute(&b, data)
+	if err != nil {
+		panic(err)
+	}
+
+	result := b.String()
+	return getPrefixString(result)
+}
+
+func getPrefixString(dest string) string {
+	return "/" + PREFIX + dest
 }
 
 func getRandomString(n int) string {

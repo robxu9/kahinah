@@ -18,7 +18,7 @@
             {{with .Packages}}
               {{range .}}
               <tr>
-                <td><a href="/builds/{{.Id}}">{{.Id}}</a></td>
+                <td><a href="{{urldata "/builds/{{.Id}}" .}}">{{.Id}}</a></td>
                 <td>{{.Name}}</td>
                 <td>{{.Submitter.Email | emailat}}</td>
                 <td>{{.Platform}}</td>

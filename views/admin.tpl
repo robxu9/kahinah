@@ -52,7 +52,7 @@
               <td>{{$key}}</td>
               <td><div class="list-group">
                   {{range $value}}
-                <a href="/admin?email={{.}}" class="list-group-item">{{.}}</a>
+                <a href="{{urldata "/admin?email={{.}}" .}}" class="list-group-item">{{.}}</a>
                   {{end}}
               </div></td>
             </tr>

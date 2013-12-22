@@ -23,43 +23,50 @@ const (
 )
 
 var (
-	user      = beego.AppConfig.String("abf_user")
-	pass      = beego.AppConfig.String("abf_pass")
-	platforms *util.Set
-	client    = &http.Client{}
+	user        = beego.AppConfig.String("abf::abf_user")
+	pass        = beego.AppConfig.String("abf::abf_pass")
+	platforms   *util.Set
+	platformids *util.Set
+	client      = &http.Client{}
 )
 
 func init() {
 	platforms = util.NewSet()
-	for _, v := range strings.Split(beego.AppConfig.String("abf_platforms"), ";") {
-		platforms.Add(v)
+	platformids = util.NewSet()
+	for _, v := range strings.Split(beego.AppConfig.String("abf::abf_platforms"), ";") {
+		platform := strings.Split(v, ":")
+		platforms.Add(platform[0])
+		platformids.Add(platform[1])
 	}
 }
 
 type ABF byte
 
 func (a ABF) Ping() error {
-	err := a.pingBuildCompleted()
-	err2 := a.pingTestingBuilds()
+
+	for v := range platformids.Iterator() {
+		go a.pingBuildCompleted(v)
+		go a.pingTestingBuilds(v)
+	}
 
 	// FUTURE TODO: ping published & rejected builds to ensure consistency
 
-	if err != nil && err2 != nil {
-		return fmt.Errorf("abf: two errors: %s | %s", err, err2)
-	} else if err != nil {
-		return err
-	} else if err2 != nil {
-		return err2
-	}
+	//if err != nil && err2 != nil {
+	//	return fmt.Errorf("abf: two errors: %s | %s", err, err2)
+	//} else if err != nil {
+	//	return err
+	//} else if err2 != nil {
+	//	return err2
+	//}
 
 	return nil
 }
 
-func (a ABF) pingBuildCompleted() error {
+func (a ABF) pingBuildCompleted(platformId string) error {
 	// regular usage: use 0 (Build has been completed)
 	// below: use 12000 ([testing] build has been published)
 	// FIXME - remove hardcoded openmandriva2013.0 filter (but find alternative, we need said filter)
-	req, err := http.NewRequest("GET", ABF_URL+"/build_lists.json?per_page=100&filter[status]=0&filter[ownership]=index&filter[platform_id]=668", nil)
+	req, err := http.NewRequest("GET", ABF_URL+"/build_lists.json?per_page=100&filter[status]=0&filter[ownership]=index&filter[platform_id]="+platformId, nil)
 	if err != nil {
 		return err
 	}
@@ -127,9 +134,9 @@ func (a ABF) pingBuildCompleted() error {
 	return nil
 }
 
-func (a ABF) pingTestingBuilds() error {
+func (a ABF) pingTestingBuilds(platformId string) error {
 	// FIXME - remove hardcoded openmandriva2013.0 filter (but find alternative, we need said filter)
-	req, err := http.NewRequest("GET", ABF_URL+"/build_lists.json?per_page=100&filter[status]=12000&filter[ownership]=index&filter[platform_id]=668", nil)
+	req, err := http.NewRequest("GET", ABF_URL+"/build_lists.json?per_page=100&filter[status]=12000&filter[ownership]=index&filter[platform_id]="+platformId, nil)
 	if err != nil {
 		return err
 	}

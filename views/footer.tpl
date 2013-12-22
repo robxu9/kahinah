@@ -1,6 +1,6 @@
       <!-- Site footer -->
       <div class="footer">
-        &copy; 2013 OpenMandriva Association and others. This is a community maintained site.<div class="pull-right">Maintained by Robert Xu. Licensed under the AGPLv3 - <a href="//github.com/robxu9/kahinah">Github</a></div>
+        &copy; 2013 OpenMandriva Association, Robert Xu, and others.<div class="pull-right">Community Maintained. Licensed under the AGPLv3 - <a href="//github.com/robxu9/kahinah">Github</a></div>
       </div>
 
     </div> <!-- /container -->

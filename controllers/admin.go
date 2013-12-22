@@ -16,8 +16,8 @@ const (
 )
 
 var (
-	adminWhitelist = strings.Split(beego.AppConfig.String("adminwhitelist"), ";")
-	Whitelist      = to.Bool(beego.AppConfig.String("whitelist"))
+	adminWhitelist = strings.Split(beego.AppConfig.String("admin::adminwhitelist"), ";")
+	Whitelist      = to.Bool(beego.AppConfig.String("admin::whitelist"))
 )
 
 func init() {

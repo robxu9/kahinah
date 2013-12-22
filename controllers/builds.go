@@ -18,8 +18,8 @@ const (
 )
 
 var (
-	maintainer_karma = to.Int64(beego.AppConfig.String("maintainerkarma"))
-	maintainer_hours = to.Int64(beego.AppConfig.String("maintainerhours"))
+	maintainer_karma = to.Int64(beego.AppConfig.String("karma::maintainerkarma"))
+	maintainer_hours = to.Int64(beego.AppConfig.String("karma::maintainerhours"))
 )
 
 type ByUpdateDate []*models.BuildList
@@ -309,12 +309,12 @@ func (this *BuildController) Post() {
 
 	karmaTotal := karmaup - karmadown + (maintainer_karma * karmamaintainer) - (block_karma * karmablock)
 
-	upthreshold, err := beego.AppConfig.Int64("upperkarma")
+	upthreshold, err := beego.AppConfig.Int64("karma::upperkarma")
 	if err != nil {
 		panic(err)
 	}
 
-	downthreshold, err := beego.AppConfig.Int64("lowerkarma")
+	downthreshold, err := beego.AppConfig.Int64("karma::lowerkarma")
 	if err != nil {
 		panic(err)
 	}

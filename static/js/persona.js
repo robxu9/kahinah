@@ -17,7 +17,7 @@ $("document").ready(function(){
   var user = null;
 
   $.ajax({
-    url: '/auth/check',
+    url: window.urlPrefix + '/auth/check',
     success: function(res, status, xhr) {
       if (res === "") {
         loggedOut();
@@ -36,7 +36,7 @@ $("document").ready(function(){
       $("#login").text("Logging in...");
       $.ajax({
         type: 'POST',
-        url: '/auth/login',
+        url: window.urlPrefix + '/auth/login',
         data: {assertion: assertion},
         success: function(res, status, xhr) {
           location.reload(true);
@@ -49,7 +49,7 @@ $("document").ready(function(){
       });
     },
     onlogout: function() {
-      $.get('/auth/logout', function() {
+      $.get(window.urlPrefix + '/auth/logout', function() {
         location.reload(true);
       });
     }

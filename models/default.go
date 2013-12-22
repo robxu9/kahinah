@@ -10,12 +10,12 @@ import (
 )
 
 var (
-	Prefix = beego.AppConfig.String("db_prefix")
-	DbType = beego.AppConfig.String("db_type")
-	DbName = beego.AppConfig.String("db_name")
-	DbHost = beego.AppConfig.String("db_host")
-	DbUser = beego.AppConfig.String("db_user")
-	DbPass = beego.AppConfig.String("db_pass")
+	Prefix = beego.AppConfig.String("database::db_prefix")
+	DbType = beego.AppConfig.String("database::db_type")
+	DbName = beego.AppConfig.String("database::db_name")
+	DbHost = beego.AppConfig.String("database::db_host")
+	DbUser = beego.AppConfig.String("database::db_user")
+	DbPass = beego.AppConfig.String("database::db_pass")
 )
 
 func init() {

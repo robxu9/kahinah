@@ -6,6 +6,9 @@ httpaddr = 0.0.0.0
 httpport = 8080
 runmode = dev
 usefcgi = false
+;urlprefix = prefix
+
+[database]
 
 db_prefix = kh_
 db_type = sqlite3
@@ -14,14 +17,22 @@ db_host = localhost:3306
 db_user = root
 db_pass = toor
 
+[abf]
+
 abf_user = <USERNAME>
-abf_pass = <API KEY>
-abf_platforms = openmandriva2013.0;cooker
+abf_pass = <PASSWORD>
+abf_platforms = openmandriva2013.0:668
+; for multiple platforms:
+; abf_platforms = openmandriva2013.0:668;cooker:317
+
+[karma]
 
 upperkarma = 3
 lowerkarma = -3
 maintainerkarma = 3
 maintainerhours = 168
+
+[admin]
 
 whitelist = false
 adminwhitelist = robxu9@gmail.com

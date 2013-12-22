@@ -60,12 +60,12 @@
         <table class="table" id="pkgtable">
           <thead>
             <tr>
-              <th>Update ID</th>
               <th>Name</th>
               <th>Submitter</th>
               <th>Platform</th>
               <th>Repository</th>
               <th>Architecture</th>
+              <th>Type</th>
               <th>Date</th>
             </tr>
           </thead>
@@ -73,12 +73,16 @@
             {{with .Packages}}
               {{range .}}
               <tr>
-                <td><a href="/builds/{{.Id}}">{{.Id}}</a></td>
-                <td>{{.Name}}</td>
+                <td><a href="{{urldata "/builds/{{.Id}}" .}}">{{.Name}}</a></td>
                 <td>{{.Submitter.Email | emailat}}</td>
                 <td>{{.Platform}}</td>
                 <td>{{.Repo}}</td>
                 <td>{{.Architecture}}</td>
+                <td>{{if eq .Type "bugfix"}}<i class="fa fa-bug"></i>{{end}}
+                    {{if eq .Type "security"}}<i class="fa fa-shield"></i>{{end}}
+                    {{if eq .Type "enhancement"}}<i class="fa fa-gift"></i>{{end}}
+                    {{if eq .Type "recommended"}}<i class="fa fa-star-o"></i>{{end}}
+                    {{if eq .Type "newpackage"}}<i class="fa fa-plus-square-o"></i>{{end}}</td>
                 <td>{{.BuildDate | since}}</td>
               </tr>
               {{end}}
