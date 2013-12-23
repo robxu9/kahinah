@@ -17,7 +17,7 @@
             {{with .Packages}}
               {{range .}}
               <tr>
-                <td><a href="{{urldata "/builds/{{.Id}}" .}}">{{.Id}}</a></td>
+                <td><a href="{{urldata "/builds/{{.Id}}" .}}">OMV-{{.BuildDate.Year}}-{{.Id}}</a></td>
                 <td><a href="{{urldata "/builds/{{.Id}}" .}}">{{.Name}}/{{.Architecture}}</a></td>
                 <td>{{.Submitter.Email | emailat}}</td>
                 <td>{{.Platform}}/{{.Repo}}</td>

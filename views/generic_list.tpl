@@ -62,27 +62,26 @@
             <tr>
               <th>Name</th>
               <th>Submitter</th>
-              <th>Platform</th>
-              <th>Repository</th>
-              <th>Architecture</th>
+              <th>For</th>
               <th>Type</th>
+              <th>Karma</th>
               <th>Date</th>
             </tr>
           </thead>
           <tbody>
+            {{$out := .}}
             {{with .Packages}}
               {{range .}}
               <tr>
-                <td><a href="{{urldata "/builds/{{.Id}}" .}}">{{.Name}}</a></td>
+                <td><a href="{{urldata "/builds/{{.Id}}" .}}">{{.Name}}/{{.Architecture}}</a></td>
                 <td>{{.Submitter.Email | emailat}}</td>
-                <td>{{.Platform}}</td>
-                <td>{{.Repo}}</td>
-                <td>{{.Architecture}}</td>
+                <td>{{.Platform}}/{{.Repo}}</td>
                 <td>{{if eq .Type "bugfix"}}<i class="fa fa-bug"></i>{{end}}
                     {{if eq .Type "security"}}<i class="fa fa-shield"></i>{{end}}
                     {{if eq .Type "enhancement"}}<i class="fa fa-gift"></i>{{end}}
                     {{if eq .Type "recommended"}}<i class="fa fa-star-o"></i>{{end}}
                     {{if eq .Type "newpackage"}}<i class="fa fa-plus-square-o"></i>{{end}}</td>
+                <td>{{$karma := mapaccess .Id $out.PkgKarma}}<img src="{{if eq $karma "0"}}//b.repl.ca/v1/karma-{{$karma}}-yellow.png{{else}}{{if lt $karma "0"}}//b.repl.ca/v1/karma-_-{{$karma}}-orange.png{{else}}{{if gt $karma "0"}}//b.repl.ca/v1/karma-{{$karma}}-yellowgreen.png{{end}}{{end}}{{end}}" alt="{{$karma}}"></td>
                 <td>{{.BuildDate | since}}</td>
               </tr>
               {{end}}

@@ -9,6 +9,7 @@ import (
 	"github.com/robxu9/kahinah/integration"
 	"github.com/robxu9/kahinah/models"
 	"html/template"
+	"menteslibres.net/gosexy/to"
 	"net/http"
 	"strings"
 	"time"
@@ -76,6 +77,10 @@ func main() {
 
 	beego.AddFuncMap("emailat", func(s string) string {
 		return strings.Replace(s, "@", " [@T] ", -1)
+	})
+
+	beego.AddFuncMap("mapaccess", func(s interface{}, m map[string]string) string {
+		return m[to.String(s)]
 	})
 
 	beego.AddFuncMap("url", getPrefixString)

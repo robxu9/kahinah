@@ -4,6 +4,7 @@ import (
 	"github.com/astaxie/beego/orm"
 	"github.com/robxu9/kahinah/models"
 	"log"
+	"menteslibres.net/gosexy/to"
 	"sort"
 )
 
@@ -35,8 +36,27 @@ func (this *TestingController) Get() {
 		this.Abort("500")
 	}
 
+	pkgkarma := make(map[string]string)
+
 	for _, v := range packages {
 		o.LoadRelated(v, "Submitter")
+		o.LoadRelated(v, "Karma")
+
+		totalKarma := 0
+
+		for _, karma := range v.Karma {
+			if karma.Vote == models.KARMA_UP {
+				totalKarma++
+			} else if karma.Vote == models.KARMA_DOWN {
+				totalKarma--
+			} else if karma.Vote == models.KARMA_MAINTAINER {
+				totalKarma += int(maintainer_karma)
+			} else if karma.Vote == models.KARMA_BLOCK {
+				totalKarma -= int(block_karma)
+			}
+		}
+
+		pkgkarma[to.String(v.Id)] = to.String(totalKarma)
 	}
 
 	sort.Sort(ByBuildDate(packages))
@@ -44,6 +64,7 @@ func (this *TestingController) Get() {
 	this.Data["Title"] = "Testing"
 	this.Data["Tab"] = 1
 	this.Data["Packages"] = packages
+	this.Data["PkgKarma"] = pkgkarma
 	this.Data["Entries"] = num
 	this.TplNames = "generic_list.tpl"
 }
