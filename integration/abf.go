@@ -339,7 +339,7 @@ func (a ABF) getBuildList(id uint64) (*models.BuildList, error) {
 	bl := models.BuildList{
 		HandleId:      to.String(dig.Uint64(&list, "id")),
 		HandleProject: dig.String(&list, "project", "fullname"),
-		Diff:          a.getDiff(dig.String(&list, "project", "git_url"), dig.String(&list, "last_published_commit_hash"), dig.String("commit_hash")),
+		Diff:          a.getDiff(dig.String(&list, "project", "git_url"), dig.String(&list, "last_published_commit_hash"), dig.String(&list, "commit_hash")),
 
 		//Platform:     dig.String(&list, "build_for_platform", "name"),
 		Platform:     dig.String(&list, "save_to_repository", "platform", "name"),
@@ -372,15 +372,27 @@ func (a ABF) getDiff(gitUrl, fromHash, toHash string) string {
 		return "Repository could not be cloned for diff: " + gitresult.Error()
 	}
 
-	gitdiffcmd := exec.Command("git", "diff", "--patch-with-stat", "--summary", fromHash+".."+toHash)
-	gitdiffcmd.Dir = tmpdir
+	if fromHash == "" {
+		gitdiffcmd := exec.Command("git", "show", "--format=fuller", "--patch-with-stat", "--summary", toHash)
+		gitdiffcmd.Dir = tmpdir
 
-	gitdiff, err := gitdiffcmd.Output()
-	if err != nil {
-		return "No diff available: " + err.Error()
+		gitdiff, err := gitdiffcmd.Output()
+		if err != nil {
+			return "No diff available: " + err.Error()
+		}
+
+		return fmt.Sprintf("$ git show --format=fuller --patch-with-stat --summary %s\n\n%s", toHash, string(gitdiff))
+	} else {
+		gitdiffcmd := exec.Command("git", "diff", "--patch-with-stat", "--summary", fromHash+".."+toHash)
+		gitdiffcmd.Dir = tmpdir
+
+		gitdiff, err := gitdiffcmd.Output()
+		if err != nil {
+			return "No diff available: " + err.Error()
+		}
+
+		return fmt.Sprintf("$ git diff --patch-with-stat --summary %s\n\n%s", fromHash+".."+toHash, string(gitdiff))
 	}
-
-	return fmt.Sprintf("$ git diff --patch-with-stat --summary %s..%s\n\n%s", fromHash, toHash, string(gitdiff))
 }
 
 func (a ABF) getUser(id uint64) *models.User {

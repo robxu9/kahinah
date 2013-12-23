@@ -81,7 +81,7 @@
                     {{if eq .Type "enhancement"}}<i class="fa fa-gift"></i>{{end}}
                     {{if eq .Type "recommended"}}<i class="fa fa-star-o"></i>{{end}}
                     {{if eq .Type "newpackage"}}<i class="fa fa-plus-square-o"></i>{{end}}</td>
-                <td>{{$karma := mapaccess .Id $out.PkgKarma}}<img src="{{if eq $karma "0"}}//b.repl.ca/v1/karma-{{$karma}}-yellow.png{{else}}{{if lt $karma "0"}}//b.repl.ca/v1/karma-_-{{$karma}}-orange.png{{else}}{{if gt $karma "0"}}//b.repl.ca/v1/karma-{{$karma}}-yellowgreen.png{{end}}{{end}}{{end}}" alt="{{$karma}}"></td>
+                <td>{{$karma := mapaccess .Id $out.PkgKarma}}<img src="{{if eq $karma "0"}}//b.repl.ca/v1/karma-_{{$karma}}-yellow.png{{else}}{{if lt $karma "0"}}//b.repl.ca/v1/karma-_-{{$karma}}-orange.png{{else}}{{if gt $karma "0"}}//b.repl.ca/v1/karma-_{{$karma}}-yellowgreen.png{{end}}{{end}}{{end}}" alt="{{$karma}}"></td>
                 <td>{{.BuildDate | since}}</td>
               </tr>
               {{end}}
