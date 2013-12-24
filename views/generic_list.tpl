@@ -1,63 +1,51 @@
 {{template "header.tpl" .}}
 
-      <link type="text/css" rel="stylesheet" href="//cdn.jsdelivr.net/tablesorter/2.13.3/addons/pager/jquery.tablesorter.pager.css" />
-      <script type="text/javascript" src="//cdn.jsdelivr.net/tablesorter/2.13.3/addons/pager/jquery.tablesorter.pager.js"></script>
-      <script type="text/javascript" src="//cdn.jsdelivr.net/tablesorter/2.13.3/addons/pager/jquery.tablesorter.pager.min.js"></script>
-      <link type="text/css" rel="stylesheet" href="//cdn.jsdelivr.net/tablesorter/2.13.3/css/filter.formatter.css" />
-      <link type="text/css" rel="stylesheet" href="//cdn.jsdelivr.net/tablesorter/2.13.3/css/theme.black-ice.css" />
-      <link type="text/css" rel="stylesheet" href="//cdn.jsdelivr.net/tablesorter/2.13.3/css/theme.blue.css" />
-      <link type="text/css" rel="stylesheet" href="//cdn.jsdelivr.net/tablesorter/2.13.3/css/theme.bootstrap.css" />
-      <link type="text/css" rel="stylesheet" href="//cdn.jsdelivr.net/tablesorter/2.13.3/css/theme.dark.css" />
-      <link type="text/css" rel="stylesheet" href="//cdn.jsdelivr.net/tablesorter/2.13.3/css/theme.default.css" />
-      <link type="text/css" rel="stylesheet" href="//cdn.jsdelivr.net/tablesorter/2.13.3/css/theme.dropbox.css" />
-      <link type="text/css" rel="stylesheet" href="//cdn.jsdelivr.net/tablesorter/2.13.3/css/theme.green.css" />
-      <link type="text/css" rel="stylesheet" href="//cdn.jsdelivr.net/tablesorter/2.13.3/css/theme.grey.css" />
-      <link type="text/css" rel="stylesheet" href="//cdn.jsdelivr.net/tablesorter/2.13.3/css/theme.ice.css" />
-      <link type="text/css" rel="stylesheet" href="//cdn.jsdelivr.net/tablesorter/2.13.3/css/theme.jui.css" />
-      <script type="text/javascript" src="//cdn.jsdelivr.net/tablesorter/2.13.3/js/jquery.metadata.js"></script>
-      <script type="text/javascript" src="//cdn.jsdelivr.net/tablesorter/2.13.3/js/jquery.tablesorter.js"></script>
-      <script type="text/javascript" src="//cdn.jsdelivr.net/tablesorter/2.13.3/js/jquery.tablesorter.min.js"></script>
-      <script type="text/javascript" src="//cdn.jsdelivr.net/tablesorter/2.13.3/js/jquery.tablesorter.widgets-filter-formatter.js"></script>
-      <script type="text/javascript" src="//cdn.jsdelivr.net/tablesorter/2.13.3/js/jquery.tablesorter.widgets-filter-formatter.min.js"></script>
-      <script type="text/javascript" src="//cdn.jsdelivr.net/tablesorter/2.13.3/js/jquery.tablesorter.widgets.js"></script>
-      <script type="text/javascript" src="//cdn.jsdelivr.net/tablesorter/2.13.3/js/jquery.tablesorter.widgets.min.js"></script>
-      <script type="text/javascript" src="//cdn.jsdelivr.net/tablesorter/2.13.3/js/parsers/parser-date-iso8601.js"></script>
-      <script type="text/javascript" src="//cdn.jsdelivr.net/tablesorter/2.13.3/js/parsers/parser-date-month.js"></script>
-      <script type="text/javascript" src="//cdn.jsdelivr.net/tablesorter/2.13.3/js/parsers/parser-date-two-digit-year.js"></script>
-      <script type="text/javascript" src="//cdn.jsdelivr.net/tablesorter/2.13.3/js/parsers/parser-date-weekday.js"></script>
-      <script type="text/javascript" src="//cdn.jsdelivr.net/tablesorter/2.13.3/js/parsers/parser-date.js"></script>
-      <script type="text/javascript" src="//cdn.jsdelivr.net/tablesorter/2.13.3/js/parsers/parser-feet-inch-fraction.js"></script>
-      <script type="text/javascript" src="//cdn.jsdelivr.net/tablesorter/2.13.3/js/parsers/parser-file-type.js"></script>
-      <script type="text/javascript" src="//cdn.jsdelivr.net/tablesorter/2.13.3/js/parsers/parser-ignore-articles.js"></script>
-      <script type="text/javascript" src="//cdn.jsdelivr.net/tablesorter/2.13.3/js/parsers/parser-input-select.js"></script>
-      <script type="text/javascript" src="//cdn.jsdelivr.net/tablesorter/2.13.3/js/parsers/parser-ipv6.js"></script>
-      <script type="text/javascript" src="//cdn.jsdelivr.net/tablesorter/2.13.3/js/parsers/parser-metric.js"></script>
-      <script type="text/javascript" src="//cdn.jsdelivr.net/tablesorter/2.13.3/js/widgets/widget-build-table.js"></script>
-      <script type="text/javascript" src="//cdn.jsdelivr.net/tablesorter/2.13.3/js/widgets/widget-editable.js"></script>
-      <script type="text/javascript" src="//cdn.jsdelivr.net/tablesorter/2.13.3/js/widgets/widget-grouping.js"></script>
-      <script type="text/javascript" src="//cdn.jsdelivr.net/tablesorter/2.13.3/js/widgets/widget-pager.js"></script>
-      <script type="text/javascript" src="//cdn.jsdelivr.net/tablesorter/2.13.3/js/widgets/widget-repeatheaders.js"></script>
-      <script type="text/javascript" src="//cdn.jsdelivr.net/tablesorter/2.13.3/js/widgets/widget-scroller.js"></script>
+      <link rel="stylesheet" href="{{url "/static/css/theme.bootstrap.css"}}">
 
-      <link type="text/css" rel="stylesheet" href="//cdn.jsdelivr.net/jquery.tablecloth/1.0.0/css/bootstrap-tables.css" />
-      <link type="text/css" rel="stylesheet" href="//cdn.jsdelivr.net/jquery.tablecloth/1.0.0/css/tablecloth.css" />
-      <script type="text/javascript" src="//cdn.jsdelivr.net/jquery.tablecloth/1.0.0/js/jquery.tablecloth.js"></script>
+      <script type="text/javascript" src="{{url "/static/js/jquery.tablesorter.min.js"}}"></script>
+      <script type="text/javascript" src="{{url "/static/js/jquery.tablesorter.pager.min.js"}}"></script>
+      <script type="text/javascript" src="{{url "/static/js/jquery.tablesorter.widgets.min.js"}}"></script>
 
       <script>
         // With customizations
         $(document).ready(function() { 
-          $("#pkgtable").tablecloth({
-            sortable: true,
-            clean: true,
-            cleanElements: "th td",
+          $.extend($.tablesorter.themes.bootstrap, {
+            // these classes are added to the table. To see other table classes available,
+            // look here: http://twitter.github.com/bootstrap/base-css.html#tables
+            table      : 'table table-bordered',
+            caption    : 'caption',
+            header     : 'bootstrap-header', // give the header a gradient background
+            footerRow  : '',
+            footerCells: '',
+            icons      : '', // add "icon-white" to make them white; this icon class is added to the <i> in the header
+            sortNone   : 'bootstrap-icon-unsorted',
+            sortAsc    : 'icon-chevron-up glyphicon glyphicon-chevron-up',     // includes classes for Bootstrap v2 & v3
+            sortDesc   : 'icon-chevron-down glyphicon glyphicon-chevron-down', // includes classes for Bootstrap v2 & v3
+            active     : '', // applied when column is sorted
+            hover      : '', // use custom css here - bootstrap class may not override it
+            filterRow  : '', // filter row class
+            even       : '', // odd row zebra striping
+            odd        : ''  // even row zebra striping
+          });
+
+          $("#pkgtable").tablesorter({
+            theme: "bootstrap",
+            headerTemplate: "{content} {icon}",
+            widgets: ["uitheme", "filter", "zebra"],
+            textExtraction: {
+              3: function(node, table, cellIndex) {
+                return $(node).find("div").text();
+              },
+              4: function(node, table, cellIndex) {
+                return $(node).find("img").attr("alt");
+              },
+            },
           });
         });
       </script>
 
       <div class="row table-responsive">
-        <br/>
-        <center><span class="label label-default">{{.Entries}} {{if eq .Entries 1}}entry{{else}}entries returned.{{end}}</span></center>
-        <table class="table" id="pkgtable">
+        <table class="table tablesorter" id="pkgtable">
           <thead>
             <tr>
               <th>Name</th>
@@ -65,7 +53,7 @@
               <th>For</th>
               <th>Type</th>
               <th>Karma</th>
-              <th>Date</th>
+              <th>Build Date</th>
             </tr>
           </thead>
           <tbody>
@@ -80,8 +68,8 @@
                     {{if eq .Type "security"}}<i class="fa fa-shield"></i>{{end}}
                     {{if eq .Type "enhancement"}}<i class="fa fa-gift"></i>{{end}}
                     {{if eq .Type "recommended"}}<i class="fa fa-star-o"></i>{{end}}
-                    {{if eq .Type "newpackage"}}<i class="fa fa-plus-square-o"></i>{{end}}</td>
-                <td>{{$karma := mapaccess .Id $out.PkgKarma}}<img src="{{if eq $karma "0"}}//b.repl.ca/v1/karma-_{{$karma}}-yellow.png{{else}}{{if lt $karma "0"}}//b.repl.ca/v1/karma-_-{{$karma}}-orange.png{{else}}{{if gt $karma "0"}}//b.repl.ca/v1/karma-_{{$karma}}-yellowgreen.png{{end}}{{end}}{{end}}" alt="{{$karma}}"></td>
+                    {{if eq .Type "newpackage"}}<i class="fa fa-plus-square-o"></i>{{end}}<div style="display: none;">{{.Type}}</div></td>
+                <td>{{$karma := mapaccess .Id $out.PkgKarma}}<img src="{{if eq $karma "0"}}//b.repl.ca/v1/karma-   {{$karma}}-yellow.png{{else}}{{if lt $karma "0"}}//b.repl.ca/v1/karma-  -{{$karma}}-orange.png{{else}}{{if gt $karma "0"}}//b.repl.ca/v1/karma- +{{$karma}}-yellowgreen.png{{end}}{{end}}{{end}}" alt="{{$karma}}"></td>
                 <td>{{.BuildDate | since}}</td>
               </tr>
               {{end}}

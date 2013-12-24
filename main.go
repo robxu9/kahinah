@@ -136,6 +136,10 @@ func getPrefixStringWithData(dest string, data interface{}) string {
 }
 
 func getPrefixString(dest string) string {
+	if PREFIX == "" {
+		return dest
+	}
+
 	return "/" + PREFIX + dest
 }
 
