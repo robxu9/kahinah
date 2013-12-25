@@ -26,6 +26,7 @@ func (this *SearchController) Get() {
 // call with /path/to/search/:{page+1}?{filterList:filter}&{sortList:sort}&size={size}
 func (this *SearchController) JsonGet() {
 	page := to.Uint64(this.Ctx.Input.Param(":page"))
+    _ = page
 
 	var packages []*models.BuildList
 

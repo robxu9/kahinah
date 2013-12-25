@@ -39,7 +39,7 @@ func (this *PublishedController) Get() {
 		page = totalpages
 	}
 
-	_, err = qt.Limit(50, (page-1)*50).Filter("status", models.STATUS_PUBLISHED).All(&packages)
+	_, err = qt.Limit(50, (page-1)*50).OrderBy("-Updated").Filter("status", models.STATUS_PUBLISHED).All(&packages)
 	if err != nil && err != orm.ErrNoRows {
 		log.Println(err)
 		this.Abort("500")
