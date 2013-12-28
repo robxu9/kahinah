@@ -122,7 +122,7 @@ func (this *BuildController) Get() {
 
 	// karma controls
 	totalKarma := 0
-	votes := make(map[string]bool)
+	votes := make(map[*models.Karma]int)
 
 	o.LoadRelated(&pkg, "Submitter")
 	o.LoadRelated(&pkg, "Karma")
@@ -132,22 +132,27 @@ func (this *BuildController) Get() {
 		o.LoadRelated(karma, "User")
 		if karma.Vote == models.KARMA_UP {
 			totalKarma++
-			votes[karma.User.Email] = true
+			votes[karma] = 1
 		} else if karma.Vote == models.KARMA_DOWN {
 			totalKarma--
-			votes[karma.User.Email] = false
+			votes[karma] = 2
 		} else if karma.Vote == models.KARMA_MAINTAINER {
 			totalKarma += int(maintainer_karma)
-			votes[karma.User.Email] = true
+			votes[karma] = 1
 		} else if karma.Vote == models.KARMA_BLOCK {
 			totalKarma -= int(block_karma)
-			votes[karma.User.Email] = false
+			votes[karma] = 2
+		} else if karma.Vote == models.KARMA_NONE {
+			if karma.Comment != "" {
+				votes[karma] = 0
+			}
 		}
 	}
 
 	this.Data["Votes"] = votes
 	this.Data["Karma"] = totalKarma
 
+	this.Data["UserVote"] = 0
 	user := models.IsLoggedIn(&this.Controller)
 	if user != "" {
 		kt := o.QueryTable(new(models.Karma))
@@ -157,12 +162,14 @@ func (this *BuildController) Get() {
 			log.Println(err)
 		} else if err == nil {
 			if userkarma.Vote == models.KARMA_UP {
-				this.Data["KarmaUpYes"] = true
+				this.Data["UserVote"] = 1
 			} else if userkarma.Vote == models.KARMA_MAINTAINER {
-				this.Data["KarmaMaintainerYes"] = true
-			} else {
-				this.Data["KarmaDownYes"] = true
+				this.Data["UserVote"] = 2
+			} else if userkarma.Vote == models.KARMA_DOWN {
+				this.Data["UserVote"] = -1
 			}
+
+			this.Data["KarmaCommentPrev"] = userkarma.Comment
 		}
 
 		if models.PermCheck(&this.Controller, PERMISSION_QA) {
@@ -179,8 +186,9 @@ func (this *BuildController) Get() {
 		if user != "" {
 			this.Data["KarmaControls"] = true
 			if pkg.Submitter != nil && pkg.Submitter.Email == user {
+				this.Data["MaintainerControls"] = true
 				if time.Since(pkg.BuildDate).Hours() >= float64(maintainer_hours) {
-					this.Data["MaintainerControls"] = true
+					this.Data["MaintainerTime"] = true
 				}
 			}
 		}
@@ -199,9 +207,11 @@ func (this *BuildController) Post() {
 	id := to.Uint64(this.Ctx.Input.Param(":id"))
 
 	postType := this.GetString("type")
-	if postType != "Up" && postType != "Down" && postType != "Maintainer" && postType != "QABlock" {
+	if postType != "Neutral" && postType != "Up" && postType != "Down" && postType != "Maintainer" && postType != "QABlock" {
 		this.Abort("400")
 	}
+
+	comment := this.GetString("comment")
 
 	user := models.IsLoggedIn(&this.Controller)
 	if user == "" {
@@ -255,34 +265,18 @@ func (this *BuildController) Post() {
 		log.Println(err)
 	} else if err == nil { // already has entry
 		if postType == "Up" {
-			if userkarma.Vote == models.KARMA_UP {
-				o.Delete(&userkarma)
-			} else {
-				userkarma.Vote = models.KARMA_UP
-				o.Update(&userkarma)
-			}
+			userkarma.Vote = models.KARMA_UP
 		} else if postType == "Maintainer" {
-			if userkarma.Vote == models.KARMA_MAINTAINER {
-				o.Delete(&userkarma)
-			} else {
-				userkarma.Vote = models.KARMA_MAINTAINER
-				o.Update(&userkarma)
-			}
+			userkarma.Vote = models.KARMA_MAINTAINER
 		} else if postType == "QABlock" {
-			if userkarma.Vote == models.KARMA_BLOCK {
-				o.Delete(&userkarma)
-			} else {
-				userkarma.Vote = models.KARMA_BLOCK
-				o.Update(&userkarma)
-			}
+			userkarma.Vote = models.KARMA_BLOCK
+		} else if postType == "Neutral" {
+			userkarma.Vote = models.KARMA_NONE
 		} else {
-			if userkarma.Vote == models.KARMA_DOWN {
-				o.Delete(&userkarma)
-			} else {
-				userkarma.Vote = models.KARMA_DOWN
-				o.Update(&userkarma)
-			}
+			userkarma.Vote = models.KARMA_DOWN
 		}
+		userkarma.Comment = comment
+		o.Update(&userkarma)
 	} else {
 		userkarma.List = &pkg
 		userkarma.User = models.FindUser(user)
@@ -292,9 +286,12 @@ func (this *BuildController) Post() {
 			userkarma.Vote = models.KARMA_MAINTAINER
 		} else if postType == "QABlock" {
 			userkarma.Vote = models.KARMA_BLOCK
+		} else if postType == "Neutral" {
+			userkarma.Vote = models.KARMA_NONE
 		} else {
 			userkarma.Vote = models.KARMA_DOWN
 		}
+		userkarma.Comment = comment
 		o.Insert(&userkarma)
 	}
 

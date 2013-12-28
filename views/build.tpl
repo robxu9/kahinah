@@ -45,7 +45,7 @@
           {{if eq .Package.Status "published"}}<div class="panel panel-success">{{else}}
           <div class="panel panel-primary">{{end}}{{end}}{{end}}
             <div class="panel-heading">
-              <h1>{{.Package.Name}} <small>[{{.Package.Architecture}}] OMV-{{.Package.BuildDate.Year}}-{{.Package.Id}}</small><div class="pull-right">{{if .KarmaControls}}<a href="#" class="btn" onclick="postUp()"><i class="fa fa-3x {{if .KarmaUpYes}}fa-thumbs-up{{else}}fa-thumbs-o-up{{end}}"></i></a>{{end}} {{.Karma}} {{if .KarmaControls}}<a href="#" class="btn" onclick="postDown()"><i class="fa fa-3x {{if .KarmaDownYes}}fa-thumbs-down{{else}}fa-thumbs-o-down{{end}}"></i></a>{{if .MaintainerControls}}<a href="#" class="btn" onclick="postMaintainer()"><i class="fa fa-3x {{if .KarmaMaintainerYes}}fa-check-square{{else}}fa-check-square-o{{end}}"></i></a>{{end}}{{if .QAControls}}<a href="#" id="qabtn" title="Instant Reject - WARNING - UNREVERSABLE and -9999 karma!" class="btn" onclick="postQA()"><i class="fa fa-3x fa-sort-amount-desc"></i></a>{{end}}{{end}}</div></h1>
+              <h1>{{.Package.Name}} <small>[{{.Package.Architecture}}] OMV-{{.Package.BuildDate.Year}}-{{.Package.Id}}</small><div class="pull-right">{{.Karma}} {{if .KarmaControls}}<a href="#" class="btn" data-toggle="modal" data-target="#voteModal"><i class="fa fa-3x {{if .UserVote}}fa-check-square-o{{else}}fa-pencil-square-o{{end}}"></i></a>{{end}}</div></h1>
             </div>
             <table class="table table-condensed">
               <tbody>
@@ -145,7 +145,7 @@
               <table class="table table-condensed table-responsive table-bordered">
                 {{with .Votes}}
                   {{range $key, $value := .}}
-                <tr class="{{if $value}}success{{else}}danger{{end}}"><td>{{$key | emailat}}</td></tr>
+                <tr class="{{if eq $value 1}}success{{end}}{{if eq $value 2}}danger{{end}}"><td>{{$key.User.Email | emailat}}</td><td>{{if $key.Comment}}{{$key.Comment}}{{else}}<em>No Comment.</em>{{end}}</td></tr>
                   {{end}}
                 {{end}}
               </table>
@@ -157,6 +157,68 @@
 
         </div>
       </div>
+
+      <!-- Vote Modal -->
+
+      <div class="modal fade" id="voteModal" tabindex="-1" role="dialog">
+        <div class="modal-dialog">
+          <center>
+            <div class="modal-content">
+              <form class="form-inline" role="form" method="post">
+                {{ .xsrf_data }}
+                <div class="modal-header">
+                  <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                  <h4 class="modal-title" id="Vote Modal">Cast Opinion</h4>
+                </div>
+                <div class="modal-body">
+                  <div class="btn-group" data-toggle="buttons">
+                    <label class="btn btn-default {{if eq .UserVote 0}}active{{end}}">
+                      <input type="radio" name="type" value="Neutral" {{if eq .UserVote 0}}checked{{end}}><i class="fa fa-lg fa-meh-o"></i> No Vote
+                    </label>
+                    <label class="btn btn-danger {{if eq .UserVote -1}}active{{end}}">
+                      <input type="radio" name="type" value="Down" {{if eq .UserVote -1}}checked{{end}}><i class="fa fa-lg fa-frown-o"></i> Reject
+                    </label>
+                    <label class="btn btn-success {{if eq .UserVote 1}}active{{end}}">
+                      <input type="radio" name="type" value="Up" {{if eq .UserVote 1}}checked{{end}}><i class="fa fa-lg fa-smile-o"></i> Accept
+                    </label>
+                    {{if .MaintainerControls}}
+                    <label class="btn btn-primary {{if eq .UserVote 2}}active{{end}}" {{if not .MaintainerTime}}disabled="disabled"{{end}}>
+                      {{if .MaintainerTime}}<input type="radio" name="type" value="Maintainer" {{if eq .UserVote 2}}checked{{end}}>{{end}}<i class="fa fa-lg fa-thumbs-o-up"></i> Maintainer Accept
+                    </label>
+                    {{end}}
+                    {{if .QAControls}}
+                    <label class="btn btn-warning">
+                      <input type="radio" name="type" id="voteQA" value="QABlock"><i class="fa fa-lg fa-thumbs-o-down"></i> QA Block
+                    </label>
+                    {{end}}
+                  </div>
+                </div>
+                <div id="voteModalAlertPlaceholder"></div>
+                <div class="modal-body">
+                  <div class="input-group">
+                    <span class="input-group-addon"><i class="fa fa-lg fa-comment-o"></i> Comment</span>
+                    <input type="text" class="form-control" name="comment" placeholder="It's recommended to say something." {{if .KarmaCommentPrev}}value="{{.KarmaCommentPrev}}"{{end}}>
+                  </div>
+                </div>
+                <div class="modal-footer">
+                  <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                  <button type="submit" type="button" class="btn btn-primary">Submit</button>
+                </div>
+              </form>
+            </div>
+          </center>
+        </div>
+      </div>
+
+      <script>
+        $("input").change(function() {
+          if ($("#voteQA").is(':checked')) {
+            $('#voteModalAlertPlaceholder').html('<div class="alert alert-danger"><b>Head\'s up!</b> This adds -9999 karma and is <b>UNREVERSABLE</b>!</div>');
+          } else {
+            $('#voteModalAlertPlaceholder').html('')
+          }
+        }).change();
+      </script>
 
       <link href="http://alexgorbatchev.com/pub/sh/current/styles/shCore.css" rel="stylesheet" type="text/css" />
       <link href="http://alexgorbatchev.com/pub/sh/current/styles/shThemeDefault.css" rel="stylesheet" type="text/css" />
