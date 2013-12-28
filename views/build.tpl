@@ -1,42 +1,5 @@
 {{template "header.tpl" .}}
 
-      {{if .KarmaControls}}<script src="/static/js/post.js"></script>
-      <script>
-        function postUp() {
-          var params = new Array();
-          params['type'] = "Up";
-          params['_xsrf'] = "{{.xsrf_token}}";
-          post_to_url(window.location.href, params, "POST");
-        }
-
-        function postDown() {
-          var params = new Array();
-          params['type'] = "Down";
-          params['_xsrf'] = "{{.xsrf_token}}";
-          post_to_url(window.location.href, params, "POST");
-        }
-
-        {{if .MaintainerControls}}
-        function postMaintainer() {
-          var params = new Array();
-          params['type'] = "Maintainer";
-          params['_xsrf'] = "{{.xsrf_token}}";
-          post_to_url(window.location.href, params, "POST");
-        }
-        {{end}}
-
-        {{if .QAControls}}
-        function postQA() {
-          if (confirm("This is irreversible! Are you sure you want to block with -9999 karma?")) {
-            var params = new Array();
-            params['type'] = "QABlock";
-            params['_xsrf'] = "{{.xsrf_token}}";
-            post_to_url(window.location.href, params, "POST");
-          }
-        }
-        {{end}}
-      </script>{{end}}
-
       <div class="row">
         <div class="col-md-10 col-md-offset-1">
           <br/>
