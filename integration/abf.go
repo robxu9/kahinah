@@ -205,6 +205,10 @@ func (a ABF) PingParams(m map[string]string) error {
 	return fmt.Errorf("abf: PingParams not supported yet.")
 }
 
+func (a ABF) Commits(m *models.BuildList) string {
+	return "https://abf.io/" + m.HandleProject + "/commits/" + m.Platform
+}
+
 func (a ABF) Url(m *models.BuildList) string {
 	return "https://abf.io/build_lists/" + m.HandleId
 }

@@ -72,7 +72,7 @@
         <div class="col-md-10 col-md-offset-1">
 
           <div class="panel panel-info">
-            <div class="panel-heading"><button class="btn btn-info" data-toggle="collapse" href="#diff">Git Diff</button></div>
+            <div class="panel-heading"><button class="btn btn-info" data-toggle="collapse" href="#diff">Git Diff</button><div class="pull-right"><a href="{{.Commits}}" class="btn btn-default">Commits</a></div></div>
             <div id="diff" class="panel-collapse collapse">
               <pre class="brush: diff">{{.Package.Diff}}</pre>
             </div>
@@ -146,7 +146,7 @@
                     </label>
                     {{if .MaintainerControls}}
                     <label class="btn btn-primary {{if eq .UserVote 2}}active{{end}}" {{if not .MaintainerTime}}disabled="disabled"{{end}}>
-                      {{if .MaintainerTime}}<input type="radio" name="type" value="Maintainer" {{if eq .UserVote 2}}checked{{end}}>{{end}}<i class="fa fa-lg fa-thumbs-o-up"></i> Maintainer Accept
+                      {{if .MaintainerTime}}<input type="radio" name="type" value="Maintainer" {{if eq .UserVote 2}}checked{{end}}>{{end}}<i class="fa fa-lg fa-thumbs-o-up"></i> Maintainer Push
                     </label>
                     {{end}}
                     {{if .QAControls}}
@@ -156,6 +156,9 @@
                     {{end}}
                   </div>
                 </div>
+                {{if .MaintainerControls}}{{if not .MaintainerTime}}
+                <div class="alert alert-info"><b>This is your update!</b> Unfortunately, you need to wait {{.MaintainerHoursNeeded}} hours since the Build Date until you can activate Maintainer Push.</div>
+                {{else}}<div class="alert alert-info"><b>This is your update!</b> You can activate Maintainer Push now.</div>{{end}}{{end}}
                 <div id="voteModalAlertPlaceholder"></div>
                 <div class="modal-body">
                   <div class="input-group">

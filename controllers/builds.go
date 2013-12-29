@@ -118,6 +118,8 @@ func (this *BuildController) Get() {
 		}
 	}
 
+	this.Data["Commits"] = integration.Commits(&pkg)
+
 	this.Data["Url"] = integration.Url(&pkg)
 
 	// karma controls
@@ -189,6 +191,7 @@ func (this *BuildController) Get() {
 				this.Data["MaintainerControls"] = true
 				if time.Since(pkg.BuildDate).Hours() >= float64(maintainer_hours) {
 					this.Data["MaintainerTime"] = true
+					this.Data["MaintainerHoursNeeded"] = maintainer_hours
 				}
 			}
 		}

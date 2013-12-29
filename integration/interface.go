@@ -10,6 +10,8 @@ type Integration interface {
 	Ping() error
 	// Check for new packages to add to the buildsystem, with parameters
 	PingParams(map[string]string) error
+	// Retrieve the url of the buildlist commit page
+	Commits(*models.BuildList) string
 	// Retrieve the url of the corresponding buildlist
 	Url(*models.BuildList) string
 	// Publish the buildlist
@@ -40,6 +42,10 @@ func PingParams(m map[string]string) {
 			log.Printf("Error pinging integrator with parameters: %s\n", err)
 		}
 	}()
+}
+
+func Commits(m *models.BuildList) string {
+	return handler.Commits(m)
 }
 
 func Url(m *models.BuildList) string {
