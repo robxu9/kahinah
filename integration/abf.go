@@ -371,6 +371,10 @@ func (a ABF) getDiff(gitUrl, fromHash, toHash string) string {
 
 	defer os.RemoveAll(tmpdir)
 
+	if strings.Contains(gitUrl, "@") {
+		gitUrl = gitUrl[:strings.Index(gitUrl, "//")+2] + gitUrl[strings.Index(gitUrl, "@")+1:]
+	}
+
 	gitresult := exec.Command("git", "clone", gitUrl, tmpdir).Run()
 	if gitresult != nil { // git better exit with status zero
 		return "Repository could not be cloned for diff: " + gitresult.Error()
