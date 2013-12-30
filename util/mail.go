@@ -102,7 +102,7 @@ func ourMail(addr string, a smtp.Auth, from string, to []string, msg []byte) err
 	//	return err
 	//}
 	if ok, _ := c.Extension("STARTTLS"); ok {
-		if err = c.StartTLS(&tls.Config{InsecureSkipVerify: mail_verify}); err != nil {
+		if err = c.StartTLS(&tls.Config{InsecureSkipVerify: !mail_verify}); err != nil {
 			return err
 		}
 	}
