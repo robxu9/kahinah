@@ -128,6 +128,8 @@ func (a ABF) pingBuildCompleted(platformId string) error {
 				listpkg.List = list
 				o.Insert(listpkg)
 			}
+
+			go util.MailModel(list)
 		}
 	}
 
@@ -195,6 +197,8 @@ func (a ABF) pingTestingBuilds(platformId string) error {
 				listpkg.List = list
 				o.Insert(listpkg)
 			}
+
+			go util.MailModel(list)
 		}
 	}
 
@@ -214,6 +218,8 @@ func (a ABF) Url(m *models.BuildList) string {
 }
 
 func (a ABF) Publish(m *models.BuildList) error {
+	go util.MailModel(m)
+
 	id := to.Uint64(m.HandleId)
 	req, err := http.NewRequest("PUT", ABF_URL+"/build_lists/"+to.String(id)+"/publish.json", nil)
 	if err != nil {
@@ -233,6 +239,8 @@ func (a ABF) Publish(m *models.BuildList) error {
 }
 
 func (a ABF) Reject(m *models.BuildList) error {
+	go util.MailModel(m)
+
 	id := to.Uint64(m.HandleId)
 	req, err := http.NewRequest("PUT", ABF_URL+"/build_lists/"+to.String(id)+"/reject_publish.json", nil)
 	if err != nil {

@@ -2,6 +2,12 @@
 ; Sadly, it's not named as .ini but it'll do for now.
 
 appname = kahinah
+; outwardloc represents the outside view of the application,
+; and defines all definite links that Kahinah generates.
+; e.g. http://something.com or https://example.org:29931
+; [you may exclude the url prefix since it is defined below]
+; (THIS MUST BE CORRECT FOR PERSONA TO OPERATE)
+outwardloc = http://localhost:8080
 httpaddr = 0.0.0.0
 httpport = 8080
 runmode = dev
@@ -9,7 +15,6 @@ usefcgi = false
 ;urlprefix = prefix
 
 [database]
-
 db_prefix = kh_
 db_type = sqlite3
 db_name = data.sqlite
@@ -18,7 +23,6 @@ db_user = root
 db_pass = toor
 
 [abf]
-
 abf_user = <USERNAME>
 abf_pass = <PASSWORD>
 abf_platforms = openmandriva2013.0:668
@@ -26,14 +30,33 @@ abf_platforms = openmandriva2013.0:668
 ; abf_platforms = openmandriva2013.0:668;cooker:317
 
 [karma]
-
 upperkarma = 3
 lowerkarma = -3
 maintainerkarma = 3
 maintainerhours = 168
 
 [admin]
-
 whitelist = false
 adminwhitelist = robxu9@gmail.com
 requireqa = true
+
+[mail]
+enabled = false
+
+; standard smtp information
+smtp_user = me@example.com
+smtp_pass = myPassword
+; smtp_domain is the domain for the user.
+; if left blank, it defaults to the user domain (if provided)
+; or blank entirely
+smtp_domain = example.com
+; smtp_host is the location of the mailserver. port is required.
+smtp_host = mail.example.com:25
+; smtp_email varies by provider.
+; e.g. for Gmail, it is ignored unless you have
+; multiple outbound emails configured.
+smtp_email = me@example.com
+
+; smtp_to is the email used for sending system notifications,
+; such as the addition of testing builds and/or their results
+to = mailing_list@example.com

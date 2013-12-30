@@ -10,6 +10,10 @@ import (
 	"net/url"
 )
 
+var (
+	outwardUrl = beego.AppConfig.String("outwardloc")
+)
+
 func IsLoggedIn(controller *beego.Controller) string {
 	session := controller.GetSession("persona")
 	if session == nil {
@@ -64,7 +68,7 @@ func (this *PersonaLoginController) Post() {
 		this.Abort("400")
 	}
 
-	data := url.Values{"assertion": {assertion}, "audience": {this.Ctx.Request.Host}}
+	data := url.Values{"assertion": {assertion}, "audience": {outwardUrl}}
 
 	resp, err := http.PostForm("https://verifier.login.persona.org/verify", data)
 	if err != nil {
