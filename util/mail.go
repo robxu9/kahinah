@@ -2,6 +2,7 @@ package util
 
 import (
 	"bytes"
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"github.com/astaxie/beego"
@@ -25,6 +26,7 @@ var (
 	mail_pass    = beego.AppConfig.String("mail::smtp_pass")
 	mail_domain  = beego.AppConfig.String("mail::smtp_domain")
 	mail_host    = beego.AppConfig.String("mail::smtp_host")
+	mail_verify  = to.Bool(beego.AppConfig.String("mail::smtp_tls_verify"))
 	mail_email   = mail.Address{"Kahinah QA Bot", beego.AppConfig.String("mail::smtp_email")}
 
 	mail_to = beego.AppConfig.String("mail::to")
@@ -83,7 +85,55 @@ func Mail(subject, content string) error {
 		}
 	}
 
-	return smtp.SendMail(mail_host, smtp.PlainAuth("", mail_user, mail_pass, mail_domain), mail_email.Address, []string{mail_to}, buf.Bytes())
+	return ourMail(mail_host, smtp.PlainAuth("", mail_user, mail_pass, mail_domain), mail_email.Address, []string{mail_to}, buf.Bytes())
+}
+
+// this function:
+// Copyright 2010 The Go Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+func ourMail(addr string, a smtp.Auth, from string, to []string, msg []byte) error {
+	c, err := smtp.Dial(addr)
+	if err != nil {
+		return err
+	}
+	defer c.Close()
+	//if err = c.Hello(); err != nil {
+	//	return err
+	//}
+	if ok, _ := c.Extension("STARTTLS"); ok {
+		if err = c.StartTLS(&tls.Config{InsecureSkipVerify: mail_verify}); err != nil {
+			return err
+		}
+	}
+	if a != nil {
+		if ok, _ := c.Extension("AUTH"); ok {
+			if err = c.Auth(a); err != nil {
+				return err
+			}
+		}
+	}
+	if err = c.Mail(from); err != nil {
+		return err
+	}
+	for _, addr := range to {
+		if err = c.Rcpt(addr); err != nil {
+			return err
+		}
+	}
+	w, err := c.Data()
+	if err != nil {
+		return err
+	}
+	_, err = w.Write(msg)
+	if err != nil {
+		return err
+	}
+	err = w.Close()
+	if err != nil {
+		return err
+	}
+	return c.Quit()
 }
 
 func MailModel(model *models.BuildList) {

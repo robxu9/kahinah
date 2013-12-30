@@ -52,6 +52,8 @@ smtp_pass = myPassword
 smtp_domain = example.com
 ; smtp_host is the location of the mailserver. port is required.
 smtp_host = mail.example.com:25
+; tls_verify? (for certificates, recommended true)
+smtp_tls_verify = true
 ; smtp_email varies by provider.
 ; e.g. for Gmail, it is ignored unless you have
 ; multiple outbound emails configured.
