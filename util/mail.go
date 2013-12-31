@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/astaxie/beego"
+	"github.com/astaxie/beego/orm"
 	"github.com/robxu9/kahinah/models"
 	"log"
 	"menteslibres.net/gosexy/to"
@@ -21,6 +22,8 @@ var (
 	outwardUrl    = beego.AppConfig.String("outwardloc")
 	outwardPrefix = beego.AppConfig.String("urlprefix")
 
+	maintainer_hours = to.Int64(beego.AppConfig.String("karma::maintainerhours"))
+
 	mail_enabled = to.Bool(beego.AppConfig.String("mail::enabled"))
 	mail_user    = beego.AppConfig.String("mail::smtp_user")
 	mail_pass    = beego.AppConfig.String("mail::smtp_pass")
@@ -31,13 +34,13 @@ var (
 
 	mail_to = beego.AppConfig.String("mail::to")
 
-	model_template = template.New("email model template")
-	mail_template  = template.New("email full template")
+	model_template       = template.New("email model template")
+	maint_model_template = template.New("email maintainer model template")
+	mail_template        = template.New("email full template")
 )
 
 func init() {
-	model_template = template.Must(model_template.Parse(`
-Hello,
+	model_template = template.Must(model_template.Parse(`Hello,
 
 The following package has been {{.Action}}:
 
@@ -46,6 +49,32 @@ Name:	{{.Package.Name}}/{{.Package.Architecture}}
 For:		{{.Package.Platform}}/{{.Package.Repo}}
 Type:	{{.Package.Type}}
 Built:	{{.Package.BuildDate}}
+
+{{if ne .Package.Status "testing"}}Comments on the package:
+{{range .Package.Karma}}
+* {{.User.Email}} voted {{.Vote}} and commented: "{{.Comment}}".
+{{end}}{{end}}
+
+More information available at the Kahinah website:
+{{.KahinahUrl}}/builds/{{.Package.Id}}
+`))
+
+	maint_model_template = template.Must(maint_model_template.Parse(`Hello,
+
+The package you have built has been {{.Action}}:
+
+Id:		UPDATE-{{.Package.BuildDate.Year}}-{{.Package.Id}}
+Name:	{{.Package.Name}}/{{.Package.Architecture}}
+For:		{{.Package.Platform}}/{{.Package.Repo}}
+Type:	{{.Package.Type}}
+Built:	{{.Package.BuildDate}}
+
+{{if eq .Package.Status "testing"}}Be sure to vote for your own package - and remember that QA
+may need more information: the comments section has input that
+might prove valuable.{{else}}Comments on the package:
+{{range .Package.Karma}}
+* {{.User.Email}} voted {{.Vote}} and commented: "{{.Comment}}".
+{{end}}{{end}}
 
 More information available at the Kahinah website:
 {{.KahinahUrl}}/builds/{{.Package.Id}}
@@ -65,14 +94,14 @@ Inbound email to this account is not monitored.
 `))
 }
 
-func Mail(subject, content string) error {
+func MailTo(subject, content, to string) error {
 	if !mail_enabled {
 		return ErrDisabled
 	}
 
 	data := make(map[string]string)
 	data["From"] = mail_email.String()
-	data["To"] = mail_to
+	data["To"] = to
 	data["Subject"] = subject
 	data["Body"] = content
 
@@ -88,6 +117,11 @@ func Mail(subject, content string) error {
 	}
 
 	return ourMail(mail_host, smtp.PlainAuth("", mail_user, mail_pass, mail_domain), mail_email.Address, []string{mail_to}, buf.Bytes())
+
+}
+
+func Mail(subject, content string) error {
+	return MailTo(subject, content, mail_to)
 }
 
 // this function:
@@ -139,6 +173,19 @@ func ourMail(addr string, a smtp.Auth, from string, to []string, msg []byte) err
 }
 
 func MailModel(model *models.BuildList) {
+	if model.Submitter == nil {
+		o := orm.NewOrm()
+		o.LoadRelated(model, "Submitter")
+	}
+
+	if model.Karma == nil {
+		o := orm.NewOrm()
+		o.LoadRelated(model, "Karma")
+		for _, karma := range model.Karma {
+			o.LoadRelated(karma, "User")
+		}
+	}
+
 	data := make(map[string]interface{})
 
 	action := "lost in an abyss"
@@ -160,13 +207,21 @@ func MailModel(model *models.BuildList) {
 	}
 	data["Package"] = model
 
-	var buf bytes.Buffer
-	model_template.Execute(&buf, data)
+	var modelTemplateBuf bytes.Buffer
+	model_template.Execute(&modelTemplateBuf, data)
+
+	var maintTemplateBuf bytes.Buffer
+	maint_model_template.Execute(&maintTemplateBuf, data)
 
 	subject := fmt.Sprintf("[kahinah] %s/%s (%s) %s", model.Name, model.Architecture, to.String(model.Id), action)
 
-	err := Mail(subject, buf.String())
+	err := Mail(subject, modelTemplateBuf.String())
 	if err != nil {
-		log.Println(err)
+		log.Printf("[mail] model email failed: %s\n", err)
+	}
+
+	err = MailTo(subject, maintTemplateBuf.String(), model.Submitter.Email)
+	if err != nil {
+		log.Printf("[mail] maint email failed: %s\n", err)
 	}
 }
