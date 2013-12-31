@@ -41,7 +41,7 @@ Hello,
 
 The following package has been {{.Action}}:
 
-Id:		OMV-{{.Package.BuildDate.Year}}-{{.Package.Id}}
+Id:		UPDATE-{{.Package.BuildDate.Year}}-{{.Package.Id}}
 Name:	{{.Package.Name}}/{{.Package.Architecture}}
 For:		{{.Package.Platform}}/{{.Package.Repo}}
 Type:	{{.Package.Type}}

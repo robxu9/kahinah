@@ -8,7 +8,7 @@
           {{if eq .Package.Status "published"}}<div class="panel panel-success">{{else}}
           <div class="panel panel-primary">{{end}}{{end}}{{end}}
             <div class="panel-heading">
-              <h1>{{.Package.Name}} <small>[{{.Package.Architecture}}] OMV-{{.Package.BuildDate.Year}}-{{.Package.Id}}</small><div class="pull-right">{{.Karma}} {{if .KarmaControls}}<a href="#" class="btn" data-toggle="modal" data-target="#voteModal"><i class="fa fa-3x {{if .UserVote}}fa-check-square-o{{else}}fa-pencil-square-o{{end}}"></i></a>{{end}}</div></h1>
+              <h1>{{.Package.Name}} <small>[{{.Package.Architecture}}] UPDATE-{{.Package.BuildDate.Year}}-{{.Package.Id}}</small><div class="pull-right">{{.Karma}} {{if .KarmaControls}}<a href="#" class="btn" data-toggle="modal" data-target="#voteModal"><i class="fa fa-3x {{if .UserVote}}fa-check-square-o{{else}}fa-pencil-square-o{{end}}"></i></a>{{end}}</div></h1>
             </div>
             <table class="table table-condensed">
               <tbody>
