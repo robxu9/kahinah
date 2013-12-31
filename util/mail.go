@@ -82,6 +82,8 @@ func Mail(subject, content string) error {
 	if mail_domain == "" {
 		if strings.Contains(mail_user, "@") {
 			mail_domain = mail_user[strings.Index(mail_user, "@")+1:]
+		} else {
+			mail_domain = mail_host[:strings.Index(mail_host, ":")]
 		}
 	}
 
