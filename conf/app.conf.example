@@ -35,6 +35,11 @@ lowerkarma = -3
 maintainerkarma = 3
 maintainerhours = 168
 
+[advisory]
+; platforms for which advisories can be created
+; they are in the format PLATFORM:PREFIX
+platforms = openmandriva2013.0:OMV;cooker:OMV
+
 [admin]
 whitelist = false
 adminwhitelist = robxu9@gmail.com

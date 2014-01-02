@@ -25,6 +25,8 @@ func init() {
 	orm.RegisterModelWithPrefix(Prefix, new(BuildList))
 	orm.RegisterModelWithPrefix(Prefix, new(BuildListPkg))
 
+	orm.RegisterModelWithPrefix(Prefix, new(Advisory))
+
 	orm.RegisterModelWithPrefix(Prefix, new(Karma))
 
 	orm.RegisterModelWithPrefix(Prefix, new(User))

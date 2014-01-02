@@ -39,6 +39,8 @@ type BuildList struct {
 	Karma []*Karma `xml:"karma" orm:"reverse(many)"`
 	// shows the diff
 	Diff string `xml:"diff" orm:"type(text)"`
+	// shows the link to an advisory, if any
+	Advisory *Advisory `xml:"advisory" orm:"rel(fk)"`
 
 	// abf specifics (abf is represented as the handler)
 	HandleId      string `xml:"handle>id,attr"` // for the handler to identify the package in the buildsystem

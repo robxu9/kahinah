@@ -12,7 +12,8 @@ type User struct {
 	Permissions []*UserPermission `orm:"rel(m2m);on_delete(set_null)"`
 	Karma       []*Karma          `orm:"reverse(many);on_delete(set_null)"`
 
-	BuildLists []*BuildList `orm:"reverse(many);on_delete(set_null)"`
+	BuildLists []*BuildList `orm:"null;reverse(many);on_delete(set_null)"`
+	Advisories []*Advisory  `orm:"null;reverse(many);on_delete(set_null)"`
 }
 
 func (u *User) String() string {
@@ -27,7 +28,7 @@ func (u *User) Save() {
 type UserPermission struct {
 	Id         uint64  `orm:"auto;pk"`
 	Permission string  `orm:"type(text);unique"`
-	Users      []*User `orm:"reverse(many);on_delete(set_null)"`
+	Users      []*User `orm:"null;reverse(many);on_delete(set_null)"`
 }
 
 func (u *UserPermission) Save() {

@@ -51,6 +51,11 @@ func main() {
 	beego.Router(getPrefixString("/builds"), &controllers.BuildsController{}) // show all testing, published, rejected (all sorted by date, linking respectively to above)
 	beego.Router(getPrefixString("/builds/:id:int"), &controllers.BuildController{})
 
+	// advisories
+	beego.Router(getPrefixString("/advisories"), &controllers.AdvisoryController{}, "get:AllGet")
+	beego.Router(getPrefixString("/advisories/:id:int"), &controllers.AdvisoryController{})
+	beego.Router(getPrefixString("/advisories/new"), &controllers.AdvisoryController{}, "get:NewGet;post:NewPost")
+
 	// platform
 	//beego.Router("/platforms", &controllers.PlatformsController{})
 	//beego.Router("/platforms/:platform:string/", &controllers.PlatformSpecificController{}) // show by platform
