@@ -110,11 +110,13 @@ func (this *BuildController) Get() {
 	}
 
 	if pkg.Changelog != "" {
-		resp, _ := http.Get(pkg.Changelog)
+		resp, err := http.Get(pkg.Changelog)
 		if err == nil {
 			defer resp.Body.Close()
 			changelog, _ := ioutil.ReadAll(resp.Body)
 			this.Data["Changelog"] = this.processChangelog(string(changelog))
+		} else {
+			this.Data["Changelog"] = "Failed to retrieve changelog: " + err.Error()
 		}
 	}
 
