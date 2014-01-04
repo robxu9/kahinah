@@ -1,5 +1,10 @@
 package models
 
+import (
+	"github.com/astaxie/beego/orm"
+	"time"
+)
+
 type Advisory struct {
 	Id uint64 `orm:"auto;pk"`
 
@@ -12,4 +17,18 @@ type Advisory struct {
 	Updated     time.Time `orm:"auto_now"`
 
 	Updates []*BuildList `orm:"reverse(many)"`
+}
+
+func NextAdvisoryId(prefix string) uint64 {
+	o := orm.NewOrm()
+
+	var adv Advisory
+	err := o.QueryTable(new(Advisory)).Filter("Prefix", prefix).OrderBy("-AdvisoryId").Limit(1).One(&adv)
+	if err == orm.ErrNoRows {
+		return 1
+	} else if err != nil {
+		panic(err)
+	}
+
+	return adv.AdvisoryId + 1
 }
