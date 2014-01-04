@@ -26,10 +26,10 @@ func IsLoggedIn(controller *beego.Controller) string {
 
 type PersonaResponse struct {
 	Status   string `json: "status"`
-	Email    string `json: "email"`
-	Audience string `json: "audience"`
-	Expires  int64  `json: "expires"`
-	Issuer   string `json: "issuer"`
+	Email    string `json: "email,omitempty"`
+	Audience string `json: "audience,omitempty"`
+	Expires  int64  `json: "expires,omitempty"`
+	Issuer   string `json: "issuer,omitempty"`
 	Reason   string `json: "reason,omitempty"`
 }
 
@@ -90,7 +90,7 @@ func (this *PersonaLoginController) Post() {
 		this.Abort("403")
 	}
 
-	if pr.Status == "failure" {
+	if pr.Status != "okay" {
 		this.Abort("403")
 	}
 
