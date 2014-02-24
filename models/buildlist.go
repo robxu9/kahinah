@@ -40,7 +40,7 @@ type BuildList struct {
 	// shows the diff
 	Diff string `xml:"diff" orm:"type(text)"`
 	// shows the link to an advisory, if any
-	Advisory *Advisory `xml:"advisory" orm:"rel(fk)"`
+	Advisory *Advisory `xml:"advisory" orm:"null;rel(fk);on_delete(set_null)"`
 
 	// abf specifics (abf is represented as the handler)
 	HandleId      string `xml:"handle>id,attr"` // for the handler to identify the package in the buildsystem
