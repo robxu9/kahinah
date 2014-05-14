@@ -1,11 +1,12 @@
 package controllers
 
 import (
+	"log"
+	"sort"
+
 	"github.com/astaxie/beego/orm"
 	"github.com/robxu9/kahinah/models"
-	"log"
 	"menteslibres.net/gosexy/to"
-	"sort"
 )
 
 type ByBuildDate []*models.BuildList
@@ -62,6 +63,7 @@ func (this *TestingController) Get() {
 	sort.Sort(ByBuildDate(packages))
 
 	this.Data["Title"] = "Testing"
+	this.Data["Loc"] = 1
 	this.Data["Tab"] = 1
 	this.Data["Packages"] = packages
 	this.Data["PkgKarma"] = pkgkarma

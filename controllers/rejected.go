@@ -1,10 +1,11 @@
 package controllers
 
 import (
-	"github.com/astaxie/beego/orm"
-	"github.com/robxu9/kahinah/models"
 	"log"
 	"sort"
+
+	"github.com/astaxie/beego/orm"
+	"github.com/robxu9/kahinah/models"
 )
 
 type RejectedController struct {
@@ -52,6 +53,7 @@ func (this *RejectedController) Get() {
 	sort.Sort(ByUpdateDate(packages))
 
 	this.Data["Title"] = "Rejected"
+	this.Data["Loc"] = 1
 	this.Data["Tab"] = 3
 	this.Data["Packages"] = packages
 	this.Data["PrevPage"] = page - 1

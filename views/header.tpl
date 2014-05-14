@@ -14,7 +14,7 @@
     <title>{{.Title}} | Kahinah</title>
 
     <!-- Bootstrap core CSS -->
-    <link href="//netdna.bootstrapcdn.com/bootstrap/3.0.3/css/bootstrap.min.css" rel="stylesheet">
+    <link href="//netdna.bootstrapcdn.com/bootswatch/3.1.1/spacelab/bootstrap.min.css" rel="stylesheet">
 
     <!-- Font Awesome -->
     <link href="//netdna.bootstrapcdn.com/font-awesome/4.0.3/css/font-awesome.min.css" rel="stylesheet">
@@ -49,17 +49,24 @@
             <span class="icon-bar"></span>
             <span class="icon-bar"></span>
           </button>
-          <a href="{{url "/"}}" class="navbar-brand">Kahinah</a>
+          <a href="{{url "/"}}" class="navbar-brand"><i class="fa fa-tasks"></i> Kahinah</a>
         </div>
 
         <div class="collapse navbar-collapse" id="navbar-collapse">
           <ul class="nav navbar-nav">
-            <li{{if eq .Tab 0}} class="active"{{end}}><a href="{{url "/"}}">Home</a></li>
-            <li{{if eq .Tab 1}} class="active"{{end}}><a href="{{url "/testing"}}">Testing</a></li>
-            <li{{if eq .Tab 2}} class="active"{{end}}><a href="{{url "/published"}}">Published</a></li>
-            <li{{if eq .Tab 3}} class="active"{{end}}><a href="{{url "/rejected"}}">Rejected</a></li>
-            <li{{if eq .Tab 4}} class="active"{{end}}><a href="{{url "/builds"}}">All</a></li>
-            <li{{if eq .Tab 5}} class="active"{{end}}><a href="{{url "/about"}}">About</a></li>
+            <li{{if eq .Loc 0}} class="active" {{end}}><a href="{{url "/"}}">Home</a></li>
+
+            <li {{if eq .Loc 1}}class="active" {{end}}class="dropdown"> <!-- builds -->
+              <a href="#" class="dropdown-toggle" data-toggle="dropdown">Builds <b class="caret"></b></a>
+              <ul class="dropdown-menu">
+                <li{{if eq .Loc 1}}{{if eq .Tab 1}} class="active"{{end}}{{end}}><a href="{{url "/testing"}}">Testing</a></li>
+                <li{{if eq .Loc 1}}{{if eq .Tab 2}} class="active"{{end}}{{end}}><a href="{{url "/published"}}">Published</a></li>
+                <li{{if eq .Loc 1}}{{if eq .Tab 3}} class="active"{{end}}{{end}}><a href="{{url "/rejected"}}">Rejected</a></li>
+                <li{{if eq .Loc 1}}{{if eq .Tab 4}} class="active"{{end}}{{end}}><a href="{{url "/builds"}}">All</a></li>
+                <li{{if eq .Loc 1}}{{if eq .Tab 5}} class="active"{{end}}{{end}}><a href="{{url "/about"}}">About</a></li>
+              </ul>
+            </li>
+
           </ul>
 
           <!-- login -->

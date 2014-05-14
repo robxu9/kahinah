@@ -1,16 +1,17 @@
 package controllers
 
 import (
+	"io/ioutil"
+	"log"
+	"net/http"
+	"sort"
+	"time"
+
 	"github.com/astaxie/beego"
 	"github.com/astaxie/beego/orm"
 	"github.com/robxu9/kahinah/integration"
 	"github.com/robxu9/kahinah/models"
-	"io/ioutil"
-	"log"
 	"menteslibres.net/gosexy/to"
-	"net/http"
-	"sort"
-	"time"
 )
 
 const (
@@ -80,6 +81,7 @@ func (this *BuildsController) Get() {
 	sort.Sort(ByUpdateDate(packages))
 
 	this.Data["Title"] = "Builds"
+	this.Data["Loc"] = 1
 	this.Data["Tab"] = 4
 	this.Data["Packages"] = packages
 	this.Data["PrevPage"] = page - 1
@@ -185,15 +187,17 @@ func (this *BuildController) Get() {
 	// karma controls end
 
 	this.Data["Title"] = "Build " + to.String(id) + ": " + pkg.Name
+	this.Data["Loc"] = 1
 	if pkg.Status == models.STATUS_TESTING {
 		this.Data["Tab"] = 1
 		if user != "" {
 			this.Data["KarmaControls"] = true
 			if pkg.Submitter != nil && pkg.Submitter.Email == user {
 				this.Data["MaintainerControls"] = true
+				this.Data["MaintainerHoursNeeded"] = maintainer_hours
 				if time.Since(pkg.BuildDate).Hours() >= float64(maintainer_hours) {
 					this.Data["MaintainerTime"] = true
-					this.Data["MaintainerHoursNeeded"] = maintainer_hours
+					delete(this.Data, "MaintainerHoursNeeded")
 				}
 			}
 		}

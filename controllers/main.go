@@ -27,6 +27,6 @@ func (this *MainController) Get() {
 
 	this.Data["Title"] = "Main"
 	this.Data["News"] = split
-	this.Data["Tab"] = 0
+	this.Data["Loc"] = 0
 	this.TplNames = "index.tpl"
 }

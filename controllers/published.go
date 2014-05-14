@@ -1,10 +1,11 @@
 package controllers
 
 import (
-	"github.com/astaxie/beego/orm"
-	"github.com/robxu9/kahinah/models"
 	"log"
 	"sort"
+
+	"github.com/astaxie/beego/orm"
+	"github.com/robxu9/kahinah/models"
 )
 
 type PublishedController struct {
@@ -52,6 +53,7 @@ func (this *PublishedController) Get() {
 	sort.Sort(ByUpdateDate(packages))
 
 	this.Data["Title"] = "Published"
+	this.Data["Loc"] = 1
 	this.Data["Tab"] = 2
 	this.Data["Packages"] = packages
 	this.Data["PrevPage"] = page - 1
