@@ -160,6 +160,8 @@ type PublishedController struct {
 }
 
 func (this *PublishedController) Get() {
+	filterPlatform := this.GetString("platform")
+
 	page, err := this.GetInt("page")
 	if err != nil {
 		page = 1
@@ -171,6 +173,10 @@ func (this *PublishedController) Get() {
 
 	o := orm.NewOrm()
 	qt := o.QueryTable(new(models.BuildList))
+
+	if filterPlatform != "" {
+		qt = qt.Filter("platform", filterPlatform)
+	}
 
 	cnt, err := qt.Filter("status", models.STATUS_PUBLISHED).Count()
 	if err != nil {

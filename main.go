@@ -60,25 +60,29 @@ func main() {
 	beego.Router(getPrefixString("/advisories/:id:int"), &controllers.AdvisoryController{})
 	beego.Router(getPrefixString("/advisories/new"), &controllers.AdvisoryController{}, "get:NewGet;post:NewPost")
 
-	// platform
-	//beego.Router("/platforms", &controllers.PlatformsController{})
-	//beego.Router("/platforms/:platform:string/", &controllers.PlatformSpecificController{}) // show by platform
-
-	// about
 	//beego.Router("/about", &controllers.AboutController{})
 
-	// ping target (for integration)
-	//beego.Router("/ping", &controllers.PingController{})
-
-	// persona
+	//
+	// --------------------------------------------------------------------
+	// AUTHENTICATION [persona]
+	// --------------------------------------------------------------------
+	//
 	beego.Router(getPrefixString("/auth/check"), &models.PersonaCheckController{})
 	beego.Router(getPrefixString("/auth/login"), &models.PersonaLoginController{})
 	beego.Router(getPrefixString("/auth/logout"), &models.PersonaLogoutController{})
 
-	// admin
+	//
+	// --------------------------------------------------------------------
+	// ADMINISTRATION [crap]
+	// --------------------------------------------------------------------
+	//
 	beego.Router(getPrefixString("/admin"), &controllers.AdminController{})
 
-	// templating
+	//
+	// --------------------------------------------------------------------
+	// TEMPLATING FUNCTIONS
+	// --------------------------------------------------------------------
+	//
 	beego.AddFuncMap("since", func(t time.Time) string {
 		hrs := time.Since(t).Hours()
 		return fmt.Sprintf("%dd %02dhrs", int(hrs)/24, int(hrs)%24)
@@ -95,7 +99,11 @@ func main() {
 	beego.AddFuncMap("url", getPrefixString)
 	beego.AddFuncMap("urldata", getPrefixStringWithData)
 
-	// error handling
+	//
+	// --------------------------------------------------------------------
+	// ERROR HANDLERS [beego doesn't want to work though e-e]
+	// --------------------------------------------------------------------
+	//
 	beego.Errorhandler("550", func(rw http.ResponseWriter, r *http.Request) {
 		t := template.Must(template.New("permerror").ParseFiles(beego.ViewsPath + "/permissions_error.tpl"))
 		data := make(map[string]interface{})
@@ -103,10 +111,16 @@ func main() {
 		t.Execute(rw, data)
 	})
 
-	// integration
+	//
+	// --------------------------------------------------------------------
+	// INTEGRATION
+	// --------------------------------------------------------------------
+	//
 	stop := make(chan bool)
 
 	integration.Integrate(integration.ABF(1))
+	// ping target (for integration)
+	//beego.Router("/ping", &controllers.PingController{})
 
 	go func() {
 		timeout := make(chan bool)

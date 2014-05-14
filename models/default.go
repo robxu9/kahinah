@@ -2,11 +2,12 @@ package models
 
 import (
 	"fmt"
+	"time"
+
 	"github.com/astaxie/beego"
 	"github.com/astaxie/beego/orm"
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/mattn/go-sqlite3"
-	"time"
 )
 
 var (
@@ -24,10 +25,10 @@ func init() {
 
 	orm.RegisterModelWithPrefix(Prefix, new(BuildList))
 	orm.RegisterModelWithPrefix(Prefix, new(BuildListPkg))
+	orm.RegisterModelWithPrefix(Prefix, new(Karma))
 
 	orm.RegisterModelWithPrefix(Prefix, new(Advisory))
-
-	orm.RegisterModelWithPrefix(Prefix, new(Karma))
+	orm.RegisterModelWithPrefix(Prefix, new(AdvisoryKarma))
 
 	orm.RegisterModelWithPrefix(Prefix, new(User))
 	orm.RegisterModelWithPrefix(Prefix, new(UserPermission))

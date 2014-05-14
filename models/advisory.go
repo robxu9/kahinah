@@ -1,8 +1,17 @@
 package models
 
 import (
-	"github.com/astaxie/beego/orm"
 	"time"
+
+	"github.com/astaxie/beego/orm"
+)
+
+const (
+	ADVISORY_UP         = "+"
+	ADVISORY_DOWN       = "-"
+	ADVISORY_MAINTAINER = "*"
+	ADVISORY_BLOCK      = "v"
+	ADVISORY_NONE       = "_"
 )
 
 type Advisory struct {
@@ -11,12 +20,29 @@ type Advisory struct {
 	Prefix     string
 	AdvisoryId uint64
 
-	Creator     *User     `orm:"rel(fk)"`
-	Description string    `orm:"type(text)"`
-	Issued      time.Time `orm:"auto_now_add"`
-	Updated     time.Time `orm:"auto_now"`
+	Creator     *User  `orm:"rel(fk)"`
+	Description string `orm:"type(text)"`
+
+	Type string // type of advisory (bugfix, security, etc)
+
+	BugsFixed string `orm:"type(text)"` // format: 123;234;534;123;133
+
+	Requested time.Time `orm:"auto_now_add"`
+	Issued    time.Time // will not be filled until advisory is approved
+	Updated   time.Time `orm:"auto_now"`
 
 	Updates []*BuildList `orm:"reverse(many)"`
+
+	// lists comments
+	Comments []*AdvisoryKarma `orm:"reverse(many)"`
+}
+
+type AdvisoryKarma struct {
+	Id       uint64    `orm:"auto;pk"`
+	Advisory *Advisory `orm:"rel(fk)"`
+	User     *User     `orm:"rel(fk)"`
+	Vote     string
+	Comment  string `orm:"type(text)"`
 }
 
 func NextAdvisoryId(prefix string) uint64 {
