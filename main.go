@@ -4,15 +4,16 @@ import (
 	"bytes"
 	"crypto/rand"
 	"fmt"
+	"html/template"
+	"net/http"
+	"strings"
+	"time"
+
 	"github.com/astaxie/beego"
 	"github.com/robxu9/kahinah/controllers"
 	"github.com/robxu9/kahinah/integration"
 	"github.com/robxu9/kahinah/models"
-	"html/template"
 	"menteslibres.net/gosexy/to"
-	"net/http"
-	"strings"
-	"time"
 )
 
 var (
@@ -30,26 +31,29 @@ func main() {
 
 	beego.Router(getPrefixString("/"), &controllers.MainController{})
 
+	//
+	// --------------------------------------------------------------------
+	// BUILDS
+	// --------------------------------------------------------------------
+	//
+
 	// testing
-	beego.Router(getPrefixString("/testing"), &controllers.TestingController{}) // lists testing updates
-	//beego.Router("/testing/:buildid:int", &controllers.TestingPkgController{}) // shows specific testing update
-	// ^ now use below BuildSpecificController
-
+	beego.Router(getPrefixString("/builds/testing"), &controllers.TestingController{}) // lists testing updates
 	// published
-	beego.Router(getPrefixString("/published"), &controllers.PublishedController{}) // lists years
-
-	// below: TODO in future update
-	//beego.Router("/published/:year:int", &controllers.PublishedListController{})        // lists updates in said years
-	//beego.Router("/published/:year:int/:id:int", &controllers.PublishedPkgController{}) // shows specific update
-	// ^ redirect to below build specific controller
-
+	beego.Router(getPrefixString("/builds/published"), &controllers.PublishedController{})
 	// rejected
-	beego.Router(getPrefixString("/rejected"), &controllers.RejectedController{}) // lists all rejected updates
-	//beego.Router("/rejected/:before:int", &controllers.RejectedController{}) // list all rejected updates before this date
-
-	// builds
+	beego.Router(getPrefixString("/builds/rejected"), &controllers.RejectedController{}) // lists all rejected updates
+	// all builds
 	beego.Router(getPrefixString("/builds"), &controllers.BuildsController{}) // show all testing, published, rejected (all sorted by date, linking respectively to above)
+
+	// specific
 	beego.Router(getPrefixString("/builds/:id:int"), &controllers.BuildController{})
+
+	//
+	// --------------------------------------------------------------------
+	// ADVISORIES
+	// --------------------------------------------------------------------
+	//
 
 	// advisories
 	beego.Router(getPrefixString("/advisories"), &controllers.AdvisoryController{}, "get:AllGet")

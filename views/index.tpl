@@ -4,7 +4,7 @@
       <div class="jumbotron">
         <h1>OpenMandriva Update System</h1>
         <p class="lead">Kahinah, the OpenMandriva Update System, is a versatile tool that hooks into <a href="//abf.io">ABF</a>, allowing package developers to focus on developing more without worrying about breakage.</p>
-        <p><a class="btn btn-lg btn-success" href="{{url "/testing"}}" role="button">See Packages in Testing</a></p>
+        <p><a class="btn btn-lg btn-success" href="{{url "/builds/testing"}}" role="button">Recent Builds</a> <a class="btn btn-lg btn-default" href="{{url "/advisories"}}" role="button">Advisories</a> <a class="btn btn-lg btn-warning" href="{{url "/vtests"}}" role="button">Virtual Testing</a></p>
       </div>
 
       <!-- Infos -->

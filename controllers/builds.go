@@ -35,6 +35,13 @@ func (b ByUpdateDate) Less(i, j int) bool {
 	return b[i].Updated.Unix() > b[j].Updated.Unix()
 }
 
+//
+// --------------------------------------------------------------------
+// LISTS
+// --------------------------------------------------------------------
+//
+
+// ALL BUILDS
 type BuildsController struct {
 	BaseController
 }
@@ -90,6 +97,187 @@ func (this *BuildsController) Get() {
 	this.Data["Pages"] = totalpages
 	this.TplNames = "builds_list.tpl"
 }
+
+// REJECTED BUILDS
+type RejectedController struct {
+	BaseController
+}
+
+func (this *RejectedController) Get() {
+	page, err := this.GetInt("page")
+	if err != nil {
+		page = 1
+	} else if page <= 0 {
+		page = 1
+	}
+
+	var packages []*models.BuildList
+
+	o := orm.NewOrm()
+	qt := o.QueryTable(new(models.BuildList))
+
+	cnt, err := qt.Filter("status", models.STATUS_REJECTED).Count()
+	if err != nil {
+		log.Println(err)
+		this.Abort("500")
+	}
+
+	totalpages := cnt / 50
+	if cnt%50 != 0 {
+		totalpages++
+	}
+
+	if page > totalpages {
+		page = totalpages
+	}
+
+	_, err = qt.Limit(50, (page-1)*50).OrderBy("-Updated").Filter("status", models.STATUS_REJECTED).All(&packages)
+	if err != nil && err != orm.ErrNoRows {
+		log.Println(err)
+		this.Abort("500")
+	}
+
+	for _, v := range packages {
+		o.LoadRelated(v, "Submitter")
+	}
+
+	sort.Sort(ByUpdateDate(packages))
+
+	this.Data["Title"] = "Rejected"
+	this.Data["Loc"] = 1
+	this.Data["Tab"] = 3
+	this.Data["Packages"] = packages
+	this.Data["PrevPage"] = page - 1
+	this.Data["Page"] = page
+	this.Data["NextPage"] = page + 1
+	this.Data["Pages"] = totalpages
+	this.TplNames = "builds_list.tpl"
+}
+
+// PUBLISHED BUILDS
+type PublishedController struct {
+	BaseController
+}
+
+func (this *PublishedController) Get() {
+	page, err := this.GetInt("page")
+	if err != nil {
+		page = 1
+	} else if page <= 0 {
+		page = 1
+	}
+
+	var packages []*models.BuildList
+
+	o := orm.NewOrm()
+	qt := o.QueryTable(new(models.BuildList))
+
+	cnt, err := qt.Filter("status", models.STATUS_PUBLISHED).Count()
+	if err != nil {
+		log.Println(err)
+		this.Abort("500")
+	}
+
+	totalpages := cnt / 50
+	if cnt%50 != 0 {
+		totalpages++
+	}
+
+	if page > totalpages {
+		page = totalpages
+	}
+
+	_, err = qt.Limit(50, (page-1)*50).OrderBy("-Updated").Filter("status", models.STATUS_PUBLISHED).All(&packages)
+	if err != nil && err != orm.ErrNoRows {
+		log.Println(err)
+		this.Abort("500")
+	}
+
+	for _, v := range packages {
+		o.LoadRelated(v, "Submitter")
+	}
+
+	sort.Sort(ByUpdateDate(packages))
+
+	this.Data["Title"] = "Published"
+	this.Data["Loc"] = 1
+	this.Data["Tab"] = 2
+	this.Data["Packages"] = packages
+	this.Data["PrevPage"] = page - 1
+	this.Data["Page"] = page
+	this.Data["NextPage"] = page + 1
+	this.Data["Pages"] = totalpages
+	this.TplNames = "builds_list.tpl"
+}
+
+// TESTING BUILDS
+type ByBuildDate []*models.BuildList
+
+func (b ByBuildDate) Len() int {
+	return len(b)
+}
+func (b ByBuildDate) Swap(i, j int) {
+	b[i], b[j] = b[j], b[i]
+}
+func (b ByBuildDate) Less(i, j int) bool {
+	return b[i].BuildDate.Unix() > b[j].BuildDate.Unix()
+}
+
+type TestingController struct {
+	BaseController
+}
+
+func (this *TestingController) Get() {
+	var packages []*models.BuildList
+
+	o := orm.NewOrm()
+	qt := o.QueryTable(new(models.BuildList))
+
+	num, err := qt.Filter("status", models.STATUS_TESTING).All(&packages)
+	if err != nil && err != orm.ErrNoRows {
+		log.Println(err)
+		this.Abort("500")
+	}
+
+	pkgkarma := make(map[string]string)
+
+	for _, v := range packages {
+		o.LoadRelated(v, "Submitter")
+		o.LoadRelated(v, "Karma")
+
+		totalKarma := 0
+
+		for _, karma := range v.Karma {
+			if karma.Vote == models.KARMA_UP {
+				totalKarma++
+			} else if karma.Vote == models.KARMA_DOWN {
+				totalKarma--
+			} else if karma.Vote == models.KARMA_MAINTAINER {
+				totalKarma += int(maintainer_karma)
+			} else if karma.Vote == models.KARMA_BLOCK {
+				totalKarma -= int(block_karma)
+			}
+		}
+
+		pkgkarma[to.String(v.Id)] = to.String(totalKarma)
+	}
+
+	sort.Sort(ByBuildDate(packages))
+
+	this.Data["Title"] = "Testing"
+	this.Data["Loc"] = 1
+	this.Data["Tab"] = 1
+	this.Data["Packages"] = packages
+	this.Data["PkgKarma"] = pkgkarma
+	this.Data["Entries"] = num
+	this.TplNames = "generic_list.tpl"
+}
+
+//
+// --------------------------------------------------------------------
+// INDIVIDUAL BUILD LOOK
+// --------------------------------------------------------------------
+//
 
 type BuildController struct {
 	BaseController

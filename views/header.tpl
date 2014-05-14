@@ -59,13 +59,14 @@
             <li {{if eq .Loc 1}}class="active" {{end}}class="dropdown"> <!-- builds -->
               <a href="#" class="dropdown-toggle" data-toggle="dropdown">Builds <b class="caret"></b></a>
               <ul class="dropdown-menu">
-                <li{{if eq .Loc 1}}{{if eq .Tab 1}} class="active"{{end}}{{end}}><a href="{{url "/testing"}}">Testing</a></li>
-                <li{{if eq .Loc 1}}{{if eq .Tab 2}} class="active"{{end}}{{end}}><a href="{{url "/published"}}">Published</a></li>
-                <li{{if eq .Loc 1}}{{if eq .Tab 3}} class="active"{{end}}{{end}}><a href="{{url "/rejected"}}">Rejected</a></li>
+                <li{{if eq .Loc 1}}{{if eq .Tab 1}} class="active"{{end}}{{end}}><a href="{{url "/builds/testing"}}">Testing</a></li>
+                <li{{if eq .Loc 1}}{{if eq .Tab 2}} class="active"{{end}}{{end}}><a href="{{url "/builds/published"}}">Published</a></li>
+                <li{{if eq .Loc 1}}{{if eq .Tab 3}} class="active"{{end}}{{end}}><a href="{{url "/builds/rejected"}}">Rejected</a></li>
                 <li{{if eq .Loc 1}}{{if eq .Tab 4}} class="active"{{end}}{{end}}><a href="{{url "/builds"}}">All</a></li>
-                <li{{if eq .Loc 1}}{{if eq .Tab 5}} class="active"{{end}}{{end}}><a href="{{url "/about"}}">About</a></li>
               </ul>
             </li>
+
+            <li{{if eq .Loc 2}}class="active"{{end}}><a href="{{url "/about"}}">About</a></li>
 
           </ul>
 
