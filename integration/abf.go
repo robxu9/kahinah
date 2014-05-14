@@ -3,19 +3,20 @@ package integration
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/astaxie/beego"
-	"github.com/astaxie/beego/orm"
-	"github.com/robxu9/kahinah/models"
-	"github.com/robxu9/kahinah/util"
 	"io/ioutil"
 	"log"
-	"menteslibres.net/gosexy/dig"
-	"menteslibres.net/gosexy/to"
 	"net/http"
 	"os"
 	"os/exec"
 	"strings"
 	"time"
+
+	"github.com/astaxie/beego"
+	"github.com/astaxie/beego/orm"
+	"github.com/robxu9/kahinah/models"
+	"github.com/robxu9/kahinah/util"
+	"menteslibres.net/gosexy/dig"
+	"menteslibres.net/gosexy/to"
 )
 
 const (
@@ -23,11 +24,12 @@ const (
 )
 
 var (
-	user        = beego.AppConfig.String("abf::abf_user")
-	pass        = beego.AppConfig.String("abf::abf_pass")
-	platforms   *util.Set
-	platformids *util.Set
-	client      = &http.Client{}
+	user          = beego.AppConfig.String("abf::abf_user")
+	pass          = beego.AppConfig.String("abf::abf_pass")
+	platforms     *util.Set
+	platformids   *util.Set
+	archwhitelist *util.Set
+	client        = &http.Client{}
 )
 
 func init() {
@@ -37,6 +39,16 @@ func init() {
 		platform := strings.Split(v, ":")
 		platforms.Add(platform[0])
 		platformids.Add(platform[1])
+	}
+
+	// whitelisted arches
+	if beego.AppConfig.String("abf::abf_whitelistarch") != "" {
+		archwhitelist = util.NewSet()
+		for _, v := range strings.Split(beego.AppConfig.String("abf::abf_whitelistarch"), ";") {
+			archwhitelist.Add(v)
+		}
+	} else {
+		archwhitelist = nil
 	}
 }
 
@@ -116,6 +128,11 @@ func (a ABF) pingBuildCompleted(platformId string) error {
 				continue
 			}
 
+			if archwhitelist != nil && !archwhitelist.Contains(list.Architecture) {
+				// ignore
+				continue
+			}
+
 			// Now send it to testing
 			go a.sendToTesting(id)
 
@@ -184,6 +201,11 @@ func (a ABF) pingTestingBuilds(platformId string) error {
 			}
 
 			if !platforms.Contains(list.Platform) {
+				// ignore
+				continue
+			}
+
+			if archwhitelist != nil && !archwhitelist.Contains(list.Architecture) {
 				// ignore
 				continue
 			}
@@ -383,7 +405,7 @@ func (a ABF) getDiff(gitUrl, fromHash, toHash string) string {
 		gitUrl = gitUrl[:strings.Index(gitUrl, "//")+2] + gitUrl[strings.Index(gitUrl, "@")+1:]
 	}
 
-	gitresult := exec.Command("git", "clone", "--depth", "100", "--bare",  gitUrl, tmpdir).Run()
+	gitresult := exec.Command("git", "clone", "--depth", "100", "--bare", gitUrl, tmpdir).Run()
 	if gitresult != nil { // git better exit with status zero
 		return "Repository could not be cloned for diff: " + gitresult.Error()
 	}
