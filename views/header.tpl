@@ -66,7 +66,40 @@
               </ul>
             </li>
 
-            <li{{if eq .Loc 2}}class="active"{{end}}><a href="{{url "/about"}}">About</a></li>
+            <li {{if eq .Loc 2}}class="active" {{end}}class="dropdown"> <!-- builds -->
+              <a href="#" class="dropdown-toggle" data-toggle="dropdown">Advisories <b class="caret"></b></a>
+              <ul class="dropdown-menu">
+                <li{{if eq .Loc 2}}{{if eq .Tab 1}} class="active"{{end}}{{end}}><a href="{{url "/advisories/pending"}}">Pending</a></li>
+                <li{{if eq .Loc 2}}{{if eq .Tab 2}} class="active"{{end}}{{end}}><a href="{{url "/advisories/approved"}}">Approved</a></li>
+                <li{{if eq .Loc 2}}{{if eq .Tab 3}} class="active"{{end}}{{end}}><a href="{{url "/advisories/rejected"}}">Rejected</a></li>
+                <li{{if eq .Loc 2}}{{if eq .Tab 4}} class="active"{{end}}{{end}}><a href="{{url "/advisories"}}">All</a></li>
+                <li class="divider"></li>
+                <li{{if eq .Loc 2}}{{if eq .Tab 5}} class="active"{{end}}{{end}}><a href="{{url "/advisories/new"}}">New Advisory</a></li>
+              </ul>
+            </li>
+
+            <li {{if eq .Loc 3}}class="active" {{end}}class="dropdown"> <!-- builds -->
+              <a href="#" class="dropdown-toggle" data-toggle="dropdown">Virtual Testing <b class="caret"></b></a>
+              <ul class="dropdown-menu">
+                <li{{if eq .Loc 3}}{{if eq .Tab 1}} class="active"{{end}}{{end}}><a href="{{url "/vtests/running"}}">Currently Running</a></li>
+                <li{{if eq .Loc 3}}{{if eq .Tab 2}} class="active"{{end}}{{end}}><a href="{{url "/vtests/recent"}}">Recent Tests</a></li>
+                <li{{if eq .Loc 3}}{{if eq .Tab 3}} class="active"{{end}}{{end}}><a href="{{url "/vtests/platform"}}">By Platform</a></li>
+              </ul>
+            </li>
+
+            <li {{if eq .Loc 4}}class="active" {{end}}class="dropdown"> <!-- builds -->
+              <a href="#" class="dropdown-toggle" data-toggle="dropdown">AppStream Check <b class="caret"></b></a>
+              <ul class="dropdown-menu">
+                <li{{if eq .Loc 4}}{{if eq .Tab 1}} class="active"{{end}}{{end}}><a href="{{url "/appstream/desktop"}}">Desktop Applications</a></li>
+                <li{{if eq .Loc 4}}{{if eq .Tab 2}} class="active"{{end}}{{end}}><a href="{{url "/appstream/console"}}">Console Applications</a></li>
+                <li{{if eq .Loc 4}}{{if eq .Tab 3}} class="active"{{end}}{{end}}><a href="{{url "/appstream/unclassified"}}">Unclassified</a></li>
+                <li class="divider"></li>
+                <li{{if eq .Loc 4}}{{if eq .Tab 4}} class="active"{{end}}{{end}}><a href="{{url "/appstream/api"}}">API</a></li>
+              </ul>
+            </li>
+
+
+            <li{{if eq .Loc -1}}class="active"{{end}}><a href="{{url "/about"}}">About</a></li>
 
           </ul>
 
