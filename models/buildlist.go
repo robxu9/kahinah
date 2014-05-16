@@ -43,8 +43,9 @@ type BuildList struct {
 	Advisory *Advisory `xml:"advisory" orm:"null;rel(fk);on_delete(set_null)"`
 
 	// abf specifics (abf is represented as the handler)
-	HandleId      string `xml:"handle>id,attr"` // for the handler to identify the package in the buildsystem
-	HandleProject string `xml:"handle>project" orm:"type(text)"`
+	HandleId       string `xml:"handle>id,attr"` // for the handler to identify the package in the buildsystem
+	HandleProject  string `xml:"handle>project" orm:"type(text)"`
+	HandleCommitId string `xml:"handle>commitid" orm:"type(text)"`
 	// end handler specifics
 }
 

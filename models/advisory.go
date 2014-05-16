@@ -6,14 +6,8 @@ import (
 	"github.com/astaxie/beego/orm"
 )
 
-const (
-	ADVISORY_UP         = "+"
-	ADVISORY_DOWN       = "-"
-	ADVISORY_MAINTAINER = "*"
-	ADVISORY_BLOCK      = "v"
-	ADVISORY_NONE       = "_"
-)
-
+// advisories are automatically issued when one or more buildlists
+// are upvoted.
 type Advisory struct {
 	Id uint64 `orm:"auto;pk"`
 
@@ -32,17 +26,6 @@ type Advisory struct {
 	Updated   time.Time `orm:"auto_now"`
 
 	Updates []*BuildList `orm:"reverse(many)"`
-
-	// lists comments
-	Comments []*AdvisoryKarma `orm:"reverse(many)"`
-}
-
-type AdvisoryKarma struct {
-	Id       uint64    `orm:"auto;pk"`
-	Advisory *Advisory `orm:"rel(fk)"`
-	User     *User     `orm:"rel(fk)"`
-	Vote     string
-	Comment  string `orm:"type(text)"`
 }
 
 func NextAdvisoryId(prefix string) uint64 {

@@ -74,10 +74,111 @@ func (a ABF) Ping() error {
 	return nil
 }
 
+func (a ABF) handleResponse(resp *http.Response, testing bool) error {
+
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+
+	var result map[string]interface{}
+
+	err = json.Unmarshal(body, &result)
+	if err != nil {
+		return err
+	}
+
+	var lists []interface{}
+
+	err = dig.Get(&result, &lists, "build_lists")
+	if err != nil {
+		return err
+	}
+
+	o := orm.NewOrm()
+
+	for _, v := range lists {
+		asserted := v.(map[string]interface{})
+		id := dig.Uint64(&asserted, "id")
+
+		num, err := o.QueryTable(new(models.BuildList)).Filter("HandleId__icontains", id).Count()
+		if num <= 0 || err != nil {
+			json, err := a.getJSONList(id)
+			if err != nil {
+				log.Printf("abf: error retrieving build list json %s: %s\n", id, err)
+				continue
+			}
+
+			// check if arch is on whitelist
+			if archwhitelist != nil && !archwhitelist.Contains(dig.String(&json, "arch", "name")) {
+				// we are ignoring this buildlist
+				continue
+			}
+
+			// check if platform is on whitelist
+			if !platforms.Contains(dig.String(&json, "save_to_repository", "platform", "name")) {
+				// we are ignoring this platform
+				continue
+			}
+
+			// *check for duplicates before continuing
+			// *we only check for duuplicates in the same platform; different platforms have different conditions
+			var possibleDuplicate models.BuildList
+			err = o.QueryTable(new(models.BuildList)).Filter("Platform", dig.String(&json, "save_to_repository", "platform", "name")).Filter("HandleCommitId", dig.String(&list, "commit_hash")).One(&possibleDuplicate)
+			if err == nil { // we found a duplicate... handle and continue
+				possibleDuplicate.HandleId = possibleDuplicate.HandleId + ";" + to.String(id)
+				possibleDuplicate.Architecture += ";" + dig.String(&list, "arch", "name")
+
+				if testing {
+					// send id to testing
+					go a.sendToTesting(id)
+				}
+
+				o.Update(&possibleDuplicate)
+
+				pkgs := makePkgList(json)
+				for _, listpkg := range pkgs {
+					listpkg.List = possibleDuplicate
+					o.Insert(listpkg)
+				}
+
+				// ok, we're done here
+				continue
+			}
+
+			list, err := a.makeBuildList(id)
+			if err != nil {
+				log.Printf("abf: Error retrieving build list %s: %s\n", id, err)
+				continue
+			}
+
+			if testing {
+				// Now send it to testing
+				go a.sendToTesting(id)
+			}
+
+			_, err = o.Insert(list)
+			if err != nil {
+				log.Printf("abf: Error saving build list %s: %s\n", id, err)
+				continue
+			}
+
+			for _, listpkg := range list.Packages {
+				listpkg.List = list
+				o.Insert(listpkg)
+			}
+
+			go util.MailModel(list)
+		}
+	}
+
+	return nil
+}
+
 func (a ABF) pingBuildCompleted(platformId string) error {
 	// regular usage: use 0 (Build has been completed)
 	// below: use 12000 ([testing] build has been published)
-	// FIXME - remove hardcoded openmandriva2013.0 filter (but find alternative, we need said filter)
 	req, err := http.NewRequest("GET", ABF_URL+"/build_lists.json?per_page=100&filter[status]=0&filter[ownership]=index&filter[platform_id]="+platformId, nil)
 	if err != nil {
 		return err
@@ -90,71 +191,10 @@ func (a ABF) pingBuildCompleted(platformId string) error {
 		return err
 	}
 
-	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return err
-	}
-
-	var result map[string]interface{}
-
-	err = json.Unmarshal(body, &result)
-	if err != nil {
-		return err
-	}
-
-	var lists []interface{}
-
-	err = dig.Get(&result, &lists, "build_lists")
-	if err != nil {
-		return err
-	}
-
-	o := orm.NewOrm()
-
-	for _, v := range lists {
-		asserted := v.(map[string]interface{})
-		id := dig.Uint64(&asserted, "id")
-
-		num, err := o.QueryTable(new(models.BuildList)).Filter("HandleId", id).Count()
-		if num <= 0 || err != nil {
-			list, err := a.getBuildList(id)
-			if err != nil {
-				log.Printf("abf: Error retrieving build list %s: %s\n", id, err)
-			}
-
-			if !platforms.Contains(list.Platform) {
-				// ignore
-				continue
-			}
-
-			if archwhitelist != nil && !archwhitelist.Contains(list.Architecture) {
-				// ignore
-				continue
-			}
-
-			// Now send it to testing
-			go a.sendToTesting(id)
-
-			_, err = o.Insert(list)
-			if err != nil {
-				log.Printf("abf: Error saving build list %s: %s\n", id, err)
-			}
-
-			for _, listpkg := range list.Packages {
-				listpkg.List = list
-				o.Insert(listpkg)
-			}
-
-			go util.MailModel(list)
-		}
-	}
-
-	return nil
+	return handleResponse(resp, true)
 }
 
 func (a ABF) pingTestingBuilds(platformId string) error {
-	// FIXME - remove hardcoded openmandriva2013.0 filter (but find alternative, we need said filter)
 	req, err := http.NewRequest("GET", ABF_URL+"/build_lists.json?per_page=100&filter[status]=12000&filter[ownership]=index&filter[platform_id]="+platformId, nil)
 	if err != nil {
 		return err
@@ -167,64 +207,7 @@ func (a ABF) pingTestingBuilds(platformId string) error {
 		return err
 	}
 
-	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return err
-	}
-
-	var result map[string]interface{}
-
-	err = json.Unmarshal(body, &result)
-	if err != nil {
-		return err
-	}
-
-	var lists []interface{}
-
-	err = dig.Get(&result, &lists, "build_lists")
-	if err != nil {
-		return err
-	}
-
-	o := orm.NewOrm()
-
-	for _, v := range lists {
-		asserted := v.(map[string]interface{})
-		id := dig.Uint64(&asserted, "id")
-
-		num, err := o.QueryTable(new(models.BuildList)).Filter("HandleId", id).Count()
-		if num <= 0 || err != nil {
-			list, err := a.getBuildList(id)
-			if err != nil {
-				log.Printf("abf: Error retrieving build list %s: %s\n", id, err)
-			}
-
-			if !platforms.Contains(list.Platform) {
-				// ignore
-				continue
-			}
-
-			if archwhitelist != nil && !archwhitelist.Contains(list.Architecture) {
-				// ignore
-				continue
-			}
-
-			_, err = o.Insert(list)
-			if err != nil {
-				log.Printf("abf: Error saving build list %s: %s\n", id, err)
-			}
-
-			for _, listpkg := range list.Packages {
-				listpkg.List = list
-				o.Insert(listpkg)
-			}
-
-			go util.MailModel(list)
-		}
-	}
-
-	return nil
+	return handleResponse(resp, false)
 }
 
 func (a ABF) PingParams(m map[string]string) error {
@@ -236,48 +219,54 @@ func (a ABF) Commits(m *models.BuildList) string {
 }
 
 func (a ABF) Url(m *models.BuildList) string {
-	return "https://abf.io/build_lists/" + m.HandleId
+	return "https://abf.io/build_lists/" + strings.Split(m.HandleId, ';')[0]
 }
 
 func (a ABF) Publish(m *models.BuildList) error {
 	go util.MailModel(m)
 
-	id := to.Uint64(m.HandleId)
-	req, err := http.NewRequest("PUT", ABF_URL+"/build_lists/"+to.String(id)+"/publish.json", nil)
-	if err != nil {
-		return err
+	for _, v := range strings.Split(m.HandleId, ";") {
+
+		id := to.Uint64(v)
+		req, err := http.NewRequest("PUT", ABF_URL+"/build_lists/"+to.String(id)+"/publish.json", nil)
+		if err != nil {
+			return err
+		}
+
+		req.SetBasicAuth(user, pass)
+		req.Header.Add("Content-Length", "0")
+
+		resp, err := client.Do(req)
+		if err != nil {
+			return err
+		}
+
+		defer resp.Body.Close()
 	}
-
-	req.SetBasicAuth(user, pass)
-	req.Header.Add("Content-Length", "0")
-
-	resp, err := client.Do(req)
-	if err != nil {
-		return err
-	}
-
-	defer resp.Body.Close()
 	return nil
 }
 
 func (a ABF) Reject(m *models.BuildList) error {
 	go util.MailModel(m)
 
-	id := to.Uint64(m.HandleId)
-	req, err := http.NewRequest("PUT", ABF_URL+"/build_lists/"+to.String(id)+"/reject_publish.json", nil)
-	if err != nil {
-		return err
+	for _, v := range strings.Split(m.HandleId, ";") {
+		id := to.Uint64(v)
+		req, err := http.NewRequest("PUT", ABF_URL+"/build_lists/"+to.String(id)+"/reject_publish.json", nil)
+		if err != nil {
+			return err
+		}
+
+		req.SetBasicAuth(user, pass)
+		req.Header.Add("Content-Length", "0")
+
+		resp, err := client.Do(req)
+		if err != nil {
+			return err
+		}
+
+		defer resp.Body.Close()
 	}
 
-	req.SetBasicAuth(user, pass)
-	req.Header.Add("Content-Length", "0")
-
-	resp, err := client.Do(req)
-	if err != nil {
-		return err
-	}
-
-	defer resp.Body.Close()
 	return nil
 }
 
@@ -299,61 +288,37 @@ func (a ABF) sendToTesting(id uint64) error {
 	return nil
 }
 
-func (a ABF) getBuildList(id uint64) (*models.BuildList, error) {
+func (a ABF) getJSONList(id uint64) (list map[string]interface{}, err error) {
 	req, err := http.NewRequest("GET", ABF_URL+"/build_lists/"+to.String(id)+".json", nil)
 	if err != nil {
-		return nil, err
+		return
 	}
 
 	req.SetBasicAuth(user, pass)
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return nil, err
+		return
 	}
 
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return nil, err
+		return
 	}
 
 	var result map[string]interface{}
 
 	err = json.Unmarshal(body, &result)
 	if err != nil {
-		return nil, err
+		return
 	}
-
-	var list map[string]interface{}
 
 	dig.Get(&result, &list, "build_list")
+}
 
-	pkgs := make([]interface{}, 0)
-	dig.Get(&list, &pkgs, "packages")
-
-	pkg := make([]*models.BuildListPkg, 0)
-
-	pkgrep := func(m map[string]interface{}) *models.BuildListPkg {
-		pkgType := dig.String(&m, "type")
-		if strings.HasSuffix(dig.String(&m, "name"), "-debuginfo") {
-			pkgType = "debuginfo"
-		}
-
-		return &models.BuildListPkg{
-			Name:    dig.String(&m, "name"),
-			Type:    pkgType,
-			Epoch:   dig.Int64(&m, "epoch"),
-			Version: dig.String(&m, "version"),
-			Release: dig.String(&m, "release"),
-			Url:     dig.String(&m, "url"),
-		}
-	}
-
-	for _, v := range pkgs {
-		asserted := v.(map[string]interface{})
-		pkg = append(pkg, pkgrep(asserted))
-	}
+func (a ABF) makeBuildList(list map[string]interface{}) (*models.BuildList, error) {
+	pkg := makePkgList(list)
 
 	changelog := ""
 
@@ -371,9 +336,10 @@ func (a ABF) getBuildList(id uint64) (*models.BuildList, error) {
 	user := a.getUser(dig.Uint64(&list, "user", "id"))
 
 	bl := models.BuildList{
-		HandleId:      to.String(dig.Uint64(&list, "id")),
-		HandleProject: dig.String(&list, "project", "fullname"),
-		Diff:          a.getDiff(dig.String(&list, "project", "git_url"), dig.String(&list, "last_published_commit_hash"), dig.String(&list, "commit_hash")),
+		HandleId:       to.String(dig.Uint64(&list, "id")),
+		HandleProject:  dig.String(&list, "project", "fullname"),
+		HandleCommitId: dig.String(&list, "commit_hash"),
+		Diff:           a.makeDiff(dig.String(&list, "project", "git_url"), dig.String(&list, "last_published_commit_hash"), dig.String(&list, "commit_hash")),
 
 		//Platform:     dig.String(&list, "build_for_platform", "name"),
 		Platform:     dig.String(&list, "save_to_repository", "platform", "name"),
@@ -389,10 +355,9 @@ func (a ABF) getBuildList(id uint64) (*models.BuildList, error) {
 	}
 
 	return &bl, nil
-
 }
 
-func (a ABF) getDiff(gitUrl, fromHash, toHash string) string {
+func (a ABF) makeDiff(gitUrl, fromHash, toHash string) string {
 	// ugh, looks like we'll have to do this the sadly hard way
 	tmpdir, err := ioutil.TempDir("", "kahinah_")
 	if err != nil {
@@ -431,6 +396,36 @@ func (a ABF) getDiff(gitUrl, fromHash, toHash string) string {
 
 		return fmt.Sprintf("$ git diff --patch-with-stat --summary %s\n\n%s", fromHash+".."+toHash, string(gitdiff))
 	}
+}
+
+func (a ABF) makePkgList(json map[string]interface{}) []*models.BuildListPkg {
+	pkgs := make([]interface{}, 0)
+	dig.Get(&json, &pkgs, "packages")
+
+	pkg := make([]*models.BuildListPkg, 0)
+
+	pkgrep := func(m map[string]interface{}) *models.BuildListPkg {
+		pkgType := dig.String(&m, "type")
+		if strings.HasSuffix(dig.String(&m, "name"), "-debuginfo") {
+			pkgType = "debuginfo"
+		}
+
+		return &models.BuildListPkg{
+			Name:    dig.String(&m, "name"),
+			Type:    pkgType,
+			Epoch:   dig.Int64(&m, "epoch"),
+			Version: dig.String(&m, "version"),
+			Release: dig.String(&m, "release"),
+			Url:     dig.String(&m, "url"),
+		}
+	}
+
+	for _, v := range pkgs {
+		asserted := v.(map[string]interface{})
+		pkg = append(pkg, pkgrep(asserted))
+	}
+
+	return pkg
 }
 
 func (a ABF) getUser(id uint64) *models.User {
