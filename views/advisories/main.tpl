@@ -1,7 +1,7 @@
 {{template "header.tpl" .}}
 
       <div class="page-header">
-        <h1>Advisories <small>Ya'll need to get advised.</small></h1>
+        <h1>Advisories <small>Y'all need to get advised.</small></h1>
       </div>
 
       {{range $index, $element := .Platforms}}
