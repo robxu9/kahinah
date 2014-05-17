@@ -13,6 +13,7 @@
             <tr>
               <td><a href="{{urldata "/advisories/{{.Id}}" .}}">{{.Prefix}}-{{.Issued.Year}}-{{.AdvisoryId}}</a></td>
               <td>{{.Summary}}</td>
+              <td>{{if eq .Type "bugfix"}}<i class="fa fa-bug"></i>{{end}}{{if eq .Type "security"}}<i class="fa fa-shield"></i>{{end}}{{if eq .Type "enhancement"}}<i class="fa fa-gift"></i>{{end}}{{if eq .Type "recommended"}}<i class="fa fa-star-o"></i>{{end}}{{if eq .Type "newpackage"}}<i class="fa fa-plus-square-o"></i>{{end}}{{.Type}}</td>
             </tr>
             {{end}}
           </table>
