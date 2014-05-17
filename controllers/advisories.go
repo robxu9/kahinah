@@ -49,7 +49,7 @@ func (this *AdvisoryMainController) Get() {
 	o := orm.NewOrm()
 
 	for k, _ := range enabledPlatforms {
-		qt := o.QueryTable(new(models.Advisory)).Filter("Platform", k).OrderBy("-Issued").Limit(5)
+		qt := o.QueryTable(new(models.Advisory)).Filter("Platform", k).Exclude("AdvisoryId", 0).OrderBy("-Issued").Limit(5)
 
 		var advisories []*models.Advisory
 
