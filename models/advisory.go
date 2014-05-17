@@ -1,9 +1,14 @@
 package models
 
 import (
+	"sync"
 	"time"
 
 	"github.com/astaxie/beego/orm"
+)
+
+var (
+	lock = &sync.Mutex{}
 )
 
 // advisories are automatically issued when one or more buildlists
@@ -28,6 +33,21 @@ type Advisory struct {
 	Updated   time.Time `orm:"auto_now"`
 
 	Updates []*BuildList `orm:"reverse(many)"`
+}
+
+func IssueAdvisory(advisory *Advisory) {
+	lock.Lock()
+
+	advisory.AdvisoryId = NextAdvisoryId(advisory.Prefix)
+	advisory.Issued = time.Now()
+
+	o := orm.NewOrm()
+	_, err := o.Insert(advisory)
+	if err != nil {
+		panic(err)
+	}
+
+	lock.Unlock()
 }
 
 func NextAdvisoryId(prefix string) uint64 {

@@ -6,7 +6,7 @@
 
       {{range $index, $element := .Platforms}}
       <div class="row">
-        <h2>{{$index}}</h2>
+        <h2>{{$index}}<a class="btn btn-link pull-right" href="{{urldata "/advisories/{{.}}" $index}}">More &rarr;</a></h2>
         <div class="table-responsive">
           <table class="table table-condensed table-hover">
             {{range $element}}
@@ -18,9 +18,6 @@
             {{end}}
           </table>
         </div>
-        <ul class="pager">
-          <li class="next"><a href="{{urldata "/advisories/{{.}}" $index}}">More &rarr;</a></li>
-        </ul>
       </div>
       {{end}}
 
