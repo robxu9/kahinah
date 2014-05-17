@@ -1,11 +1,12 @@
 package controllers
 
 import (
+	"strings"
+
 	"github.com/astaxie/beego"
 	"github.com/astaxie/beego/orm"
 	"github.com/robxu9/kahinah/models"
 	"menteslibres.net/gosexy/to"
-	"strings"
 )
 
 const (
@@ -95,6 +96,7 @@ func (this *AdminController) Get() {
 		}
 	}
 
+	this.Data["Loc"] = 0
 	this.Data["Tab"] = -1
 
 	perms := make(map[string][]string)

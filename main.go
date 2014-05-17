@@ -56,9 +56,10 @@ func main() {
 	//
 
 	// advisories
-	beego.Router(getPrefixString("/advisories"), &controllers.AdvisoryController{}, "get:AllGet")
-	beego.Router(getPrefixString("/advisories/:id:int"), &controllers.AdvisoryController{})
-	beego.Router(getPrefixString("/advisories/new"), &controllers.AdvisoryController{}, "get:NewGet;post:NewPost")
+	beego.Router(getPrefixString("/advisories"), &controllers.AdvisoryMainController{})
+	//beego.Router(getPrefixString("/advisories/:platform:string"), &controllers.AdvisoryPlatformController{})
+	//beego.Router(getPrefixString("/advisories/:id:int"), &controllers.AdvisoryController{})
+	//beego.Router(getPrefixString("/advisories/new"), &controllers.AdvisoryNewController{})
 
 	//beego.Router("/about", &controllers.AboutController{})
 

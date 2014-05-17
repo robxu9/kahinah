@@ -28,7 +28,6 @@ func init() {
 	orm.RegisterModelWithPrefix(Prefix, new(Karma))
 
 	orm.RegisterModelWithPrefix(Prefix, new(Advisory))
-	orm.RegisterModelWithPrefix(Prefix, new(AdvisoryKarma))
 
 	orm.RegisterModelWithPrefix(Prefix, new(User))
 	orm.RegisterModelWithPrefix(Prefix, new(UserPermission))

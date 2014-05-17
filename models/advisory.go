@@ -11,10 +11,12 @@ import (
 type Advisory struct {
 	Id uint64 `orm:"auto;pk"`
 
+	Platform   string
 	Prefix     string
 	AdvisoryId uint64
 
 	Creator     *User  `orm:"rel(fk)"`
+	Summary     string `orm:"type(text)"`
 	Description string `orm:"type(text)"`
 
 	Type string // type of advisory (bugfix, security, etc)

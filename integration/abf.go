@@ -125,10 +125,10 @@ func (a ABF) handleResponse(resp *http.Response, testing bool) error {
 			// *check for duplicates before continuing
 			// *we only check for duuplicates in the same platform; different platforms have different conditions
 			var possibleDuplicate models.BuildList
-			err = o.QueryTable(new(models.BuildList)).Filter("Platform", dig.String(&json, "save_to_repository", "platform", "name")).Filter("HandleCommitId", dig.String(&list, "commit_hash")).One(&possibleDuplicate)
+			err = o.QueryTable(new(models.BuildList)).Filter("Platform", dig.String(&json, "save_to_repository", "platform", "name")).Filter("HandleCommitId", dig.String(&json, "commit_hash")).One(&possibleDuplicate)
 			if err == nil { // we found a duplicate... handle and continue
 				possibleDuplicate.HandleId = possibleDuplicate.HandleId + ";" + to.String(id)
-				possibleDuplicate.Architecture += ";" + dig.String(&list, "arch", "name")
+				possibleDuplicate.Architecture += ";" + dig.String(&json, "arch", "name")
 
 				if testing {
 					// send id to testing
@@ -137,9 +137,9 @@ func (a ABF) handleResponse(resp *http.Response, testing bool) error {
 
 				o.Update(&possibleDuplicate)
 
-				pkgs := makePkgList(json)
+				pkgs := a.makePkgList(json)
 				for _, listpkg := range pkgs {
-					listpkg.List = possibleDuplicate
+					listpkg.List = &possibleDuplicate
 					o.Insert(listpkg)
 				}
 
@@ -147,7 +147,7 @@ func (a ABF) handleResponse(resp *http.Response, testing bool) error {
 				continue
 			}
 
-			list, err := a.makeBuildList(id)
+			list, err := a.makeBuildList(json)
 			if err != nil {
 				log.Printf("abf: Error retrieving build list %s: %s\n", id, err)
 				continue
@@ -191,7 +191,7 @@ func (a ABF) pingBuildCompleted(platformId string) error {
 		return err
 	}
 
-	return handleResponse(resp, true)
+	return a.handleResponse(resp, true)
 }
 
 func (a ABF) pingTestingBuilds(platformId string) error {
@@ -207,7 +207,7 @@ func (a ABF) pingTestingBuilds(platformId string) error {
 		return err
 	}
 
-	return handleResponse(resp, false)
+	return a.handleResponse(resp, false)
 }
 
 func (a ABF) PingParams(m map[string]string) error {
@@ -219,7 +219,7 @@ func (a ABF) Commits(m *models.BuildList) string {
 }
 
 func (a ABF) Url(m *models.BuildList) string {
-	return "https://abf.io/build_lists/" + strings.Split(m.HandleId, ';')[0]
+	return "https://abf.io/build_lists/" + strings.Split(m.HandleId, ";")[0]
 }
 
 func (a ABF) Publish(m *models.BuildList) error {
@@ -315,10 +315,11 @@ func (a ABF) getJSONList(id uint64) (list map[string]interface{}, err error) {
 	}
 
 	dig.Get(&result, &list, "build_list")
+	return
 }
 
 func (a ABF) makeBuildList(list map[string]interface{}) (*models.BuildList, error) {
-	pkg := makePkgList(list)
+	pkg := a.makePkgList(list)
 
 	changelog := ""
 

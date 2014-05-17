@@ -66,19 +66,20 @@
               </ul>
             </li>
 
-            <li {{if eq .Loc 2}}class="active" {{end}}class="dropdown"> <!-- builds -->
+            <li {{if eq .Loc 2}}class="active" {{end}}class="dropdown"> <!-- advisories -->
               <a href="#" class="dropdown-toggle" data-toggle="dropdown">Advisories <b class="caret"></b></a>
               <ul class="dropdown-menu">
-                <li{{if eq .Loc 2}}{{if eq .Tab 1}} class="active"{{end}}{{end}}><a href="{{url "/advisories/pending"}}">Pending</a></li>
-                <li{{if eq .Loc 2}}{{if eq .Tab 2}} class="active"{{end}}{{end}}><a href="{{url "/advisories/approved"}}">Approved</a></li>
+                <li{{if eq .Loc 2}}{{if eq .Tab 1}} class="active"{{end}}{{end}}><a href="{{url "/advisories"}}">Recent</a></li>
+                <li class="divider"></li>
+                <li{{if eq .Loc 2}}{{if eq .Tab 2}} class="active"{{end}}{{end}}><a href="{{url "/advisories/pending"}}">Pending</a></li>
                 <li{{if eq .Loc 2}}{{if eq .Tab 3}} class="active"{{end}}{{end}}><a href="{{url "/advisories/rejected"}}">Rejected</a></li>
                 <li{{if eq .Loc 2}}{{if eq .Tab 4}} class="active"{{end}}{{end}}><a href="{{url "/advisories"}}">All</a></li>
                 <li class="divider"></li>
-                <li{{if eq .Loc 2}}{{if eq .Tab 5}} class="active"{{end}}{{end}}><a href="{{url "/advisories/new"}}">New Advisory</a></li>
+                <li{{if eq .Loc 2}}{{if eq .Tab -1}} class="active"{{end}}{{end}}><a href="{{url "/advisories/new"}}">New Advisory</a></li>
               </ul>
             </li>
 
-            <li {{if eq .Loc 3}}class="active" {{end}}class="dropdown"> <!-- builds -->
+            <li {{if eq .Loc 3}}class="active" {{end}}class="dropdown"> <!-- virtual testing -->
               <a href="#" class="dropdown-toggle" data-toggle="dropdown">Virtual Testing <b class="caret"></b></a>
               <ul class="dropdown-menu">
                 <li{{if eq .Loc 3}}{{if eq .Tab 1}} class="active"{{end}}{{end}}><a href="{{url "/vtests/running"}}">Currently Running</a></li>
@@ -87,7 +88,7 @@
               </ul>
             </li>
 
-            <li {{if eq .Loc 4}}class="active" {{end}}class="dropdown"> <!-- builds -->
+            <li {{if eq .Loc 4}}class="active" {{end}}class="dropdown"> <!-- appstream -->
               <a href="#" class="dropdown-toggle" data-toggle="dropdown">AppStream Check <b class="caret"></b></a>
               <ul class="dropdown-menu">
                 <li{{if eq .Loc 4}}{{if eq .Tab 1}} class="active"{{end}}{{end}}><a href="{{url "/appstream/desktop"}}">Desktop Applications</a></li>
