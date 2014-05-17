@@ -44,6 +44,10 @@
         });
       </script>
 
+      <div class="page-header">
+        <h1>{{.Title}} <small>much sortable such searchable wow</small></h1>
+      </div>
+
       <div class="row table-responsive">
         <table class="table tablesorter" id="pkgtable">
           <thead>

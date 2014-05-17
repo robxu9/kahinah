@@ -18,7 +18,7 @@
           </table>
         </div>
         <ul class="pager">
-          <li class="next"><a href="{{urldata "/advisories/$index" .}}">More &rarr;</a></li>
+          <li class="next"><a href="{{urldata "/advisories/{{.}}" $index}}">More &rarr;</a></li>
         </ul>
       </div>
       {{end}}
