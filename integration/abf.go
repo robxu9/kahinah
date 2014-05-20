@@ -282,6 +282,7 @@ func (a ABF) sendToTesting(id uint64) error {
 
 	resp, err := client.Do(req)
 	if err != nil {
+		fmt.Fprintf(os.Stderr, "failed to send %d to testing: %s\n", id, err.Error())
 		return err
 	}
 
