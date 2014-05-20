@@ -56,6 +56,26 @@ type AdminController struct {
 func (this *AdminController) Get() {
 	adminCheck(&this.Controller)
 
+	this.Data["Loc"] = 0
+	this.Data["Tab"] = -1
+
+	perms := make(map[string][]string)
+
+	for _, perm := range models.PermGetAll() {
+		perms[perm.Permission] = make([]string, 0)
+
+		for _, v := range perm.Users {
+			perms[perm.Permission] = append(perms[perm.Permission], v.Email)
+		}
+	}
+
+	this.Data["Title"] = "Admin"
+	this.Data["Permissions"] = perms
+	this.TplNames = "admin.tpl"
+}
+
+func (this *AdminController) Post() {
+
 	if this.GetString("email") != "" {
 		user := models.FindUserNoCreate(this.GetString("email"))
 		if user == nil {
@@ -99,20 +119,6 @@ func (this *AdminController) Get() {
 		}
 	}
 
-	this.Data["Loc"] = 0
-	this.Data["Tab"] = -1
+	this.Get()
 
-	perms := make(map[string][]string)
-
-	for _, perm := range models.PermGetAll() {
-		perms[perm.Permission] = make([]string, 0)
-
-		for _, v := range perm.Users {
-			perms[perm.Permission] = append(perms[perm.Permission], v.Email)
-		}
-	}
-
-	this.Data["Title"] = "Admin"
-	this.Data["Permissions"] = perms
-	this.TplNames = "admin.tpl"
 }

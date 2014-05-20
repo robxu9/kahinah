@@ -10,7 +10,7 @@
       <div class="row">
         <div class="col-lg-6">
           <h3>Users</h3>
-          <form class="form-inline" role="form" method="get">
+          <form class="form-inline" role="form" method="post">
             {{ .xsrf_data }}
             <div class="form-group">
               <label class="sr-only" for="email">Email Address</label>
@@ -19,7 +19,7 @@
             <button type="submit" class="btn btn-default">Submit</button>
           </form>
           {{if .User}}
-          <form class="form-inline" role="form" method="get">
+          <form class="form-inline" role="form" method="post">
             {{ .xsrf_data }}
             <div class="form-group">
               <label class="sr-only" for="add">Add Permission</label>
@@ -28,7 +28,7 @@
             </div>
             <button type="submit" class="btn btn-default">Add</button>
           </form>
-          <form class="form-inline" role="form" method="get">
+          <form class="form-inline" role="form" method="post">
             {{ .xsrf_data }}
             <div class="form-group">
               <input type="hidden" name="email" value="{{.User.Email}}">
