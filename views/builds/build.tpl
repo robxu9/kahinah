@@ -46,7 +46,7 @@
                         {{with .Package.Packages}}
                           {{range .}}
                         <tr>
-                          <td>{{.Name}}-{{if gt .Epoch 0}}{{.Epoch}}:{{end}}{{.Version}}-{{.Release}}.{{.Type}}</td>
+                          <td>{{.Name}}-{{if gt .Epoch 0}}{{.Epoch}}:{{end}}{{.Version}}-{{.Release}}{{if .Arch}}.{{.Arch}}{{end}}.{{.Type}}</td>
                         </tr>
                           {{end}}
                         {{end}}

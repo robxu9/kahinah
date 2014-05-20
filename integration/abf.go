@@ -448,6 +448,7 @@ func (a ABF) makePkgList(json map[string]interface{}) []*models.BuildListPkg {
 			Epoch:   dig.Int64(&m, "epoch"),
 			Version: dig.String(&m, "version"),
 			Release: dig.String(&m, "release"),
+			Arch:    dig.String(&json, "arch", "name"),
 			Url:     dig.String(&m, "url"),
 		}
 	}

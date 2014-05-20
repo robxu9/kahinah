@@ -57,5 +57,6 @@ type BuildListPkg struct {
 	Epoch   int64
 	Version string
 	Release string
+	Arch    string
 	Url     string `orm:"type(text)"`
 }
