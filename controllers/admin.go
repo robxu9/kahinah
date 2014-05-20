@@ -59,6 +59,17 @@ func (this *AdminController) Get() {
 	this.Data["Loc"] = 0
 	this.Data["Tab"] = -1
 
+	if this.GetString("email") != "" {
+		user := models.FindUserNoCreate(this.GetString("email"))
+		if user == nil {
+			flash := beego.NewFlash()
+			flash.Error("No such email " + this.GetString("email") + "!")
+			flash.Store(&this.Controller)
+		} else {
+			this.Data["User"] = user
+		}
+	}
+
 	perms := make(map[string][]string)
 
 	for _, perm := range models.PermGetAll() {
@@ -75,6 +86,7 @@ func (this *AdminController) Get() {
 }
 
 func (this *AdminController) Post() {
+	adminCheck(&this.Controller)
 
 	if this.GetString("email") != "" {
 		user := models.FindUserNoCreate(this.GetString("email"))
