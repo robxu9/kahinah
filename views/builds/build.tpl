@@ -74,7 +74,7 @@
           <div class="panel panel-info">
             <div class="panel-heading"><button class="btn btn-info" data-toggle="collapse" href="#diff">Git Diff</button><div class="pull-right"><a href="{{.Commits}}" class="btn btn-default">Commits</a></div></div>
             <div id="diff" class="panel-collapse collapse">
-              <pre class="highlightThis">{{.Package.Diff}}</pre>
+              <pre class="brush: diff">{{.Package.Diff}}</pre>
             </div>
           </div>
 
@@ -102,7 +102,7 @@
           {{end}}
 
           <div class="panel panel-default">
-            <div class="panel-heading"><button class="btn btn-default">Karma</button></div>
+            <div class="panel-heading"><button class="btn btn-default">Votes</button></div>
             <div class="panel-body">
               {{if .Votes}}
               <table class="table table-condensed table-responsive table-bordered">
@@ -113,7 +113,7 @@
                 {{end}}
               </table>
               {{else}}
-              No opinions on this... yet.
+              Nobody's voted yet.
               {{end}}
             </div>
           </div>
@@ -186,13 +186,10 @@
         }).change();
       </script>
 
-      <link rel="stylesheet" href="//yandex.st/highlightjs/8.0/styles/default.min.css">
-      <link rel="stylesheet" href="//yandex.st/highlightjs/8.0/styles/github.min.css">
-      <script src="//yandex.st/highlightjs/8.0/highlight.min.js"></script>
-      <script>
-        $(document).ready(function() {
-          $(".highlightThis").each(function(i, e) {hljs.highlightBlock(e)});
-        });
-      </script>
+      <link href="http://alexgorbatchev.com/pub/sh/current/styles/shCore.css" rel="stylesheet" type="text/css" />
+      <link href="http://alexgorbatchev.com/pub/sh/current/styles/shThemeDefault.css" rel="stylesheet" type="text/css" />
+      <script src="http://alexgorbatchev.com/pub/sh/current/scripts/shCore.js" type="text/javascript"></script>
+      <script src="http://alexgorbatchev.com/pub/sh/current/scripts/shBrushDiff.js" type="text/javascript"></script>
+      <script>SyntaxHighlighter.all();</script>
 
 {{template "footer.tpl" .}}
