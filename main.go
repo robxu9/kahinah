@@ -9,16 +9,13 @@ import (
 	"net/http"
 	"strings"
 	"time"
+	"github.com/robxu9/kahinah/util"
 
 	"github.com/astaxie/beego"
 	"github.com/robxu9/kahinah/controllers"
 	"github.com/robxu9/kahinah/integration"
 	"github.com/robxu9/kahinah/models"
 	"menteslibres.net/gosexy/to"
-)
-
-var (
-	PREFIX = beego.AppConfig.String("urlprefix")
 )
 
 func main() {
@@ -28,9 +25,9 @@ func main() {
 	beego.XSRFKEY = getRandomString(50)
 	beego.XSRFExpire = 3600
 
-	beego.SetStaticPath(getPrefixString("/static"), "static")
+	beego.SetStaticPath(util.GetPrefixString("/static"), "static")
 
-	beego.Router(getPrefixString("/"), &controllers.MainController{})
+	beego.Router(util.GetPrefixString("/"), &controllers.MainController{})
 
 	//
 	// --------------------------------------------------------------------
@@ -39,16 +36,16 @@ func main() {
 	//
 
 	// testing
-	beego.Router(getPrefixString("/builds/testing"), &controllers.TestingController{}) // lists testing updates
+	beego.Router(util.GetPrefixString("/builds/testing"), &controllers.TestingController{}) // lists testing updates
 	// published
-	beego.Router(getPrefixString("/builds/published"), &controllers.PublishedController{})
+	beego.Router(util.GetPrefixString("/builds/published"), &controllers.PublishedController{})
 	// rejected
-	beego.Router(getPrefixString("/builds/rejected"), &controllers.RejectedController{}) // lists all rejected updates
+	beego.Router(util.GetPrefixString("/builds/rejected"), &controllers.RejectedController{}) // lists all rejected updates
 	// all builds
-	beego.Router(getPrefixString("/builds"), &controllers.BuildsController{}) // show all testing, published, rejected (all sorted by date, linking respectively to above)
+	beego.Router(util.GetPrefixString("/builds"), &controllers.BuildsController{}) // show all testing, published, rejected (all sorted by date, linking respectively to above)
 
 	// specific
-	beego.Router(getPrefixString("/builds/:id:int"), &controllers.BuildController{})
+	beego.Router(util.GetPrefixString("/builds/:id:int"), &controllers.BuildController{})
 
 	//
 	// --------------------------------------------------------------------
@@ -57,10 +54,10 @@ func main() {
 	//
 
 	// advisories
-	beego.Router(getPrefixString("/advisories"), &controllers.AdvisoryMainController{})
-	//beego.Router(getPrefixString("/advisories/:platform:string"), &controllers.AdvisoryPlatformController{})
-	//beego.Router(getPrefixString("/advisories/:id:int"), &controllers.AdvisoryController{})
-	beego.Router(getPrefixString("/advisories/new"), &controllers.AdvisoryNewController{})
+	beego.Router(util.GetPrefixString("/advisories"), &controllers.AdvisoryMainController{})
+	//beego.Router(util.GetPrefixString("/advisories/:platform:string"), &controllers.AdvisoryPlatformController{})
+	//beego.Router(util.GetPrefixString("/advisories/:id:int"), &controllers.AdvisoryController{})
+	beego.Router(util.GetPrefixString("/advisories/new"), &controllers.AdvisoryNewController{})
 
 	//beego.Router("/about", &controllers.AboutController{})
 
@@ -69,16 +66,16 @@ func main() {
 	// AUTHENTICATION [persona]
 	// --------------------------------------------------------------------
 	//
-	beego.Router(getPrefixString("/auth/check"), &models.PersonaCheckController{})
-	beego.Router(getPrefixString("/auth/login"), &models.PersonaLoginController{})
-	beego.Router(getPrefixString("/auth/logout"), &models.PersonaLogoutController{})
+	beego.Router(util.GetPrefixString("/auth/check"), &models.PersonaCheckController{})
+	beego.Router(util.GetPrefixString("/auth/login"), &models.PersonaLoginController{})
+	beego.Router(util.GetPrefixString("/auth/logout"), &models.PersonaLogoutController{})
 
 	//
 	// --------------------------------------------------------------------
 	// ADMINISTRATION [crap]
 	// --------------------------------------------------------------------
 	//
-	beego.Router(getPrefixString("/admin"), &controllers.AdminController{})
+	beego.Router(util.GetPrefixString("/admin"), &controllers.AdminController{})
 
 	//
 	// --------------------------------------------------------------------
@@ -98,8 +95,8 @@ func main() {
 		return m[to.String(s)]
 	})
 
-	beego.AddFuncMap("url", getPrefixString)
-	beego.AddFuncMap("urldata", getPrefixStringWithData)
+	beego.AddFuncMap("url", util.GetPrefixString)
+	beego.AddFuncMap("urldata", util.GetPrefixStringWithData)
 
 	//
 	// --------------------------------------------------------------------
@@ -166,28 +163,6 @@ func main() {
 
 	beego.Run()
 	<-stop
-}
-
-func getPrefixStringWithData(dest string, data interface{}) string {
-	// no need to prefix if the dest has no / before it
-	temp := template.Must(template.New("prefixTemplate").Parse(dest))
-	var b bytes.Buffer
-
-	err := temp.Execute(&b, data)
-	if err != nil {
-		panic(err)
-	}
-
-	result := b.String()
-	return getPrefixString(result)
-}
-
-func getPrefixString(dest string) string {
-	if PREFIX == "" {
-		return dest
-	}
-
-	return "/" + PREFIX + dest
 }
 
 func getRandomString(n int) string {

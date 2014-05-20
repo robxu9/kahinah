@@ -1,4 +1,5 @@
 {{template "header.tpl" .}}
+
 		<div class="page-header">
 			<h1>Create Advisory <small>Something big needs to be known.</small></h1>
 		</div>
@@ -39,21 +40,22 @@
 			<div class="form-group"> <!-- BUGS FIXED -->
 				<label for="input_bugs" class="col-sm-2 control-label">Bugs Fixed <button class="btn btn-link" id="bugs_add">Add</button></label>
 				<div class="col-sm-10" id="bugs_div">
-					{{if .FailBug}}{{range $key, $value := .FailBug}}<input type="number" autocomplete="off" class="form-control input_bugs" name="input_bugs" id="input_bugs_{{$key}}" placeholder="Update ID" value="{{$value}}"/>{{end}}{{else}}<input type="number" autocomplete="off" class="form-control input_bugs" name="input_bugs" id="input_bugs_0" placeholder="e.g. 789 (for omv#789)" />{{end}}
+					{{if .FailBug}}{{range $key, $value := .FailBug}}<input type="number" autocomplete="off" class="form-control input_bugs" name="input_bugs" id="input_bugs_{{$key}}" placeholder="Update ID" value="{{$value}}" min="0"/>{{end}}{{else}}<input type="number" autocomplete="off" class="form-control input_bugs" name="input_bugs" id="input_bugs_0" placeholder="e.g. 789 (for omv#789)" min="0"/>{{end}}
 				</div>
 			</div>
 			<div class="form-group"> <!-- UPDATE IDs -->
 				<label for="input_update" class="col-sm-2 control-label">Update IDs <button class="btn btn-link" id="update_add">Add</button></label>
 				<div class="col-sm-10" id="update_div">
-					{{if .FailUpdateID}}{{range $key, $value := .FailUpdateID}}<input type="number" autocomplete="off" class="form-control input_update" name="input_update" id="input_update_{{$key}}" placeholder="Update ID" value="{{$value}}"/>{{end}}{{else}}<input type="number" autocomplete="off" class="form-control input_update" name="input_update" id="input_update_0" placeholder="e.g. 152 (for UPDATE-YEAR-152)" />{{end}}
+					{{if .FailUpdateID}}{{range $key, $value := .FailUpdateID}}<input type="number" autocomplete="off" class="form-control input_update" name="input_update" id="input_update_{{$key}}" placeholder="Update ID" value="{{$value}}" min="0"/>{{end}}{{else}}<input type="number" autocomplete="off" class="form-control input_update" name="input_update" id="input_update_0" placeholder="e.g. 152 (for UPDATE-YEAR-152)" min="0"/>{{end}}
 				</div>
 			</div>
 			<div class="form-group"> <!-- SUBMIT -->
-				<label for="input_submit" class="col-sm-2 control-label">Make sure to proofread!</label>
-				<div class="col-sm-10">
-					<input type="submit" class="btn btn-primary" value="I have proofread this advisory and will submit it for approval.">
+				<label for="input_submit" class="col-sm-6 control-label">Make sure to proofread! Once submitted, this cannot be changed!</label>
+				<div class="col-sm-6">
+					<input type="submit" class="btn btn-primary" value="I have proofread this advisory, and know that this advisory can not be edited.">
 				</div>
 			</div>
+			{{.xsrf_data}}
 		</form>
 
 		<script>

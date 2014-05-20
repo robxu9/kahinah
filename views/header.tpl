@@ -70,10 +70,7 @@
               <a href="#" class="dropdown-toggle" data-toggle="dropdown">Advisories <b class="caret"></b></a>
               <ul class="dropdown-menu">
                 <li{{if eq .Loc 2}}{{if eq .Tab 1}} class="active"{{end}}{{end}}><a href="{{url "/advisories"}}">Recent</a></li>
-                <li class="divider"></li>
-                <li{{if eq .Loc 2}}{{if eq .Tab 2}} class="active"{{end}}{{end}}><a href="{{url "/advisories/pending"}}">Pending</a></li>
-                <li{{if eq .Loc 2}}{{if eq .Tab 3}} class="active"{{end}}{{end}}><a href="{{url "/advisories/rejected"}}">Rejected</a></li>
-                <li{{if eq .Loc 2}}{{if eq .Tab 4}} class="active"{{end}}{{end}}><a href="{{url "/advisories"}}">All</a></li>
+                <li{{if eq .Loc 2}}{{if eq .Tab 2}} class="active"{{end}}{{end}}><a href="{{url "/advisories/all"}}">All</a></li>
                 <li class="divider"></li>
                 <li{{if eq .Loc 2}}{{if eq .Tab -1}} class="active"{{end}}{{end}}><a href="{{url "/advisories/new"}}">New Advisory</a></li>
               </ul>
