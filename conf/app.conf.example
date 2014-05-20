@@ -25,6 +25,10 @@ db_pass = toor
 [abf]
 abf_user = <USERNAME>
 abf_pass = <PASSWORD>
+
+; use ssh to git clone repos
+abf_use_ssh = false
+
 abf_platforms = openmandriva2013.0:668
 ; for multiple platforms:
 ; abf_platforms = openmandriva2013.0:668;cooker:317

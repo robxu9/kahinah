@@ -26,6 +26,7 @@ const (
 var (
 	user          = beego.AppConfig.String("abf::abf_user")
 	pass          = beego.AppConfig.String("abf::abf_pass")
+	use_ssh       = to.Bool(beego.AppConfig.String("abf::abf_use_ssh"))
 	platforms     *util.Set
 	platformids   *util.Set
 	archwhitelist *util.Set
@@ -340,7 +341,7 @@ func (a ABF) makeBuildList(list map[string]interface{}) (*models.BuildList, erro
 		HandleId:       to.String(dig.Uint64(&list, "id")),
 		HandleProject:  dig.String(&list, "project", "fullname"),
 		HandleCommitId: dig.String(&list, "commit_hash"),
-		Diff:           a.makeDiff(dig.String(&list, "project", "git_url"), dig.String(&list, "last_published_commit_hash"), dig.String(&list, "commit_hash")),
+		Diff:           a.makeDiff(dig.String(&list, "project", "git_url"), dig.String(&list, "project", "ssh_url"), dig.String(&list, "last_published_commit_hash"), dig.String(&list, "commit_hash")),
 
 		//Platform:     dig.String(&list, "build_for_platform", "name"),
 		Platform:     dig.String(&list, "save_to_repository", "platform", "name"),
@@ -358,7 +359,7 @@ func (a ABF) makeBuildList(list map[string]interface{}) (*models.BuildList, erro
 	return &bl, nil
 }
 
-func (a ABF) makeDiff(gitUrl, fromHash, toHash string) string {
+func (a ABF) makeDiff(gitUrl, sshUrl, fromHash, toHash string) string {
 	// ugh, looks like we'll have to do this the sadly hard way
 	tmpdir, err := ioutil.TempDir("", "kahinah_")
 	if err != nil {
@@ -371,7 +372,12 @@ func (a ABF) makeDiff(gitUrl, fromHash, toHash string) string {
 		gitUrl = gitUrl[:strings.Index(gitUrl, "//")+2] + gitUrl[strings.Index(gitUrl, "@")+1:]
 	}
 
-	gitresult := exec.Command("git", "clone", "--depth", "100", "--bare", gitUrl, tmpdir).Run()
+	urlToUse := gitUrl
+	if use_ssh {
+		urlToUse = sshUrl
+	}
+
+	gitresult := exec.Command("git", "clone", "--depth", "100", "--bare", urlToUse, tmpdir).Run()
 	if gitresult != nil { // git better exit with status zero
 		return "Repository could not be cloned for diff: " + gitresult.Error()
 	}
