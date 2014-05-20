@@ -1,6 +1,7 @@
 package integration
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -342,7 +343,7 @@ func (a ABF) makeBuildList(list map[string]interface{}) (*models.BuildList, erro
 		HandleId:       to.String(dig.Uint64(&list, "id")),
 		HandleProject:  dig.String(&list, "project", "fullname"),
 		HandleCommitId: dig.String(&list, "commit_hash"),
-		Diff:           a.makeDiff(dig.String(&list, "project", "git_url"), dig.String(&list, "project", "ssh_url"), dig.String(&list, "last_published_commit_hash"), dig.String(&list, "commit_hash")),
+		Diff:           a.makeDiff(dig.String(&list, "project", "git_url"), dig.String(&list, "last_published_commit_hash"), dig.String(&list, "commit_hash")),
 
 		//Platform:     dig.String(&list, "build_for_platform", "name"),
 		Platform:     dig.String(&list, "save_to_repository", "platform", "name"),
@@ -360,7 +361,7 @@ func (a ABF) makeBuildList(list map[string]interface{}) (*models.BuildList, erro
 	return &bl, nil
 }
 
-func (a ABF) makeDiff(gitUrl, sshUrl, fromHash, toHash string) string {
+func (a ABF) makeDiff(gitUrl, fromHash, toHash string) string {
 	// ugh, looks like we'll have to do this the sadly hard way
 	tmpdir, err := ioutil.TempDir("", "kahinah_")
 	if err != nil {
@@ -375,20 +376,42 @@ func (a ABF) makeDiff(gitUrl, sshUrl, fromHash, toHash string) string {
 
 	urlToUse := gitUrl
 	if use_ssh {
-		urlToUse = sshUrl
+		urlToUse = strings.Replace("git@"+gitUrl[strings.Index(gitUrl, "//")+2:], "/", ":", 1)
 	}
 
-	gitresult := exec.Command("git", "clone", "--depth", "100", "--bare", urlToUse, tmpdir).Run()
-	if gitresult != nil { // git better exit with status zero
-		return "Repository could not be cloned for diff: " + gitresult.Error()
+	// reusable bytes output
+	var b bytes.Buffer
+
+	gitclonecmd := exec.Command("git", "clone", urlToUse, tmpdir)
+	gitclonecmd.Stderr = &b
+	gitclonecmd.Stdout = &b
+	gitclonecmd.Start()
+
+	gitresult := make(chan error, 1)
+	go func() {
+		gitresult <- gitclonecmd.Wait()
+	}()
+	select {
+	case <-time.After(10 * time.Minute):
+		if err := gitclonecmd.Process.Kill(); err != nil {
+			fmt.Fprintf(os.Stderr, "couldn't kill git process: %s\n", err.Error())
+		}
+		<-gitresult // allow goroutine to exit
+		log.Println("process killed")
+	case err := <-gitresult:
+		if err != nil { // git exited with non-zero status
+			fmt.Fprintf(os.Stderr, "git errored: %s\n", b.String())
+			return "Repository could not be cloned for diff: " + err.Error()
+		}
 	}
 
 	if fromHash == "" {
 		gitdiffcmd := exec.Command("git", "show", "--format=fuller", "--patch-with-stat", "--summary", toHash)
 		gitdiffcmd.Dir = tmpdir
 
-		gitdiff, err := gitdiffcmd.Output()
+		gitdiff, err := gitdiffcmd.CombinedOutput()
 		if err != nil {
+			fmt.Printf("%s", gitdiff)
 			return "No diff available: " + err.Error()
 		}
 
@@ -397,8 +420,9 @@ func (a ABF) makeDiff(gitUrl, sshUrl, fromHash, toHash string) string {
 		gitdiffcmd := exec.Command("git", "diff", "--patch-with-stat", "--summary", fromHash+".."+toHash)
 		gitdiffcmd.Dir = tmpdir
 
-		gitdiff, err := gitdiffcmd.Output()
+		gitdiff, err := gitdiffcmd.CombinedOutput()
 		if err != nil {
+			fmt.Printf("%s", gitdiff)
 			return "No diff available: " + err.Error()
 		}
 

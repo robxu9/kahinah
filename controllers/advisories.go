@@ -87,6 +87,7 @@ func (this *AdvisoryNewController) Get() {
 }
 
 func (this *AdvisoryNewController) Post() {
+	models.PermAbortCheck(&this.Controller, PERMISSION_ADVISORY)
 
 	fmt.Printf("%s\n", this.Input())
 
