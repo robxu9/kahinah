@@ -38,7 +38,7 @@ func init() {
 		orm.RegisterDataBase("default", "sqlite3", "file:"+DbName, 30)
 
 	}
-	err := orm.RunSyncdb("default", true, true)
+	err := orm.RunSyncdb("default", false, true)
 	if err != nil {
 		panic(err)
 	}
