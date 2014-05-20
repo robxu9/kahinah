@@ -108,7 +108,7 @@
               <table class="table table-condensed table-responsive table-bordered">
                 {{with .Votes}}
                   {{range $key, $value := .}}
-                <tr class="{{if eq $value 1}}success{{end}}{{if eq $value 2}}danger{{end}}"><td>{{$key.User.Email | emailat}}</td><td>{{if $key.Comment}}{{$key.Comment}}{{else}}<em>No Comment.</em>{{end}}</td></tr>
+                <tr class="{{if eq $value 1}}success{{end}}{{if eq $value 2}}danger{{end}}"><td>{{$key.User.Email | emailat}}</td><td>{{if $key.Comment}}{{$key.Comment}}{{else}}<em>No Comment.</em>{{end}}</td><td>{{if $key.Time}}{{$key.Time | since}}{{else}}[voted before timekeeping began]{{end}}</td></tr>
                   {{end}}
                 {{end}}
               </table>
@@ -151,7 +151,10 @@
                     {{end}}
                     {{if .QAControls}}
                     <label class="btn btn-warning">
-                      <input type="radio" name="type" id="voteQA" value="QABlock"><i class="fa fa-lg fa-thumbs-o-down"></i> QA Block
+                      <input type="radio" name="type" id="voteQADown" value="QABlock"><i class="fa fa-lg fa-thumbs-o-down"></i> QA Block
+                    </label>
+                    <label class="btn btn-warning">
+                      <input type="radio" name="type" id="voteQAUp" value="QAPush"><i class="fa fa-lg fa-thumbs-o-up"></i> QA Push
                     </label>
                     {{end}}
                   </div>
@@ -178,8 +181,10 @@
 
       <script>
         $("input").change(function() {
-          if ($("#voteQA").is(':checked')) {
+          if ($("#voteQADown").is(':checked')) {
             $('#voteModalAlertPlaceholder').html('<div class="alert alert-danger"><b>Head\'s up!</b> This adds -9999 karma and is <b>UNREVERSABLE</b>!</div>');
+          } else if ($("#voteQAUp").is(':checked')) {
+            $('#voteModalAlertPlaceholder').html('<div class="alert alert-warning"><b>Head\'s up!</b> This adds 9999 karma and is <b>UNREVERSABLE</b>!</div>');
           } else {
             $('#voteModalAlertPlaceholder').html('')
           }

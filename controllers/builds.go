@@ -16,6 +16,7 @@ import (
 
 const (
 	block_karma = 9999
+	push_karma  = 9999
 )
 
 var (
@@ -342,6 +343,9 @@ func (this *BuildController) Get() {
 		} else if karma.Vote == models.KARMA_BLOCK {
 			totalKarma -= int(block_karma)
 			votes[karma] = 2
+		} else if karma.Vote == models.KARMA_PUSH {
+			totalKarma += int(push_karma)
+			votes[karma] = 1
 		} else if karma.Vote == models.KARMA_NONE {
 			if karma.Comment != "" {
 				votes[karma] = 0
@@ -357,7 +361,7 @@ func (this *BuildController) Get() {
 	if user != "" {
 		kt := o.QueryTable(new(models.Karma))
 		var userkarma models.Karma
-		err = kt.Filter("User__Email", user).Filter("List__Id", id).One(&userkarma)
+		err = kt.Filter("User__Email", user).Filter("List__Id", id).OrderBy("-Time").Limit(1).One(&userkarma)
 		if err != orm.ErrNoRows && err != nil {
 			log.Println(err)
 		} else if err == nil {
@@ -410,7 +414,7 @@ func (this *BuildController) Post() {
 	id := to.Uint64(this.Ctx.Input.Param(":id"))
 
 	postType := this.GetString("type")
-	if postType != "Neutral" && postType != "Up" && postType != "Down" && postType != "Maintainer" && postType != "QABlock" {
+	if postType != "Neutral" && postType != "Up" && postType != "Down" && postType != "Maintainer" && postType != "QABlock" && postType != "QAPush" {
 		this.Abort("400")
 	}
 
@@ -444,7 +448,7 @@ func (this *BuildController) Post() {
 				this.Abort("400")
 			}
 		}
-	} else if postType == "QABlock" {
+	} else if postType == "QABlock" || postType == "QAPush" {
 		models.PermAbortCheck(&this.Controller, PERMISSION_QA)
 	} else {
 		// whitelist stuff
@@ -454,7 +458,7 @@ func (this *BuildController) Post() {
 				flash := beego.NewFlash()
 				flash.Warning("Sorry, the whitelist is on and you are not allowed to vote.")
 				flash.Store(&this.Controller)
-				this.Get()
+				this.Redirect(this.UrlFor("BuildController.Get"), http.StatusMovedPermanently)
 				return
 			}
 		}
@@ -463,47 +467,32 @@ func (this *BuildController) Post() {
 	kt := o.QueryTable(new(models.Karma))
 
 	var userkarma models.Karma
-	err = kt.Filter("List__Id", id).Filter("User__Email", user).One(&userkarma)
-	if err != orm.ErrNoRows && err != nil {
-		log.Println(err)
-	} else if err == nil { // already has entry
-		if postType == "Up" {
-			userkarma.Vote = models.KARMA_UP
-		} else if postType == "Maintainer" {
-			userkarma.Vote = models.KARMA_MAINTAINER
-		} else if postType == "QABlock" {
-			userkarma.Vote = models.KARMA_BLOCK
-		} else if postType == "Neutral" {
-			userkarma.Vote = models.KARMA_NONE
-		} else {
-			userkarma.Vote = models.KARMA_DOWN
-		}
-		userkarma.Comment = comment
-		o.Update(&userkarma)
+
+	userkarma.List = &pkg
+	userkarma.User = models.FindUser(user)
+	if postType == "Up" {
+		userkarma.Vote = models.KARMA_UP
+	} else if postType == "Maintainer" {
+		userkarma.Vote = models.KARMA_MAINTAINER
+	} else if postType == "QABlock" {
+		userkarma.Vote = models.KARMA_BLOCK
+	} else if postType == "QAPush" {
+		userkarma.Vote = models.KARMA_PUSH
+	} else if postType == "Neutral" {
+		userkarma.Vote = models.KARMA_NONE
 	} else {
-		userkarma.List = &pkg
-		userkarma.User = models.FindUser(user)
-		if postType == "Up" {
-			userkarma.Vote = models.KARMA_UP
-		} else if postType == "Maintainer" {
-			userkarma.Vote = models.KARMA_MAINTAINER
-		} else if postType == "QABlock" {
-			userkarma.Vote = models.KARMA_BLOCK
-		} else if postType == "Neutral" {
-			userkarma.Vote = models.KARMA_NONE
-		} else {
-			userkarma.Vote = models.KARMA_DOWN
-		}
-		userkarma.Comment = comment
-		o.Insert(&userkarma)
+		userkarma.Vote = models.KARMA_DOWN
 	}
+	userkarma.Comment = comment
+	o.Insert(&userkarma)
 
 	karmaup, _ := kt.Filter("List__Id", id).Filter("Vote", models.KARMA_UP).Count()
 	karmadown, _ := kt.Filter("List__Id", id).Filter("Vote", models.KARMA_DOWN).Count()
 	karmamaintainer, _ := kt.Filter("List__Id", id).Filter("Vote", models.KARMA_MAINTAINER).Count()
 	karmablock, _ := kt.Filter("List__Id", id).Filter("Vote", models.KARMA_BLOCK).Count()
+	karmapush, _ := kt.Filter("List__Id", id).Filter("Vote", models.KARMA_PUSH).Count()
 
-	karmaTotal := karmaup - karmadown + (maintainer_karma * karmamaintainer) - (block_karma * karmablock)
+	karmaTotal := karmaup - karmadown + (maintainer_karma * karmamaintainer) - (block_karma * karmablock) + (push_karma * karmapush)
 
 	upthreshold, err := beego.AppConfig.Int64("karma::upperkarma")
 	if err != nil {
