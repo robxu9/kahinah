@@ -42,7 +42,7 @@ func IssueAdvisory(advisory *Advisory) {
 	advisory.Issued = time.Now()
 
 	o := orm.NewOrm()
-	_, err := o.Insert(advisory)
+	_, err := o.Update(advisory)
 	if err != nil {
 		panic(err)
 	}

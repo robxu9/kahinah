@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"fmt"
 	"log"
 	"strings"
 
@@ -66,4 +67,28 @@ func (this *AdvisoryMainController) Get() {
 	this.TplNames = "advisories/main.tpl"
 
 	this.Data["Platforms"] = platforms
+}
+
+//
+// new controller
+// shows new input
+//
+
+type AdvisoryNewController struct {
+	AdvisoryBaseController
+}
+
+func (this *AdvisoryNewController) Get() {
+	models.PermAbortCheck(&this.Controller, PERMISSION_ADVISORY)
+
+	this.Data["Tab"] = -1
+	this.Data["Title"] = "New Advisory"
+	this.TplNames = "advisories/new.tpl"
+}
+
+func (this *AdvisoryNewController) Post() {
+
+	fmt.Printf("%s\n", this.Input())
+
+	this.Abort("500")
 }

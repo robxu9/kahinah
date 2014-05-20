@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"fmt"
 	"html/template"
+	"io/ioutil"
 	"net/http"
 	"strings"
 	"time"
@@ -59,7 +60,7 @@ func main() {
 	beego.Router(getPrefixString("/advisories"), &controllers.AdvisoryMainController{})
 	//beego.Router(getPrefixString("/advisories/:platform:string"), &controllers.AdvisoryPlatformController{})
 	//beego.Router(getPrefixString("/advisories/:id:int"), &controllers.AdvisoryController{})
-	//beego.Router(getPrefixString("/advisories/new"), &controllers.AdvisoryNewController{})
+	beego.Router(getPrefixString("/advisories/new"), &controllers.AdvisoryNewController{})
 
 	//beego.Router("/about", &controllers.AboutController{})
 
@@ -106,10 +107,32 @@ func main() {
 	// --------------------------------------------------------------------
 	//
 	beego.Errorhandler("550", func(rw http.ResponseWriter, r *http.Request) {
-		t := template.Must(template.New("permerror").ParseFiles(beego.ViewsPath + "/permissions_error.tpl"))
+
+		templateName := "permissions_error.tpl"
+
 		data := make(map[string]interface{})
+		data["Title"] = "Oh No!"
 		data["Permission"] = r.Form.Get("permission")
-		t.Execute(rw, data)
+		data["Loc"] = -2
+		data["Tab"] = -1
+		data["copyright"] = time.Now().Year()
+
+		data["xsrf_token"] = r.Form.Get("xsrf")
+
+		if beego.RunMode == "dev" {
+			beego.BuildTemplate(beego.ViewsPath)
+		}
+
+		newbytes := bytes.NewBufferString("")
+		if _, ok := beego.BeeTemplates[templateName]; !ok {
+			panic("can't find templatefile in the path:" + templateName)
+		}
+		err := beego.BeeTemplates[templateName].ExecuteTemplate(newbytes, templateName, data)
+		if err != nil {
+			panic("template Execute err: " + err.Error())
+		}
+		tplcontent, _ := ioutil.ReadAll(newbytes)
+		fmt.Fprint(rw, template.HTML(string(tplcontent)))
 	})
 
 	//

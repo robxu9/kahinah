@@ -1,6 +1,8 @@
 package models
 
 import (
+	"net/url"
+
 	"github.com/astaxie/beego"
 	"github.com/astaxie/beego/orm"
 )
@@ -94,7 +96,10 @@ func PermAbortCheck(c *beego.Controller, perm string) {
 		}
 
 	}
+
+	c.Ctx.Request.Form = url.Values{}
 	c.Ctx.Request.Form.Set("permission", perm)
+	c.Ctx.Request.Form.Set("xsrf", c.XsrfToken())
 	c.Abort("550")
 }
 

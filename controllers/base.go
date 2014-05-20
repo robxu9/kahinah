@@ -1,9 +1,10 @@
 package controllers
 
 import (
-	"github.com/astaxie/beego"
 	"html/template"
 	"time"
+
+	"github.com/astaxie/beego"
 )
 
 type BaseController struct {

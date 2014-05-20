@@ -13,6 +13,8 @@ const (
 	PERMISSION_ADMIN     = "kahinah.admin"
 	PERMISSION_QA        = "kahinah.qa"
 	PERMISSION_WHITELIST = "kahinah.whitelist"
+
+	PERMISSION_ADVISORY = "kahinah.advisory"
 )
 
 var (
@@ -24,6 +26,7 @@ func init() {
 	models.PermRegister(PERMISSION_ADMIN)
 	models.PermRegister(PERMISSION_QA)
 	models.PermRegister(PERMISSION_WHITELIST)
+	models.PermRegister(PERMISSION_ADVISORY)
 }
 
 func adminCheck(this *beego.Controller) {
