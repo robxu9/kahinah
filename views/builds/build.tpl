@@ -107,8 +107,8 @@
               {{if .Votes}}
               <table class="table table-condensed table-responsive table-bordered">
                 {{with .Votes}}
-                  {{range $key, $value := .}}
-                <tr class="{{if eq $value 1}}success{{end}}{{if eq $value 2}}danger{{end}}"><td>{{$key.User.Email | emailat}}</td><td>{{if $key.Comment}}{{$key.Comment}}{{else}}<em>No Comment.</em>{{end}}</td><td>{{if $key.Time}}{{$key.Time | since}}{{else}}[voted before timekeeping began]{{end}}</td></tr>
+                  {{range .}}
+                <tr class="{{if eq .Value 1}}success{{end}}{{if eq .Value 2}}danger{{end}}"><td>{{.Key.User.Email | emailat}}</td><td>{{if .Key.Comment}}{{.Key.Comment}}{{else}}<em>No Comment.</em>{{end}}</td><td>{{if .Key.Time}}{{.Key.Time | since}}{{else}}[voted before timekeeping began]{{end}}</td></tr>
                   {{end}}
                 {{end}}
               </table>

@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"sort"
 	"time"
+	"github.com/robxu9/kahinah/util"
 
 	"github.com/astaxie/beego"
 	"github.com/astaxie/beego/orm"
@@ -321,36 +322,44 @@ func (this *BuildController) Get() {
 
 	this.Data["Url"] = integration.Url(&pkg)
 
-	// karma controls
-	totalKarma := 0
-	votes := make(map[*models.Karma]int)
-
 	o.LoadRelated(&pkg, "Submitter")
-	o.LoadRelated(&pkg, "Karma")
 	o.LoadRelated(&pkg, "Packages")
 
-	for _, karma := range pkg.Karma {
-		o.LoadRelated(karma, "User")
-		if karma.Vote == models.KARMA_UP {
-			totalKarma++
-			votes[karma] = 1
-		} else if karma.Vote == models.KARMA_DOWN {
-			totalKarma--
-			votes[karma] = 2
-		} else if karma.Vote == models.KARMA_MAINTAINER {
-			totalKarma += int(maintainer_karma)
-			votes[karma] = 1
-		} else if karma.Vote == models.KARMA_BLOCK {
-			totalKarma -= int(block_karma)
-			votes[karma] = 2
-		} else if karma.Vote == models.KARMA_PUSH {
-			totalKarma += int(push_karma)
-			votes[karma] = 1
-		} else if karma.Vote == models.KARMA_NONE {
-			if karma.Comment != "" {
-				votes[karma] = 0
+	// karma controls
+	totalKarma := this.getTotalKarma(id) // get total karma
+
+	votes := make([]util.Pair, 0) // *models.Karma, int
+
+	// load karma totals
+	var inOrder []*models.Karma
+	kt := o.QueryTable(new(models.Karma))
+	kt.Filter("List__Id", id).OrderBy("Time").All(&inOrder)
+
+	// only count most recent votes
+	for _, v := range inOrder {
+		o.LoadRelated(v, "User")
+
+		pair := util.Pair{}
+		pair.Key = v
+
+		switch v.Vote {
+		case models.KARMA_UP:
+			pair.Value = 1
+		case models.KARMA_DOWN:
+			pair.Value = 2
+		case models.KARMA_MAINTAINER:
+			pair.Value = 1
+		case models.KARMA_BLOCK:
+			pair.Value = 2
+		case models.KARMA_PUSH:
+			pair.Value = 1
+		case models.KARMA_NONE:
+			if v.Comment != "" {
+				pair.Value = 0
 			}
 		}
+
+		votes = append(votes, pair)
 	}
 
 	this.Data["Votes"] = votes
@@ -458,13 +467,11 @@ func (this *BuildController) Post() {
 				flash := beego.NewFlash()
 				flash.Warning("Sorry, the whitelist is on and you are not allowed to vote.")
 				flash.Store(&this.Controller)
-				this.Redirect(this.UrlFor("BuildController.Get"), http.StatusMovedPermanently)
+				this.Get()
 				return
 			}
 		}
 	}
-
-	kt := o.QueryTable(new(models.Karma))
 
 	var userkarma models.Karma
 
@@ -486,13 +493,7 @@ func (this *BuildController) Post() {
 	userkarma.Comment = comment
 	o.Insert(&userkarma)
 
-	karmaup, _ := kt.Filter("List__Id", id).Filter("Vote", models.KARMA_UP).Count()
-	karmadown, _ := kt.Filter("List__Id", id).Filter("Vote", models.KARMA_DOWN).Count()
-	karmamaintainer, _ := kt.Filter("List__Id", id).Filter("Vote", models.KARMA_MAINTAINER).Count()
-	karmablock, _ := kt.Filter("List__Id", id).Filter("Vote", models.KARMA_BLOCK).Count()
-	karmapush, _ := kt.Filter("List__Id", id).Filter("Vote", models.KARMA_PUSH).Count()
-
-	karmaTotal := karmaup - karmadown + (maintainer_karma * karmamaintainer) - (block_karma * karmablock) + (push_karma * karmapush)
+	karmaTotal := this.getTotalKarma(id)
 
 	upthreshold, err := beego.AppConfig.Int64("karma::upperkarma")
 	if err != nil {
@@ -504,17 +505,54 @@ func (this *BuildController) Post() {
 		panic(err)
 	}
 
-	if karmaTotal >= upthreshold {
+	if karmaTotal >= int(upthreshold) {
 		pkg.Status = models.STATUS_PUBLISHED
 		o.Update(&pkg)
 		go integration.Publish(&pkg)
-	} else if karmaTotal <= downthreshold {
+	} else if karmaTotal <= int(downthreshold) {
 		pkg.Status = models.STATUS_REJECTED
 		o.Update(&pkg)
 		go integration.Reject(&pkg)
 	}
 
 	this.Get()
+}
+
+func (this *BuildController) getTotalKarma(id uint64) int {
+	o := orm.NewOrm()
+	kt := o.QueryTable(new(models.Karma))
+
+	var karma []*models.Karma
+	kt.Filter("List__Id", id).OrderBy("-Time").All(&karma)
+
+	set := util.NewSet()
+	totalKarma := 0
+
+	// only count most recent votes
+	for _, v := range karma {
+		o.LoadRelated(v, "User")
+
+		if set.Contains(v.User.Email) {
+			continue // we've already counted this person's most recent vote
+		}
+
+		switch v.Vote {
+		case models.KARMA_UP:
+			totalKarma++
+		case models.KARMA_DOWN:
+			totalKarma--
+		case models.KARMA_MAINTAINER:
+			totalKarma += int(maintainer_karma)
+		case models.KARMA_BLOCK:
+			totalKarma -= int(block_karma)
+		case models.KARMA_PUSH:
+			totalKarma += int(push_karma)
+		}
+
+		set.Add(v.User.Email)
+	}
+
+	return totalKarma
 }
 
 func (this *BuildController) processChangelog(changelog string) string {
