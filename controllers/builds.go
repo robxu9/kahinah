@@ -356,6 +356,8 @@ func (this *BuildController) Get() {
 		case models.KARMA_NONE:
 			if v.Comment != "" {
 				pair.Value = 0
+			} else {
+				continue // no karma and no comment? useless
 			}
 		}
 
