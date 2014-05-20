@@ -105,7 +105,7 @@ func main() {
 	//
 	beego.Errorhandler("550", func(rw http.ResponseWriter, r *http.Request) {
 
-		templateName := "permissions_error.tpl"
+		templateName := "errors/550.tpl"
 
 		data := make(map[string]interface{})
 		data["Title"] = "Oh No!"
