@@ -102,7 +102,7 @@
           {{end}}
 
           <div class="panel panel-default">
-            <div class="panel-heading"><button class="btn btn-default">Votes</button></div>
+            <div class="panel-heading"><button class="btn btn-default">Karma</button></div>
             <div class="panel-body">
               {{if .Votes}}
               <table class="table table-condensed table-responsive table-bordered">
@@ -113,7 +113,7 @@
                 {{end}}
               </table>
               {{else}}
-              Nobody's voted yet.
+              No opinions... yet.
               {{end}}
             </div>
           </div>
@@ -186,10 +186,11 @@
         }).change();
       </script>
 
-      <link href="http://alexgorbatchev.com/pub/sh/current/styles/shCore.css" rel="stylesheet" type="text/css" />
-      <link href="http://alexgorbatchev.com/pub/sh/current/styles/shThemeDefault.css" rel="stylesheet" type="text/css" />
-      <script src="http://alexgorbatchev.com/pub/sh/current/scripts/shCore.js" type="text/javascript"></script>
-      <script src="http://alexgorbatchev.com/pub/sh/current/scripts/shBrushDiff.js" type="text/javascript"></script>
+      <link href="{{url "/static/css/shCore.css"}}" rel="stylesheet" type="text/css" />
+      <link href="{{url "/static/css/shThemeDefault.css"}}" rel="stylesheet" type="text/css" />
+
+      <script src="{{url "/static/js/shCore.js"}}" type="text/javascript"></script>
+      <script src="{{url "/static/js/shBrushDiff.js"}}" type="text/javascript"></script>
       <script>SyntaxHighlighter.all();</script>
 
 {{template "footer.tpl" .}}
