@@ -8,15 +8,15 @@
 			<div class="form-group"> <!-- SUMMARY -->
 				<label for="input_summary" class="col-sm-2 control-label">Summary</label>
 				<div class="col-sm-10">
-			    	<input type="text" class="form-control" id="input_summary" placeholder="What's this about?"{{if .FailSummary}}value="{{.FailSummary}}"{{end}}>
+			    	<input type="text" class="form-control" id="input_summary" placeholder="What's this about?"{{if .FailSummary}}value="{{.FailSummary}}"{{end}} name="input_summary">
 			    </div>
 			</div>
 			<div class="form-group"> <!-- PLATFORM -->
 				<label for="input_platform" class="col-sm-2 control-label">Platform</label>
 				<div class="col-sm-10">
-					<select id="input_platform" class="form-control">
+					<select id="input_platform" class="form-control" name="input_platform">
 						{{range $key, $value := .Platforms}}
-						<option{{if .FailPlatform}}{{if eq .FailPlatform $value}} selected="selected"{{end}}{{end}}>{{$value}}</option>
+						<option value="{{$key}}">{{$key}}</option>
 						{{end}}
 					</select>
   				</div>
@@ -24,15 +24,15 @@
 			<div class="form-group"> <!-- DESCRIPTION -->
 				<label for="input_description" class="col-sm-2 control-label">Description</label>
 				<div class="col-sm-10">
-					<textarea class="form-control" rows="3" id="input_description" placeholder="Explain, in detail, what this update encompasses. Include CVE numbers and other details." form="advisory_new">{{if .FailDescription}}{{.FailDescription}}{{end}}</textarea>
+					<textarea class="form-control" rows="3" id="input_description" placeholder="Explain, in detail, what this update encompasses. Include CVE numbers and other details." form="advisory_new" name="input_description">{{if .FailDescription}}{{.FailDescription}}{{end}}</textarea>
 			    </div>
 			</div>
 			<div class="form-group"> <!-- TYPE -->
 				<label for="input_type" class="col-sm-2 control-label">Type</label>
 				<div class="col-sm-10">
-					<select id="input_type" class="form-control">
+					<select id="input_type" class="form-control" name="input_type">
 						{{range $key, $value := .Types}}
-						<option{{if .FailType}}{{if eq .FailType $value}} selected="selected"{{end}}{{end}}>{{$value}}</option>
+						<option>{{$value}}</option>
 						{{end}}
 					</select>
 			    </div>

@@ -12,6 +12,7 @@ import (
 
 var (
 	enabledPlatforms = make(map[string]string) // [platform]PREFIX
+	types            = make([]string, 4)
 )
 
 func init() {
@@ -20,6 +21,11 @@ func init() {
 		parts := strings.Split(v, ":")
 		enabledPlatforms[parts[0]] = parts[1]
 	}
+
+	types[0] = "Security"
+	types[1] = "Recommended"
+	types[2] = "Bug Fix"
+	types[3] = "New Release"
 }
 
 //
@@ -80,6 +86,11 @@ type AdvisoryNewController struct {
 
 func (this *AdvisoryNewController) Get() {
 	models.PermAbortCheck(&this.Controller, PERMISSION_ADVISORY)
+
+	this.Data["FailPlatform"] = ""
+
+	this.Data["Platforms"] = enabledPlatforms
+	this.Data["Types"] = types
 
 	this.Data["Tab"] = -1
 	this.Data["Title"] = "New Advisory"

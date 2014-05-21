@@ -405,7 +405,7 @@ func (a ABF) makeDiff(gitUrl, fromHash, toHash string) string {
 		}
 	}
 
-	if fromHash == "" {
+	if fromHash == "" || fromHash == toHash {
 		gitdiffcmd := exec.Command("git", "show", "--format=fuller", "--patch-with-stat", "--summary", toHash)
 		gitdiffcmd.Dir = tmpdir
 
