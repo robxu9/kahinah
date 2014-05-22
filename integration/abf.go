@@ -27,6 +27,7 @@ const (
 var (
 	user          = beego.AppConfig.String("abf::abf_user")
 	pass          = beego.AppConfig.String("abf::abf_pass")
+	api_key       = beego.AppConfig.String("abf::abf_api_key")
 	use_ssh       = to.Bool(beego.AppConfig.String("abf::abf_use_ssh"))
 	platforms     *util.Set
 	platformids   *util.Set
