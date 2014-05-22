@@ -182,9 +182,9 @@
       <script>
         $("input").change(function() {
           if ($("#voteQADown").is(':checked')) {
-            $('#voteModalAlertPlaceholder').html('<div class="alert alert-danger"><b>Head\'s up!</b> This adds -9999 karma and is <b>UNREVERSABLE</b>!</div>');
+            $('#voteModalAlertPlaceholder').html('<div class="alert alert-danger"><b>Heads up!</b> This adds -9999 karma and is <b>UNREVERSABLE</b>!</div>');
           } else if ($("#voteQAUp").is(':checked')) {
-            $('#voteModalAlertPlaceholder').html('<div class="alert alert-warning"><b>Head\'s up!</b> This adds 9999 karma and is <b>UNREVERSABLE</b>!</div>');
+            $('#voteModalAlertPlaceholder').html('<div class="alert alert-warning"><b>Heads up!</b> This adds 9999 karma and is <b>UNREVERSABLE</b>!</div>');
           } else {
             $('#voteModalAlertPlaceholder').html('')
           }
