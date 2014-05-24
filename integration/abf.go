@@ -289,8 +289,9 @@ func (a ABF) sendToTesting(id uint64) error {
 	}
 
 	defer resp.Body.Close()
-	bte, _ := ioutil.ReadAll(resp.Body)
-	fmt.Printf("sending %d to testing yielded %s\n", id, bte)
+    // we are not doing this again...
+	//bte, _ := ioutil.ReadAll(resp.Body)
+	//fmt.Printf("sending %d to testing yielded %s\n", id, bte)
 	return nil
 }
 

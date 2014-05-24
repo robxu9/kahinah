@@ -34,7 +34,8 @@ abf_platforms = openmandriva2013.0:668
 ; for multiple platforms:
 ; abf_platforms = openmandriva2013.0:668;cooker:317
 ; you MUST have write access to the groups from which
-; the packages come from!
+; the packages come from! [otherwise pushing to testing
+; WILL FAIL]
 
 ; Use abf_whitelistarch to whitelist only certain arches
 abf_whitelistarch = x86_64;i586
