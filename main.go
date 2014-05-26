@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"crypto/rand"
+	"encoding/json"
 	"fmt"
 	"html/template"
 	"io/ioutil"
@@ -100,9 +101,126 @@ func main() {
 
 	//
 	// --------------------------------------------------------------------
-	// ERROR HANDLERS [beego doesn't want to work though e-e]
+	// ERROR HANDLERS
 	// --------------------------------------------------------------------
 	//
+	beego.Errorhandler("400", func(rw http.ResponseWriter, r *http.Request) {
+
+		templateName := "errors/400.tpl"
+
+		data := make(map[string]interface{})
+		data["Title"] = "huh wut"
+		data["Loc"] = -2
+		data["Tab"] = -1
+		data["copyright"] = time.Now().Year()
+
+		if beego.RunMode == "dev" {
+			beego.BuildTemplate(beego.ViewsPath)
+		}
+
+		newbytes := bytes.NewBufferString("")
+		if _, ok := beego.BeeTemplates[templateName]; !ok {
+			panic("can't find templatefile in the path:" + templateName)
+		}
+		err := beego.BeeTemplates[templateName].ExecuteTemplate(newbytes, templateName, data)
+		if err != nil {
+			panic("template Execute err: " + err.Error())
+		}
+		tplcontent, _ := ioutil.ReadAll(newbytes)
+		fmt.Fprint(rw, template.HTML(string(tplcontent)))
+	})
+
+	beego.Errorhandler("403", func(rw http.ResponseWriter, r *http.Request) {
+
+		templateName := "errors/403.tpl"
+
+		data := make(map[string]interface{})
+		data["Title"] = "bzzzt..."
+		data["Loc"] = -2
+		data["Tab"] = -1
+		data["copyright"] = time.Now().Year()
+
+		if beego.RunMode == "dev" {
+			beego.BuildTemplate(beego.ViewsPath)
+		}
+
+		newbytes := bytes.NewBufferString("")
+		if _, ok := beego.BeeTemplates[templateName]; !ok {
+			panic("can't find templatefile in the path:" + templateName)
+		}
+		err := beego.BeeTemplates[templateName].ExecuteTemplate(newbytes, templateName, data)
+		if err != nil {
+			panic("template Execute err: " + err.Error())
+		}
+		tplcontent, _ := ioutil.ReadAll(newbytes)
+		fmt.Fprint(rw, template.HTML(string(tplcontent)))
+	})
+
+	beego.Errorhandler("404", func(rw http.ResponseWriter, r *http.Request) {
+
+		templateName := "errors/404.tpl"
+
+		data := make(map[string]interface{})
+		data["Title"] = "i have no idea what i'm doing"
+		data["Loc"] = -2
+		data["Tab"] = -1
+		data["copyright"] = time.Now().Year()
+
+		resp, err := http.Get("http://xkcd.com/info.0.json")
+		if err == nil {
+			defer resp.Body.Close()
+			bte, err := ioutil.ReadAll(resp.Body)
+
+			if err == nil {
+				var v map[string]interface{}
+				if json.Unmarshal(bte, &v) == nil {
+					data["xkcd_today"] = v["img"]
+					data["xkcd_today_title"] = v["alt"]
+				}
+			}
+		}
+
+		if beego.RunMode == "dev" {
+			beego.BuildTemplate(beego.ViewsPath)
+		}
+
+		newbytes := bytes.NewBufferString("")
+		if _, ok := beego.BeeTemplates[templateName]; !ok {
+			panic("can't find templatefile in the path:" + templateName)
+		}
+		err = beego.BeeTemplates[templateName].ExecuteTemplate(newbytes, templateName, data)
+		if err != nil {
+			panic("template Execute err: " + err.Error())
+		}
+		tplcontent, _ := ioutil.ReadAll(newbytes)
+		fmt.Fprint(rw, template.HTML(string(tplcontent)))
+	})
+
+	beego.Errorhandler("500", func(rw http.ResponseWriter, r *http.Request) {
+
+		templateName := "errors/500.tpl"
+
+		data := make(map[string]interface{})
+		data["Title"] = "eek fire FIRE"
+		data["Loc"] = -2
+		data["Tab"] = -1
+		data["copyright"] = time.Now().Year()
+
+		if beego.RunMode == "dev" {
+			beego.BuildTemplate(beego.ViewsPath)
+		}
+
+		newbytes := bytes.NewBufferString("")
+		if _, ok := beego.BeeTemplates[templateName]; !ok {
+			panic("can't find templatefile in the path:" + templateName)
+		}
+		err := beego.BeeTemplates[templateName].ExecuteTemplate(newbytes, templateName, data)
+		if err != nil {
+			panic("template Execute err: " + err.Error())
+		}
+		tplcontent, _ := ioutil.ReadAll(newbytes)
+		fmt.Fprint(rw, template.HTML(string(tplcontent)))
+	})
 	beego.Errorhandler("550", func(rw http.ResponseWriter, r *http.Request) {
 
 		templateName := "errors/550.tpl"
