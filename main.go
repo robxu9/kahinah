@@ -166,16 +166,27 @@ func main() {
 		data["Tab"] = -1
 		data["copyright"] = time.Now().Year()
 
-		resp, err := http.Get("http://xkcd.com/info.0.json")
-		if err == nil {
-			defer resp.Body.Close()
-			bte, err := ioutil.ReadAll(resp.Body)
+		if j, found := util.Cache.Get("404_xkcd_json"); found {
 
+			v := j.(map[string]interface{})
+			data["xkcd_today"] = v["img"]
+			data["xkcd_today_title"] = v["alt"]
+
+		} else {
+			resp, err := http.Get("http://xkcd.com/info.0.json")
 			if err == nil {
-				var v map[string]interface{}
-				if json.Unmarshal(bte, &v) == nil {
-					data["xkcd_today"] = v["img"]
-					data["xkcd_today_title"] = v["alt"]
+				defer resp.Body.Close()
+				bte, err := ioutil.ReadAll(resp.Body)
+
+				if err == nil {
+					var v map[string]interface{}
+
+					if json.Unmarshal(bte, &v) == nil {
+						util.Cache.Set("404_xkcd_json", v, 0)
+
+						data["xkcd_today"] = v["img"]
+						data["xkcd_today_title"] = v["alt"]
+					}
 				}
 			}
 		}
@@ -188,7 +199,7 @@ func main() {
 		if _, ok := beego.BeeTemplates[templateName]; !ok {
 			panic("can't find templatefile in the path:" + templateName)
 		}
-		err = beego.BeeTemplates[templateName].ExecuteTemplate(newbytes, templateName, data)
+		err := beego.BeeTemplates[templateName].ExecuteTemplate(newbytes, templateName, data)
 		if err != nil {
 			panic("template Execute err: " + err.Error())
 		}
