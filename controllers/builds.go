@@ -250,22 +250,7 @@ func (this *TestingController) Get() {
 	pkgkarma := make(map[string]string)
 
 	for _, v := range packages {
-		o.LoadRelated(v, "Submitter")
-		o.LoadRelated(v, "Karma")
-
-		totalKarma := 0
-
-		for _, karma := range v.Karma {
-			if karma.Vote == models.KARMA_UP {
-				totalKarma++
-			} else if karma.Vote == models.KARMA_DOWN {
-				totalKarma--
-			} else if karma.Vote == models.KARMA_MAINTAINER {
-				totalKarma += int(maintainer_karma)
-			} else if karma.Vote == models.KARMA_BLOCK {
-				totalKarma -= int(block_karma)
-			}
-		}
+		totalKarma := getTotalKarma(v.Id)
 
 		pkgkarma[to.String(v.Id)] = to.String(totalKarma)
 	}
@@ -326,7 +311,7 @@ func (this *BuildController) Get() {
 	o.LoadRelated(&pkg, "Packages")
 
 	// karma controls
-	totalKarma := this.getTotalKarma(id) // get total karma
+	totalKarma := getTotalKarma(id) // get total karma
 
 	votes := make([]util.Pair, 0) // *models.Karma, int
 
@@ -495,7 +480,7 @@ func (this *BuildController) Post() {
 	userkarma.Comment = comment
 	o.Insert(&userkarma)
 
-	karmaTotal := this.getTotalKarma(id)
+	karmaTotal := getTotalKarma(id)
 
 	upthreshold, err := beego.AppConfig.Int64("karma::upperkarma")
 	if err != nil {
@@ -520,7 +505,7 @@ func (this *BuildController) Post() {
 	this.Get()
 }
 
-func (this *BuildController) getTotalKarma(id uint64) int {
+func getTotalKarma(id uint64) int {
 	o := orm.NewOrm()
 	kt := o.QueryTable(new(models.Karma))
 
