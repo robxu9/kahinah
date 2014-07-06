@@ -91,10 +91,7 @@
             <div class="panel-heading"><button class="btn btn-warning" data-toggle="collapse" href="#testinfo">Want to test?</button></div>
             <div id="testinfo" class="panel-collapse collapse">
               <div class="panel-body">
-                On your <code>{{.Package.Platform}}/{{.Package.Architecture}}</code> machine, do:
-                <pre>kahup {{.Package.Id}}</pre>
-                to install the above packages from the testing repository onto your computer.<br/>
-                <br/>
+                On your <code>{{.Package.Platform}}/{{.Package.Architecture}}</code> machine, enable the updates-testing repository for {{.Package.Repo}}. Then <code>urpmi.update -a</code> and <code>urpmi</code> the affected packages.<br/>
                 When you're done, you can use <code>urpmi --downgrade</code> to revert back to previous versions.
               </div>
             </div>
