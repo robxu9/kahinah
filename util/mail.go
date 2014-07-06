@@ -5,15 +5,16 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
-	"github.com/astaxie/beego"
-	"github.com/astaxie/beego/orm"
-	"github.com/robxu9/kahinah/models"
 	"log"
-	"menteslibres.net/gosexy/to"
 	"net/mail"
 	"net/smtp"
 	"strings"
 	"text/template"
+
+	"github.com/astaxie/beego"
+	"github.com/astaxie/beego/orm"
+	"github.com/robxu9/kahinah/models"
+	"menteslibres.net/gosexy/to"
 )
 
 var (
@@ -116,7 +117,7 @@ func MailTo(subject, content, to string) error {
 		}
 	}
 
-	return ourMail(mail_host, smtp.PlainAuth("", mail_user, mail_pass, mail_domain), mail_email.Address, []string{mail_to}, buf.Bytes())
+	return ourMail(mail_host, smtp.PlainAuth("", mail_user, mail_pass, mail_domain), mail_email.Address, []string{to}, buf.Bytes())
 
 }
 
