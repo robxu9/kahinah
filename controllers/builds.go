@@ -253,6 +253,8 @@ func (this *TestingController) Get() {
 		totalKarma := getTotalKarma(v.Id)
 
 		pkgkarma[to.String(v.Id)] = to.String(totalKarma)
+
+		o.LoadRelated(v, "Submitter")
 	}
 
 	sort.Sort(ByBuildDate(packages))
