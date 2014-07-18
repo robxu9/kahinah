@@ -15,16 +15,6 @@ var (
 	outwardUrl = beego.AppConfig.String("outwardloc")
 )
 
-func IsLoggedIn(controller *beego.Controller) string {
-	session := controller.GetSession("persona")
-	if session == nil {
-		return ""
-	}
-	pr := PersonaResponse{}
-	json.Unmarshal(to.Bytes(session), &pr)
-	return pr.Email
-}
-
 type PersonaResponse struct {
 	Status   string `json: "status"`
 	Email    string `json: "email,omitempty"`

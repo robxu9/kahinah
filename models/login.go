@@ -10,7 +10,7 @@ import (
 func IsLoggedIn(controller *beego.Controller) string {
 	// check api key header first
 	apiKey := controller.Ctx.Input.Header("X-Kahinah-Key")
-	if apiKey != nil {
+	if apiKey != "" {
 		user := FindUserApi(apiKey)
 		if user != nil {
 			return user.Email
