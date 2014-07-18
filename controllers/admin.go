@@ -9,26 +9,17 @@ import (
 	"menteslibres.net/gosexy/to"
 )
 
-const (
-	PERMISSION_ADMIN     = "kahinah.admin"
-	PERMISSION_QA        = "kahinah.qa"
-	PERMISSION_WHITELIST = "kahinah.whitelist"
-
-	PERMISSION_ADVISORY = "kahinah.advisory"
-	PERMISSION_API      = "kahinah.api"
-)
-
 var (
 	adminWhitelist = strings.Split(beego.AppConfig.String("admin::adminwhitelist"), ";")
 	Whitelist      = to.Bool(beego.AppConfig.String("admin::whitelist"))
 )
 
 func init() {
-	models.PermRegister(PERMISSION_ADMIN)
-	models.PermRegister(PERMISSION_QA)
-	models.PermRegister(PERMISSION_WHITELIST)
-	models.PermRegister(PERMISSION_ADVISORY)
-	models.PermRegister(PERMISSION_API)
+	models.PermRegister(models.PERMISSION_ADMIN)
+	models.PermRegister(models.PERMISSION_QA)
+	models.PermRegister(models.PERMISSION_WHITELIST)
+	models.PermRegister(models.PERMISSION_ADVISORY)
+	models.PermRegister(models.PERMISSION_API)
 }
 
 func adminCheck(this *beego.Controller) {
@@ -47,7 +38,7 @@ func adminCheck(this *beego.Controller) {
 	}
 
 	if !loggedin {
-		models.PermAbortCheck(this, PERMISSION_ADMIN)
+		models.PermAbortCheck(this, models.PERMISSION_ADMIN)
 	}
 }
 

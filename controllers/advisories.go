@@ -85,7 +85,7 @@ type AdvisoryNewController struct {
 }
 
 func (this *AdvisoryNewController) Get() {
-	models.PermAbortCheck(&this.Controller, PERMISSION_ADVISORY)
+	models.PermAbortCheck(&this.Controller, models.PERMISSION_ADVISORY)
 
 	this.Data["FailPlatform"] = ""
 
@@ -98,7 +98,7 @@ func (this *AdvisoryNewController) Get() {
 }
 
 func (this *AdvisoryNewController) Post() {
-	models.PermAbortCheck(&this.Controller, PERMISSION_ADVISORY)
+	models.PermAbortCheck(&this.Controller, models.PERMISSION_ADVISORY)
 
 	fmt.Printf("%s\n", this.Input())
 

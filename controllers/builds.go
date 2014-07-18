@@ -374,7 +374,7 @@ func (this *BuildController) Get() {
 			this.Data["KarmaCommentPrev"] = userkarma.Comment
 		}
 
-		if models.PermCheck(&this.Controller, PERMISSION_QA) {
+		if models.PermCheck(&this.Controller, models.PERMISSION_QA) {
 			this.Data["QAControls"] = true
 		}
 
@@ -447,11 +447,11 @@ func (this *BuildController) Post() {
 			}
 		}
 	} else if postType == "QABlock" || postType == "QAPush" {
-		models.PermAbortCheck(&this.Controller, PERMISSION_QA)
+		models.PermAbortCheck(&this.Controller, models.PERMISSION_QA)
 	} else {
 		// whitelist stuff
 		if Whitelist {
-			perm := models.PermCheck(&this.Controller, PERMISSION_WHITELIST)
+			perm := models.PermCheck(&this.Controller, models.PERMISSION_WHITELIST)
 			if !perm {
 				flash := beego.NewFlash()
 				flash.Warning("Sorry, the whitelist is on and you are not allowed to vote.")
