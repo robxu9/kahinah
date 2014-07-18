@@ -8,9 +8,12 @@ import (
 )
 
 type User struct {
-	Id          uint64            `orm:"auto;pk"`
-	Email       string            `orm:"type(text)"`
-	Integration string            `orm:"type(text)"` // abf service user id
+	Id          uint64 `orm:"auto;pk"`
+	Email       string `orm:"type(text)"`
+	Integration string `orm:"type(text)"` // abf service user id
+
+	ApiKey string `orm:"type(text)"`
+
 	Permissions []*UserPermission `orm:"rel(m2m);on_delete(set_null)"`
 	Karma       []*Karma          `orm:"reverse(many);on_delete(set_null)"`
 
@@ -56,6 +59,26 @@ func FindUser(email string) *User {
 			Email: email,
 		}
 		o.Insert(&user)
+	} else {
+		o.LoadRelated(&user, "Permissions")
+		o.LoadRelated(&user, "Karma")
+		o.LoadRelated(&user, "BuildLists")
+	}
+
+	return &user
+}
+
+func FindUserApi(apikey string) *User {
+	o := orm.NewOrm()
+	qt := o.QueryTable(new(User))
+
+	var user User
+	err := qt.Filter("ApiKey", apikey).One(&user)
+	if err != nil && err != orm.ErrNoRows {
+		panic(err)
+	} else if err != nil {
+		// No such User
+		return nil
 	} else {
 		o.LoadRelated(&user, "Permissions")
 		o.LoadRelated(&user, "Karma")
