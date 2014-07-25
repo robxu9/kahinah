@@ -21,7 +21,8 @@ var (
 
 func init() {
 	orm.Debug, _ = beego.AppConfig.Bool("orm.debug")
-	orm.DefaultTimeLoc = time.UTC
+	orm.DefaultTimeLoc = time.Local
+	//orm.DefaultTimeLoc = time.UTC
 
 	orm.RegisterModelWithPrefix(Prefix, new(BuildList))
 	orm.RegisterModelWithPrefix(Prefix, new(BuildListPkg))

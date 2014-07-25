@@ -103,7 +103,7 @@
 
           <!-- login -->
           <div class="navbar-right">
-            <p class="navbar-text" id="persona-user"></p>
+            <a href="{{url "/user"}}"><p class="navbar-text" id="persona-user"></p></a>
             {{if .xsrf_token}}
             <button type="button" class="btn btn-primary navbar-btn" style="display: none" id="login">Persona Login</button><button type="button" class="btn btn-warning navbar-btn" style="display: none" id="logout">Logout</button>
             {{end}}
