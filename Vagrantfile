@@ -6,6 +6,7 @@ VAGRANTFILE_API_VERSION = "2"
 
 # Inline script to help us provision the box.
 $script = <<SCRIPT
+PACKAGE="github.com/robxu9/kahinah"
 echo "Provisioning Vagrant VM:"
 
 echo "> updating centos packages"
@@ -72,6 +73,10 @@ sudo mv -f /tmp/check-golang.service /etc/systemd/system
 sudo systemctl enable check-golang.service
 
 sudo systemctl start check-golang.service
+
+echo "> link /vagrant to $PACKAGE"
+cd /vagrant
+gvm linkthis $PACKAGE
 
 echo "done."
 SCRIPT
