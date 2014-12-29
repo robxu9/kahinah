@@ -10,6 +10,10 @@ import (
 
 // Kahinah represents the main entry point into all functions
 type Kahinah struct {
+	// Process changed Advisories
+	advisoryProcessQueue    chan *Advisory
+	advisoryProcessRoutines *sync.WaitGroup
+
 	// AdvisoryID for AdvisoryFamily mutex
 	advisoryFamIDmutex *sync.Mutex
 
@@ -48,7 +52,19 @@ func Open(dialect, params string) (*Kahinah, error) {
 	// Create cache
 	c := cache.New(5*time.Minute, 30*time.Second)
 
-	return &Kahinah{db: dbptr, cache: c, advisoryFamIDmutex: &sync.Mutex{}}, nil
+	// Create kahinah obj
+	kahinah := &Kahinah{
+		db:                      dbptr,
+		cache:                   c,
+		advisoryFamIDmutex:      &sync.Mutex{},
+		advisoryProcessQueue:    make(chan *Advisory, 100),
+		advisoryProcessRoutines: &sync.WaitGroup{},
+	}
+
+	// Start worker queue
+	go kahinah.processAdvisory()
+
+	return kahinah, nil
 }
 
 // OpenDebug is like open, except it enables debug logging. DO NOT
@@ -66,6 +82,8 @@ func OpenDebug(dialect, params string) (*Kahinah, error) {
 // Close closes the database. Any operations afterwards on Kahinah
 // WILL panic.
 func (k *Kahinah) Close() error {
+	// finish processing everything
+	k.advisoryProcessRoutines.Wait() // we must wait for processes to finish
 	// delete everything from the cache
 	k.cache.Flush()
 	// close the db

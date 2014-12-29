@@ -227,6 +227,15 @@ func (k *Kahinah) ListAdvisories(from, limit int64) ([]int64, error) {
 	return records, nil
 }
 
+func (k *Kahinah) processAdvisory() {
+	k.advisoryProcessRoutines.Add(1) // for this thread itself
+	defer k.advisoryProcessRoutines.Done()
+
+	for advisory := range k.advisoryProcessQueue {
+		_ = advisory // FIXME
+	}
+}
+
 // NewComment adds a new comment to an advisory.
 func (k *Kahinah) NewComment(a *Advisory, user int64, verdict CommentVerdict, thoughts string) error {
 	// verify that the user exists
@@ -248,6 +257,9 @@ func (k *Kahinah) NewComment(a *Advisory, user int64, verdict CommentVerdict, th
 
 	// append to existing advisory
 	a.Comments = append(a.Comments, comment)
+
+	// send to queue
+	k.advisoryProcessQueue <- a
 
 	return nil
 }
