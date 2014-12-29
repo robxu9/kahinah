@@ -242,7 +242,7 @@ func (k *Kahinah) CountUpdates() int64 {
 	return count
 }
 
-// ListUpdates returns a list of updates in descending order.
+// ListUpdates returns a list of updates in most recent order.
 func (k *Kahinah) ListUpdates(from, limit int64) ([]int64, error) {
 	var records []int64
 

@@ -187,7 +187,7 @@ func (k *Kahinah) ForceRetrieveAdvisory(id int64) (*Advisory, error) {
 
 	// get a list of all comments, sorted by time
 	var comments []Comment
-	if err := k.db.Where(&Comment{AdvisoryId: record.Id}).Order("created_at desc").Find(&comments).Error; err != nil {
+	if err := k.db.Where(&Comment{AdvisoryId: record.Id}).Order("created_at").Find(&comments).Error; err != nil {
 		panic(err)
 	}
 
@@ -225,4 +225,29 @@ func (k *Kahinah) ListAdvisories(from, limit int64) ([]int64, error) {
 	}
 
 	return records, nil
+}
+
+// NewComment adds a new comment to an advisory.
+func (k *Kahinah) NewComment(a *Advisory, user int64, verdict CommentVerdict, thoughts string) error {
+	// verify that the user exists
+	if _, err := k.RetrieveUser(user); err != nil {
+		return err
+	}
+
+	// insert this comment
+	comment := &Comment{
+		UserId:     user,
+		AdvisoryId: a.Id,
+		Verdict:    verdict,
+		Thoughts:   thoughts,
+	}
+
+	if err := k.db.Save(comment).Error; err != nil {
+		return err
+	}
+
+	// append to existing advisory
+	a.Comments = append(a.Comments, comment)
+
+	return nil
 }
