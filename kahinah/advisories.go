@@ -28,6 +28,9 @@ var (
 	// ErrAdvisoryChanged - the advisory has changed
 	ErrAdvisoryChanged = errors.New("kahinah: advisory has changed")
 
+	// ErrAdvisoryUpdateAttached - an update has already been attached to an advisory
+	ErrAdvisoryUpdateAttached = errors.New("kahinah: update already attached to advisory")
+
 	// CacheAdvisoryExp - the default expiration for updates in the cache
 	CacheAdvisoryExp = 1 * time.Hour
 )
@@ -140,6 +143,12 @@ func (k *Kahinah) NewAdvisory(user int64, updates []int64, references []string, 
 		if err != nil {
 			return 0, err
 		}
+
+		// check that the update isn't already attributed to an advisory
+		if update.AdvisoryId != 0 {
+			return 0, ErrAdvisoryUpdateAttached
+		}
+
 		updateptrs = append(updateptrs, update)
 	}
 

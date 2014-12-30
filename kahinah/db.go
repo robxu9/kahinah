@@ -20,6 +20,9 @@ type Kahinah struct {
 	// AdvisoryID for AdvisoryFamily mutex
 	advisoryFamIDmutex *sync.Mutex
 
+	// User mutex (in case frontend is stupid enough to try creating two users w/ same email)
+	userMutex *sync.Mutex
+
 	// Connectors
 	connectors map[string]Connector
 
@@ -81,7 +84,7 @@ func Open(dialect, params string) (*Kahinah, error) {
 	dbptr.AutoMigrate(&Advisory{}, &Comment{})
 
 	// migrate users
-	dbptr.AutoMigrate(&User{}, &UserIP{}, &UserToken{})
+	dbptr.AutoMigrate(&User{})
 
 	// Create cache
 	c := cache.New(5*time.Minute, 30*time.Second)
@@ -92,6 +95,7 @@ func Open(dialect, params string) (*Kahinah, error) {
 		db:                      dbptr,
 		cache:                   c,
 		advisoryFamIDmutex:      &sync.Mutex{},
+		userMutex:               &sync.Mutex{},
 		advisoryProcessQueue:    make(chan *Advisory, 100),
 		advisoryProcessRoutines: &sync.WaitGroup{},
 		AdvisoryProcessFunc:     DefaultAdvisoryProcessFunc,
