@@ -51,6 +51,7 @@ type Update struct {
 	Content   *UpdateContent `sql:"-"`       // contents of the update
 	ContentId int64          `sql:"content"` // content ID
 
+	ConnectorName string // connector name
 	ConnectorInfo string // connector information
 
 	CreatedAt time.Time // time this was created
@@ -122,7 +123,7 @@ func (k *Kahinah) setUpdateAdvisoryId(u *Update, id int64) error {
 
 // NewUpdate creates a new update and stores it in the database. It then returns
 // either a unique id to the update, or an error with why it failed.
-func (k *Kahinah) NewUpdate(connector, target, name, submitter string, updatetype UpdateType, content *UpdateContent, connectorinfo string) (int64, error) {
+func (k *Kahinah) NewUpdate(connector, target, name, submitter string, updatetype UpdateType, content *UpdateContent, connectorname, connectorinfo string) (int64, error) {
 	// Insert content first
 	if err := k.db.Save(content).Error; err != nil {
 		return 0, err
@@ -164,6 +165,7 @@ func (k *Kahinah) NewUpdate(connector, target, name, submitter string, updatetyp
 		Type:          updatetype,
 		Content:       content,
 		ContentId:     content.Id,
+		ConnectorName: connectorname,
 		ConnectorInfo: connectorinfo,
 	}
 

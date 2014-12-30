@@ -10,6 +10,9 @@ import (
 
 // Kahinah represents the main entry point into all functions
 type Kahinah struct {
+	// Function to determine whether an advisory passes, fails, or remains the same
+	AdvisoryProcessFunc func(*Advisory) AdvisoryStatus
+
 	// Process changed Advisories
 	advisoryProcessQueue    chan *Advisory
 	advisoryProcessRoutines *sync.WaitGroup
@@ -17,11 +20,42 @@ type Kahinah struct {
 	// AdvisoryID for AdvisoryFamily mutex
 	advisoryFamIDmutex *sync.Mutex
 
+	// Connectors
+	connectors map[string]Connector
+
 	// A mutex for the db is not needed.
 	// In gorm, the db is cloned before any operation, so variables
 	// occur separately from each other, it seems.
 	db    *gorm.DB
 	cache *cache.Cache
+}
+
+// DefaultAdvisoryProcessFunc provides the default advisory process function,
+// a simple karma check, with limits -3 and 3.
+func DefaultAdvisoryProcessFunc(a *Advisory) AdvisoryStatus {
+	total := 0
+	for _, v := range a.Comments {
+		switch v.Verdict {
+		case NEUTRAL:
+			break
+		case NO:
+			total--
+		case YES:
+			total++
+		case BLOCK:
+			total -= 9999
+		case OVERRIDE:
+			total += 9999
+		}
+	}
+
+	if total >= 3 {
+		return PASS
+	} else if total <= -3 {
+		return FAIL
+	}
+
+	return OPEN
 }
 
 // Open sets up the Kahinah database, creating and
@@ -54,11 +88,13 @@ func Open(dialect, params string) (*Kahinah, error) {
 
 	// Create kahinah obj
 	kahinah := &Kahinah{
+		connectors:              make(map[string]Connector),
 		db:                      dbptr,
 		cache:                   c,
 		advisoryFamIDmutex:      &sync.Mutex{},
 		advisoryProcessQueue:    make(chan *Advisory, 100),
 		advisoryProcessRoutines: &sync.WaitGroup{},
+		AdvisoryProcessFunc:     DefaultAdvisoryProcessFunc,
 	}
 
 	// Start worker queue

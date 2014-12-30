@@ -25,6 +25,9 @@ var (
 	// ErrNoSuchAdvisory - update does not exist.
 	ErrNoSuchAdvisory = errors.New("kahinah: advisory doesn't exist")
 
+	// ErrAdvisoryChanged - the advisory has changed
+	ErrAdvisoryChanged = errors.New("kahinah: advisory has changed")
+
 	// CacheAdvisoryExp - the default expiration for updates in the cache
 	CacheAdvisoryExp = 1 * time.Hour
 )
@@ -49,6 +52,8 @@ type Advisory struct {
 
 	AdvisoryFamily string // Outward-facing Advisory Family
 	AdvisoryID     int64  // Outward-facing Advisory ID
+
+	Version int64 // versioning
 
 	CreatedAt time.Time // time this was created
 	UpdatedAt time.Time // time this was updated
@@ -99,6 +104,11 @@ func advisoryCacheId(id int64) string {
 	return "advisories/" + strconv.FormatInt(id, 10)
 }
 
+func (k *Kahinah) incrementVersion(a *Advisory) error {
+	a.Version++
+	return k.db.Save(a).Error
+}
+
 func (k *Kahinah) nextFamilyID(family string) int64 {
 	var id []int64
 	if err := k.db.Model(&Advisory{}).Where(&Advisory{AdvisoryFamily: family}).Order("advisoryid desc").Limit(1).Pluck("advisoryid", &id).Error; err != nil {
@@ -142,6 +152,7 @@ func (k *Kahinah) NewAdvisory(user int64, updates []int64, references []string, 
 		Status:         OPEN,
 		AdvisoryFamily: family,
 		AdvisoryID:     k.nextFamilyID(family),
+		Version:        0,
 	}
 
 	if err := k.db.Save(record).Error; err != nil {
@@ -232,7 +243,50 @@ func (k *Kahinah) processAdvisory() {
 	defer k.advisoryProcessRoutines.Done()
 
 	for advisory := range k.advisoryProcessQueue {
-		_ = advisory // FIXME
+		// check the status of the advisory - we may have already
+		// processed it?
+		if advisory.Status != OPEN {
+			// already processed, skip
+			continue
+		}
+
+		// check whether we've met the config requirements
+		advisory.Status = k.AdvisoryProcessFunc(advisory)
+
+		// save that new status
+		k.incrementVersion(advisory)
+
+		if advisory.Status != OPEN {
+			// for each update
+			for _, update := range advisory.Updates {
+				// get updateptr
+				updateptr, err := k.RetrieveUpdate(update)
+				if err != nil {
+					// FIXME: log?
+					continue
+				}
+
+				// get the associated connector
+				connector, ok := k.connectors[updateptr.ConnectorName]
+				if !ok {
+					// FIXME: log?
+					continue
+				}
+
+				// send to connector
+				go func(a *Advisory, u *Update) {
+					k.advisoryProcessRoutines.Add(1)
+					defer k.advisoryProcessRoutines.Done()
+
+					if a.Status == FAIL {
+						connector.Fail(u)
+					} else {
+						connector.Pass(u)
+					}
+
+				}(advisory, updateptr)
+			}
+		}
 	}
 }
 
@@ -241,6 +295,16 @@ func (k *Kahinah) NewComment(a *Advisory, user int64, verdict CommentVerdict, th
 	// verify that the user exists
 	if _, err := k.RetrieveUser(user); err != nil {
 		return err
+	}
+
+	// verify that the advisory hasn't changed before you add a new comment
+	forceAdvisory, err := k.ForceRetrieveAdvisory(a.Id)
+	if err != nil {
+		return err
+	}
+
+	if forceAdvisory.Version != a.Version {
+		return ErrAdvisoryChanged
 	}
 
 	// insert this comment
@@ -257,6 +321,11 @@ func (k *Kahinah) NewComment(a *Advisory, user int64, verdict CommentVerdict, th
 
 	// append to existing advisory
 	a.Comments = append(a.Comments, comment)
+
+	// up the version and save
+	if err := k.incrementVersion(a); err != nil {
+		return err
+	}
 
 	// send to queue
 	k.advisoryProcessQueue <- a
