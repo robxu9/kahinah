@@ -22,25 +22,6 @@ type User struct {
 	DeletedAt time.Time
 }
 
-type UserIP struct {
-	Id int64
-
-	UserId     int64
-	IP         string
-	AccessedAt time.Time
-}
-
-type UserToken struct {
-	Id int64
-
-	UserId  int64
-	Name    string
-	Token   string
-	Revoked bool
-
-	CreatedAt time.Time
-}
-
 func (k *Kahinah) RegisterUser(name, email string) (int64, error) {
 	return 0, nil
 }
