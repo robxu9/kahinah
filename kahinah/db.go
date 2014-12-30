@@ -123,6 +123,7 @@ func OpenDebug(dialect, params string) (*Kahinah, error) {
 // WILL panic.
 func (k *Kahinah) Close() error {
 	// finish processing everything
+	close(k.advisoryProcessQueue)
 	k.advisoryProcessRoutines.Wait() // we must wait for processes to finish
 	// delete everything from the cache
 	k.cache.Flush()
