@@ -65,6 +65,16 @@ func DefaultAdvisoryProcessFunc(a *Advisory) AdvisoryStatus {
 // adjusting tables as necessary. It follows the standard
 // sql.Open() syntax.
 func Open(dialect, params string) (*Kahinah, error) {
+	return open(dialect, params, false)
+}
+
+// OpenDebug is like open, except it enables debug logging. DO NOT
+// ENABLE THIS IN PRODUCTION - it logs EVERYTHING!
+func OpenDebug(dialect, params string) (*Kahinah, error) {
+	return open(dialect, params, true)
+}
+
+func open(dialect, params string, debug bool) (*Kahinah, error) {
 	db, err := gorm.Open(dialect, params)
 
 	if err != nil {
@@ -72,6 +82,10 @@ func Open(dialect, params string) (*Kahinah, error) {
 	}
 
 	dbptr := &db
+
+	if debug {
+		dbptr.LogMode(true)
+	}
 
 	// Auto-Migration
 
@@ -105,18 +119,6 @@ func Open(dialect, params string) (*Kahinah, error) {
 	go kahinah.processAdvisory()
 
 	return kahinah, nil
-}
-
-// OpenDebug is like open, except it enables debug logging. DO NOT
-// ENABLE THIS IN PRODUCTION - it logs EVERYTHING!
-func OpenDebug(dialect, params string) (*Kahinah, error) {
-	k, err := Open(dialect, params)
-	if err != nil {
-		return nil, err
-	}
-
-	k.db.LogMode(true)
-	return k, nil
 }
 
 // Close closes the database. Any operations afterwards on Kahinah

@@ -19,6 +19,7 @@ var (
 // can also create new updates by calling the NewUpdate() method on the
 // Kahinah object.
 type Connector interface {
+	// Name returns the name of the connector, usually in reverse domain name notation.
 	Name() string
 	Init(*Kahinah) error
 	Pass(*Update)

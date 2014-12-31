@@ -51,7 +51,6 @@ type Update struct {
 	Content   *UpdateContent `sql:"-"`       // contents of the update
 	ContentId int64          `sql:"content"` // content ID
 
-	ConnectorName string // connector name
 	ConnectorInfo string // connector information
 
 	CreatedAt time.Time // time this was created
@@ -65,7 +64,7 @@ type UpdateContent struct {
 	From string // from commit id
 	To   string // to commit id
 
-	URL     string    // url on the build system
+	Url     string    // url on the build system
 	BuiltAt time.Time // time this requested for building
 
 	Packages []*UpdatePackage `sql:"-"` // list of update packages
@@ -90,9 +89,10 @@ type UpdatePackage struct {
 	Version string
 	Release string
 	Arch    string
+	Type    string
 
 	// direct url to the package (optional)
-	URL string
+	Url string
 }
 
 // ConnectUpdateContentUpdateChange is a sql relation connector
@@ -123,7 +123,7 @@ func (k *Kahinah) setUpdateAdvisoryId(u *Update, id int64) error {
 
 // NewUpdate creates a new update and stores it in the database. It then returns
 // either a unique id to the update, or an error with why it failed.
-func (k *Kahinah) NewUpdate(connector, target, name, submitter string, updatetype UpdateType, content *UpdateContent, connectorname, connectorinfo string) (int64, error) {
+func (k *Kahinah) NewUpdate(connector, target, name, submitter string, updatetype UpdateType, content *UpdateContent, connectorinfo string) (int64, error) {
 	// Insert content first
 	if err := k.db.Save(content).Error; err != nil {
 		return 0, err
@@ -165,7 +165,6 @@ func (k *Kahinah) NewUpdate(connector, target, name, submitter string, updatetyp
 		Type:          updatetype,
 		Content:       content,
 		ContentId:     content.Id,
-		ConnectorName: connectorname,
 		ConnectorInfo: connectorinfo,
 	}
 
@@ -192,9 +191,11 @@ func (k *Kahinah) RetrieveUpdate(id int64) (*Update, error) {
 		return nil, ErrNoSuchUpdate
 	}
 
+	record.Content = &UpdateContent{}
+
 	// Retrieve connecting content
 	if k.db.First(record.Content, record.ContentId).RecordNotFound() {
-		panic(ErrCorruptUpdate)
+		return nil, ErrCorruptUpdate
 	}
 
 	// Then retrieve connecting packages to content
@@ -237,7 +238,7 @@ func (k *Kahinah) CountUpdates() int64 {
 
 	var count int64
 
-	if err := k.db.Model(&Update{}).Count(&count); err != nil {
+	if err := k.db.Model(&Update{}).Count(&count).Error; err != nil {
 		panic(err)
 	}
 

@@ -5,8 +5,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/jinzhu/gorm"
 )
 
 // AdvisoryStatus reflects the current status of the advisory
@@ -54,7 +52,7 @@ type Advisory struct {
 	Status AdvisoryStatus // Status of the Advisory
 
 	AdvisoryFamily string // Outward-facing Advisory Family
-	AdvisoryID     int64  // Outward-facing Advisory ID
+	AdvisoryId     int64  // Outward-facing Advisory ID
 
 	Version int64 // versioning
 
@@ -114,12 +112,14 @@ func (k *Kahinah) incrementVersion(a *Advisory) error {
 
 func (k *Kahinah) nextFamilyID(family string) int64 {
 	var id []int64
-	if err := k.db.Model(&Advisory{}).Where(&Advisory{AdvisoryFamily: family}).Order("advisoryid desc").Limit(1).Pluck("advisoryid", &id).Error; err != nil {
-		if err == gorm.RecordNotFound {
-			return 1
-		}
+	if err := k.db.Model(&Advisory{}).Where(&Advisory{AdvisoryFamily: family}).Order("advisory_id desc").Limit(1).Pluck("advisory_id", &id).Error; err != nil {
 		panic(err)
 	}
+
+	if len(id) == 0 {
+		return 1
+	}
+
 	return id[0] + 1
 }
 
@@ -160,7 +160,7 @@ func (k *Kahinah) NewAdvisory(user int64, updates []int64, references []string, 
 		Description:    description,
 		Status:         OPEN,
 		AdvisoryFamily: family,
-		AdvisoryID:     k.nextFamilyID(family),
+		AdvisoryId:     k.nextFamilyID(family),
 		Version:        0,
 	}
 
@@ -200,8 +200,9 @@ func (k *Kahinah) ForceRetrieveAdvisory(id int64) (*Advisory, error) {
 		return nil, ErrNoSuchUpdate
 	}
 
+	// FIXME GORM WHY
 	// get a list of all updates
-	if err := k.db.Where(&Update{AdvisoryId: record.Id}).Pluck("id", &record.Updates).Error; err != nil {
+	if err := k.db.Model(&Update{}).Where(&Update{AdvisoryId: record.Id}).Pluck("id", &record.Updates).Error; err != nil {
 		panic(err)
 	}
 
@@ -229,7 +230,7 @@ func (k *Kahinah) CountAdvisories() int64 {
 
 	var count int64
 
-	if err := k.db.Model(&Advisory{}).Count(&count); err != nil {
+	if err := k.db.Model(&Advisory{}).Count(&count).Error; err != nil {
 		panic(err)
 	}
 
@@ -276,7 +277,7 @@ func (k *Kahinah) processAdvisory() {
 				}
 
 				// get the associated connector
-				connector, ok := k.connectors[updateptr.ConnectorName]
+				connector, ok := k.connectors[updateptr.Connector]
 				if !ok {
 					// FIXME: log?
 					continue

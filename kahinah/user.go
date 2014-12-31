@@ -38,7 +38,7 @@ func (k *Kahinah) NewUser(email string) (int64, error) {
 		Email: email,
 	}
 
-	if err := k.db.Save(email).Error; err != nil {
+	if err := k.db.Save(user).Error; err != nil {
 		return 0, err
 	}
 
@@ -47,13 +47,18 @@ func (k *Kahinah) NewUser(email string) (int64, error) {
 
 // FindUser looks for a user with a specified email.
 func (k *Kahinah) FindUser(email string) (int64, error) {
-	var id int64
+	var id []int64
 
-	if err := k.db.Where(&User{Email: email}).Pluck("id", &id).Error; err != nil {
+	// FIXME WHY DOES GORM NOT KNOW THE TABLE NAME?
+	if err := k.db.Model(&User{}).Where(&User{Email: email}).Limit(1).Pluck("id", &id).Error; err != nil {
+		return 0, err
+	}
+
+	if len(id) == 0 {
 		return 0, ErrNoSuchUser
 	}
 
-	return id, nil
+	return id[0], nil
 }
 
 // RetrieveUser retrieves a user with the specified id.
@@ -64,8 +69,9 @@ func (k *Kahinah) RetrieveUser(id int64) (*User, error) {
 		return nil, ErrNoSuchUser
 	}
 
+	// FIXME WHY DOES GORM NOT KNOW THE TABLE NAME?
 	// get a list of all advisories
-	if err := k.db.Where(&Advisory{UserId: record.Id}).Pluck("id", &record.Advisories).Error; err != nil {
+	if err := k.db.Model(&Advisory{}).Where(&Advisory{UserId: record.Id}).Pluck("id", &record.Advisories).Error; err != nil {
 		panic(err)
 	}
 
