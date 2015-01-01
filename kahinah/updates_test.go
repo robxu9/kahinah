@@ -60,6 +60,10 @@ func TestUpdate(t *testing.T) {
 		t.Fatalf("should not be pulling from cache")
 	}
 
+	if update2.Id != update.Id {
+		t.Fatalf("id is not the same")
+	}
+
 	if len(update2.Content.Packages) != 2 {
 		t.Fatalf("packages is not 2")
 	}
@@ -73,4 +77,18 @@ func TestUpdate(t *testing.T) {
 	}
 
 	t.Log(update2)
+
+	// FindUpdatesWithConnector
+	updates, err := k.FindUpdatesWithConnector(update2.Connector, update2.ConnectorId, update2.ConnectorInfo)
+	if err != nil {
+		t.Fatalf("findupdateswithconnector failed: %v", err)
+	}
+
+	if len(updates) != 1 {
+		t.Fatalf("num updates should be 1")
+	}
+
+	if updates[0] != update2.Id {
+		t.Fatalf("updates is returning wrong id: %v", updates[0])
+	}
 }

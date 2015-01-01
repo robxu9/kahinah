@@ -56,7 +56,7 @@ func (t *TestingConnector) MakeNewUpdate(test *testing.T) int64 {
 				Details:  "did some stuff",
 			},
 		},
-	}, "1234567890")
+	}, "1234567890", "info here")
 
 	if err != nil {
 		test.Fatal(err)
