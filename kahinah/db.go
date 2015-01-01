@@ -127,6 +127,10 @@ func (k *Kahinah) Close() error {
 	// finish processing everything
 	close(k.advisoryProcessQueue)
 	k.advisoryProcessRoutines.Wait() // we must wait for processes to finish
+	// signal to connectors that we're closing
+	for _, v := range k.connectors {
+		v.Close()
+	}
 	// delete everything from the cache
 	k.cache.Flush()
 	// close the db

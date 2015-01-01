@@ -24,6 +24,8 @@ type Connector interface {
 	Init(*Kahinah) error
 	Pass(*Update)
 	Fail(*Update)
+	// Close signals to the connector that Kahinah is terminating.
+	Close()
 }
 
 // Attach attaches a connector to Kahinah, which can be used to

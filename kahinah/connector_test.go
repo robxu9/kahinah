@@ -10,6 +10,7 @@ type TestingConnector struct {
 	init chan struct{}
 	pass chan struct{}
 	fail chan struct{}
+	clse chan struct{}
 }
 
 func setupConnector() *TestingConnector {
@@ -17,6 +18,7 @@ func setupConnector() *TestingConnector {
 		init: make(chan struct{}, 1),
 		pass: make(chan struct{}, 1),
 		fail: make(chan struct{}, 1),
+		clse: make(chan struct{}, 1),
 	}
 }
 
@@ -79,6 +81,10 @@ func (t *TestingConnector) Pass(u *Update) {
 
 func (t *TestingConnector) Fail(u *Update) {
 	t.fail <- struct{}{}
+}
+
+func (t *TestingConnector) Close() {
+	t.clse <- struct{}{}
 }
 
 func TestConnector(t *testing.T) {
