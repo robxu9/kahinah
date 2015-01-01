@@ -54,6 +54,10 @@ type Update struct {
 	ConnectorId   string // connector id
 	ConnectorInfo string // connector information
 
+	Available bool // is this update available for an advisory?
+	// ^ rationale: connectors may set this false while not being attached
+	// to an advisory, if the status changes on the connected build system.
+
 	CreatedAt time.Time // time this was created
 }
 
@@ -122,6 +126,19 @@ func (k *Kahinah) setUpdateAdvisoryId(u *Update, id int64) error {
 	return k.db.Save(u).Error
 }
 
+// SetUpdateAvailability sets the availibility of the specified update.
+func (k *Kahinah) SetUpdateAvailability(update int64, available bool) error {
+	// FIXME security - what if the frontend modifies the update obj in the
+	// cache? or do we trust the frontend not to be so stupid?
+	u, err := k.RetrieveUpdate(update)
+	if err != nil {
+		return err
+	}
+
+	u.Available = available
+	return k.db.Save(u).Error
+}
+
 // NewUpdate creates a new update and stores it in the database. It then returns
 // either a unique id to the update, or an error with why it failed.
 func (k *Kahinah) NewUpdate(connector, target, name, submitter string, updatetype UpdateType, content *UpdateContent, connectorid, connectorinfo string) (int64, error) {
@@ -168,6 +185,7 @@ func (k *Kahinah) NewUpdate(connector, target, name, submitter string, updatetyp
 		ContentId:     content.Id,
 		ConnectorId:   connectorid,
 		ConnectorInfo: connectorinfo,
+		Available:     true,
 	}
 
 	if err := k.db.Save(record).Error; err != nil {
