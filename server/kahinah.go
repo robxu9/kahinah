@@ -117,6 +117,8 @@ func main() {
 	// start renderer
 	log.Print("starting renderer...")
 	r = render.New(render.Options{
+		Layout:        "layout",
+		Extensions:    []string{".tmpl", ".html"},
 		IsDevelopment: config.DevMode,
 	})
 
