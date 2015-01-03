@@ -3,6 +3,12 @@
   "version": "0.0.1",
   "private": "true",
   "dependencies": {
-    "foundation": "zurb/bower-foundation"
+    "foundation": "zurb/bower-foundation",
+    "ember": "~1.9.1",
+    "ember-data": "~0.0.14"
+  },
+  "resolutions": {
+    "ember": "~1.9.1",
+    "handlebars": ">= 2.0.0 < 3.0.0"
   }
 }
