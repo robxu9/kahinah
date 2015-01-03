@@ -1,12 +1,12 @@
 package controllers
 
 import (
+	"github.com/robxu9/kahinah/util"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"sort"
 	"time"
-	"github.com/robxu9/kahinah/util"
 
 	"github.com/astaxie/beego"
 	"github.com/astaxie/beego/orm"
@@ -49,12 +49,14 @@ type BuildsController struct {
 }
 
 func (this *BuildsController) Get() {
-	page, err := this.GetInt("page")
+	pageint, err := this.GetInt("page")
 	if err != nil {
-		page = 1
-	} else if page <= 0 {
-		page = 1
+		pageint = 1
+	} else if pageint <= 0 {
+		pageint = 1
 	}
+
+	page := int64(pageint)
 
 	var packages []*models.BuildList
 
@@ -106,12 +108,14 @@ type RejectedController struct {
 }
 
 func (this *RejectedController) Get() {
-	page, err := this.GetInt("page")
+	pageint, err := this.GetInt("page")
 	if err != nil {
-		page = 1
-	} else if page <= 0 {
-		page = 1
+		pageint = 1
+	} else if pageint <= 0 {
+		pageint = 1
 	}
+
+	page := int64(pageint)
 
 	var packages []*models.BuildList
 
@@ -164,12 +168,14 @@ type PublishedController struct {
 func (this *PublishedController) Get() {
 	filterPlatform := this.GetString("platform")
 
-	page, err := this.GetInt("page")
+	pageint, err := this.GetInt("page")
 	if err != nil {
-		page = 1
-	} else if page <= 0 {
-		page = 1
+		pageint = 1
+	} else if pageint <= 0 {
+		pageint = 1
 	}
+
+	page := int64(pageint)
 
 	var packages []*models.BuildList
 

@@ -60,8 +60,8 @@ type ABF byte
 func (a ABF) Ping() error {
 
 	for v := range platformids.Iterator() {
-		go a.pingBuildCompleted(v)
-		go a.pingTestingBuilds(v)
+		a.pingBuildCompleted(v)
+		a.pingTestingBuilds(v)
 	}
 
 	// FUTURE TODO: ping published & rejected builds to ensure consistency
@@ -289,7 +289,7 @@ func (a ABF) sendToTesting(id uint64) error {
 	}
 
 	defer resp.Body.Close()
-    // we are not doing this again...
+	// we are not doing this again...
 	//bte, _ := ioutil.ReadAll(resp.Body)
 	//fmt.Printf("sending %d to testing yielded %s\n", id, bte)
 	return nil
