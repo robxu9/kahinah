@@ -27,7 +27,7 @@ const (
 var (
 	global *kahinah.Kahinah
 	config Config
-	r      *render.Render
+	rend   *render.Render
 )
 
 func defaultAndExit() {
@@ -116,15 +116,18 @@ func main() {
 
 	// start renderer
 	log.Print("starting renderer...")
-	r = render.New(render.Options{
-		Layout:        "layout",
-		Extensions:    []string{".tmpl", ".html"},
+	rend = render.New(render.Options{
 		IsDevelopment: config.DevMode,
 	})
 
 	// start http server
 	log.Print("creating routes...")
 	mux := http.NewServeMux()
+
+	// ~> /api/v1
+	mux.Handle("/api/v1/", http.StripPrefix("/api/v1", &APIv1Endpoint{}))
+	// ~> everything else
+	mux.Handle("/", &ClientEndpoint{})
 
 	// start middleware
 	log.Print("starting middleware...")

@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>Kahinah</title>
+    <meta name="description" content="">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<!--
+
+Whee! I should not code at 2 AM, but here I am, typing away.
+Of course, there's also a bunch of other sites open, dedicated to
+helping me procrastinate on any work I have to do.
+
+And then there are the numberous ember.js tabs open as I struggle
+to figure out how ember.js works. I'm almost certain this will be
+a piece of work I will look back at in a year and cringe.
+
+Hopefully my cringe won't be mistaken for a heart attack.
+
+-->
+
+    {{content-for 'head'}}
+
+    <link rel="stylesheet" href="assets/vendor.css">
+    <link rel="stylesheet" href="assets/http.css">
+
+    {{content-for 'head-footer'}}
+  </head>
+  <body>
+    {{content-for 'body'}}
+
+    <script src="assets/vendor.js"></script>
+    <script src="assets/http.js"></script>
+
+    {{content-for 'body-footer'}}
+  </body>
+</html>
