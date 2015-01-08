@@ -121,6 +121,11 @@ func open(dialect, params string, debug bool) (*Kahinah, error) {
 	return kahinah, nil
 }
 
+// DB returns a copy of the database object for client side use.
+func (k *Kahinah) DB() *gorm.DB {
+	return k.db.New()
+}
+
 // Close closes the database. Any operations afterwards on Kahinah
 // WILL panic.
 func (k *Kahinah) Close() error {
