@@ -4,6 +4,7 @@ import (
 	"errors"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -249,8 +250,9 @@ func (k *Kahinah) ListAdvisories(from, limit int64) ([]int64, error) {
 }
 
 func (k *Kahinah) processAdvisory() {
-	k.advisoryProcessRoutines.Add(1) // for this thread itself
 	defer k.advisoryProcessRoutines.Done()
+
+	processRoutines := &sync.WaitGroup{}
 
 	for advisory := range k.advisoryProcessQueue {
 		// check the status of the advisory - we may have already
@@ -284,9 +286,9 @@ func (k *Kahinah) processAdvisory() {
 				}
 
 				// send to connector
+				processRoutines.Add(1)
 				go func(a *Advisory, u *Update) {
-					k.advisoryProcessRoutines.Add(1)
-					defer k.advisoryProcessRoutines.Done()
+					defer processRoutines.Done()
 
 					if a.Status == FAIL {
 						connector.Fail(u)
@@ -298,6 +300,8 @@ func (k *Kahinah) processAdvisory() {
 			}
 		}
 	}
+
+	processRoutines.Wait()
 }
 
 // NewComment adds a new comment to an advisory.

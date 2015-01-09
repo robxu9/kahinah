@@ -116,6 +116,7 @@ func open(dialect, params string, debug bool) (*Kahinah, error) {
 	}
 
 	// Start worker queue
+	kahinah.advisoryProcessRoutines.Add(1)
 	go kahinah.processAdvisory()
 
 	return kahinah, nil
