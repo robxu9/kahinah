@@ -125,7 +125,7 @@ func main() {
 	mux := http.NewServeMux()
 
 	// ~> /api/v1
-	mux.Handle("/api/v1/", http.StripPrefix("/api/v1", &APIv1Endpoint{}))
+	mux.Handle("/api/v1/", http.StripPrefix("/api/v1", NewAPIv1Endpoint()))
 	// ~> everything else
 	mux.Handle("/", &ClientEndpoint{})
 
