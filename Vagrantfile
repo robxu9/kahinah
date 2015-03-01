@@ -36,7 +36,7 @@ echo "> sourcing gvm"
 source ~/.gvm/scripts/gvm
 
 echo "> finding latest go"
-version=$(curl -s https://go.googlecode.com/hg/.hgtags | awk '{ print $2 }' | grep go | tail -n1)
+version=$(git ls-remote -t https://go.googlesource.com/go | awk -F/ '{ print $NF }' | grep go | grep -v beta | grep -v rc | tail -n1)
 echo ">> latest is $version"
 
 echo "> checking our go"
