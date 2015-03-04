@@ -1,4 +1,4 @@
-package main
+package common
 
 type Config struct {
 	Version   int
@@ -56,17 +56,37 @@ type advisory struct {
 	Families []string
 }
 
-func DefaultConfig() *Config {
+func DefaultConfig(version int) *Config {
 	return &Config{
-		Version:   VERSION,
+		Version:   version,
 		SecretKey: "ChangeMeToSomethingRandomForSecurity!",
+
+		GlobalNotice: "",
+		Admin: admin{
+			Permanent: []string{
+				"permanent@admin.email",
+			},
+		},
+
 		HTTP:      ":3000",
 		DevMode:   true,
 		DebugMode: false,
+
 		Database: database{
 			Dialect: "sqlite3",
 			Params:  ":memory:",
 		},
+
+		Connectors: connectors{
+			ABF: abfstruct{
+				Enabled:       false,
+				PlatformIds:   []string{},
+				User:          "user",
+				APIKey:        "apikey",
+				CheckEveryMin: 60,
+			},
+		},
+
 		Karma: karma{
 			PassLimit:        3,
 			FailLimit:        -3,
@@ -76,6 +96,12 @@ func DefaultConfig() *Config {
 			AddBlockKarma:    -6,
 			OverrideHours:    168,
 			BlockHours:       12,
+		},
+
+		Advisory: advisory{
+			Families: []string{
+				"myfamily",
+			},
 		},
 	}
 }

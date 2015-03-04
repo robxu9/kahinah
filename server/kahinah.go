@@ -13,7 +13,9 @@ import (
 	"github.com/goincremental/negroni-sessions/cookiestore"
 	"github.com/robxu9/kahinah/connectors/abf"
 	"github.com/robxu9/kahinah/kahinah"
-	"github.com/unrolled/render"
+	"github.com/robxu9/kahinah/server/apiv1"
+	"github.com/robxu9/kahinah/server/common"
+	"github.com/stretchr/graceful"
 
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/lib/pq"
@@ -26,9 +28,12 @@ const (
 
 var (
 	global *kahinah.Kahinah
-	config Config
-	rend   *render.Render
+	config *common.Config
 )
+
+func init() {
+	config = common.DefaultConfig(VERSION)
+}
 
 func defaultAndExit() {
 	configFile, err := os.Create("config.toml.new")
@@ -39,7 +44,7 @@ func defaultAndExit() {
 	encoder := toml.NewEncoder(configFile)
 	encoder.Indent = "\t"
 
-	if err := encoder.Encode(configFile); err != nil {
+	if err := encoder.Encode(config); err != nil {
 		panic(err)
 	}
 
@@ -53,6 +58,7 @@ func main() {
 		log.Printf("[warn] failed to open output.log: %v", err)
 	} else {
 		log.SetOutput(io.MultiWriter(os.Stdout, logFile))
+		defer logFile.Close()
 	}
 
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
@@ -70,7 +76,7 @@ func main() {
 	}
 	defer configFile.Close()
 
-	if _, err := toml.DecodeReader(configFile, &config); err != nil {
+	if _, err := toml.DecodeReader(configFile, config); err != nil {
 		log.Print("[err] failed to decode config.toml")
 		log.Print("[err] writing default config to config.toml.new and exiting")
 		defaultAndExit()
@@ -96,6 +102,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("[err] failed to connect to database: %v", err)
 	}
+	defer global.Close()
 
 	// set options
 	log.Print("setting options...")
@@ -114,18 +121,15 @@ func main() {
 		}
 	}
 
-	// start renderer
-	log.Print("starting renderer...")
-	rend = render.New(render.Options{
-		IsDevelopment: config.DevMode,
-	})
+	// migrate any remaining database tables
+	global.DB().AutoMigrate(&common.UserToken{})
 
 	// start http server
 	log.Print("creating routes...")
 	mux := http.NewServeMux()
 
 	// ~> /api/v1
-	mux.Handle("/api/v1/", http.StripPrefix("/api/v1", NewAPIv1Endpoint()))
+	mux.Handle("/api/v1/", http.StripPrefix("/api/v1", apiv1.NewAPIv1Endpoint()))
 	// ~> everything else
 	mux.Handle("/", &ClientEndpoint{})
 
@@ -136,5 +140,7 @@ func main() {
 	n.UseHandler(mux)
 
 	log.Printf("running on %v", config.HTTP)
-	n.Run(config.HTTP)
+	graceful.Run(config.HTTP, 10*time.Second, n)
+
+	log.Printf("*** gracefully terminating")
 }
