@@ -3,10 +3,13 @@
 var EmberApp = require('ember-cli/lib/broccoli/ember-app');
 
 var app = new EmberApp({
-  'foundation-sass': {
+  'ember-cli-foundation-sass': {
     'modernizr': true,
     'fastclick': true,
     'foundationJs': 'all'
+  },
+  vendorFiles: {
+    'handlebars.js': null
   }
 });
 
