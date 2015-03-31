@@ -15,7 +15,7 @@ func TestUpdate(t *testing.T) {
 		t.Fatalf("counting updates failed: should be 1 but is %d", count)
 	}
 
-	list, err := k.ListUpdates(0, 10)
+	list, err := k.ListUpdates(0, 10, NONE, "")
 	if err != nil {
 		t.Fatalf("failed to list updates: %v", err)
 	}
@@ -90,5 +90,82 @@ func TestUpdate(t *testing.T) {
 
 	if updates[0] != update2.Id {
 		t.Fatalf("updates is returning wrong id: %v", updates[0])
+	}
+}
+
+func TestUpdateListFiltering(t *testing.T) {
+	k := setupTest(t)
+	defer k.Close()
+
+	c := setupConnector()
+	k.Attach(c)
+
+	id := c.MakeNewUpdate(t)
+
+	if count := k.CountUpdates(); count != 1 {
+		t.Fatalf("counting updates failed: should be 1 but is %d", count)
+	}
+
+	list, err := k.ListUpdates(0, 10, NONE, "")
+	if err != nil {
+		t.Fatalf("failed to list updates: %v", err)
+	}
+
+	if len(list) != 1 {
+		t.Fatalf("list of updates is not 1")
+	}
+
+	if list[0] != id {
+		t.Fatalf("list[0] should be id which is %d but is %d", id, list[0])
+	}
+
+	// filter by type (SECURITY should have none since our update is BUGFIX)
+	list, err = k.ListUpdates(0, 10, SECURITY, "")
+	if err != nil {
+		t.Fatalf("failed to list updates: %v", err)
+	}
+
+	if len(list) != 0 {
+		t.Fatalf("list of updates is not 0")
+	}
+
+	// filter by type (BUGFIX len == 1)
+	list, err = k.ListUpdates(0, 10, BUGFIX, "")
+	if err != nil {
+		t.Fatalf("failed to list updates: %v", err)
+	}
+
+	if len(list) != 1 {
+		t.Fatalf("list of updates is not 1")
+	}
+
+	// filter by target (len == 1)
+	list, err = k.ListUpdates(0, 10, NONE, "robxu9/2014/main")
+	if err != nil {
+		t.Fatalf("failed to list updates: %v", err)
+	}
+
+	if len(list) != 1 {
+		t.Fatalf("list of updates is not 1")
+	}
+
+	// filter by invalid target (len == 0)
+	list, err = k.ListUpdates(0, 10, NONE, "invalid/target")
+	if err != nil {
+		t.Fatalf("failed to list updates: %v", err)
+	}
+
+	if len(list) != 0 {
+		t.Fatalf("list of updates is not 0")
+	}
+
+	// filter by both type and target (len == 1)
+	list, err = k.ListUpdates(0, 10, BUGFIX, "robxu9/2014/main")
+	if err != nil {
+		t.Fatalf("failed to list updates: %v", err)
+	}
+
+	if len(list) != 1 {
+		t.Fatalf("list of updates is not 1")
 	}
 }

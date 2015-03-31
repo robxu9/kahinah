@@ -21,19 +21,32 @@ import (
  * @apiSuccess {Number} updates.id    Update ID
  */
 func (a *APIv1) Updates(rw http.ResponseWriter, r *http.Request, t *common.UserToken) {
-	filter_page := 1
-	filter_type := r.URL.Query().Get("type")
-	filter_for := r.URL.Query().Get("for")
+	filterPage := 1
+	filterType := r.URL.Query().Get("type")
+	filterFor := r.URL.Query().Get("for")
 
 	if p := r.URL.Query().Get("page"); p != "" {
 		if i, err := strconv.Atoi(p); err == nil {
 			if i >= 1 {
-				filter_page = i
+				filterPage = i
 			}
 		}
 	}
 
-	updateIds, err := a.c.K.ListUpdates(int64(LIST_LIMIT*(filter_page-1)), int64(LIST_LIMIT))
+	actualType := kahinah.NONE
+
+	switch filterType {
+	case "bugfix":
+		actualType = kahinah.BUGFIX
+	case "security":
+		actualType = kahinah.SECURITY
+	case "enhancement":
+		actualType = kahinah.ENHANCEMENT
+	case "new":
+		actualType = kahinah.NEW
+	}
+
+	updateIds, err := a.c.K.ListUpdates(int64(LIST_LIMIT*(filterPage-1)), int64(LIST_LIMIT), actualType, filterFor)
 	if err != nil {
 		panic(err)
 	}
@@ -47,7 +60,7 @@ func (a *APIv1) Updates(rw http.ResponseWriter, r *http.Request, t *common.UserT
 		updates = append(updates, update)
 	}
 
-	links := a.makeLists(r.URL, filter_page-1, int(a.c.K.CountUpdates()))
+	links := a.makeLists(r.URL, filterPage-1, int(a.c.K.CountUpdates()))
 
 	a.r.JSON(rw, http.StatusOK, map[string]interface{}{
 		"updates": updates,

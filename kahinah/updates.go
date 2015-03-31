@@ -10,7 +10,7 @@ import (
 type UpdateType int
 
 const (
-	// NONE represents an undefined update type
+	// NONE represents an undefined update type/no specified update type to filter
 	NONE UpdateType = iota
 	// BUGFIX represents a bugfix update
 	BUGFIX
@@ -266,10 +266,20 @@ func (k *Kahinah) CountUpdates() int64 {
 }
 
 // ListUpdates returns a list of updates in most recent order.
-func (k *Kahinah) ListUpdates(from, limit int64) ([]int64, error) {
+func (k *Kahinah) ListUpdates(from, limit int64, filterType UpdateType, filterFor string) ([]int64, error) {
 	var records []int64
 
-	if err := k.db.Model(&Update{}).Order("created_at desc").Limit(limit).Offset(from).Pluck("id", &records).Error; err != nil {
+	model := k.db.Model(&Update{}).Order("created_at desc").Limit(limit).Offset(from)
+
+	if filterType != NONE {
+		model = model.Where(&Update{Type: filterType})
+	}
+
+	if filterFor != "" {
+		model = model.Where(&Update{For: filterFor})
+	}
+
+	if err := model.Pluck("id", &records).Error; err != nil {
 		return nil, err
 	}
 
