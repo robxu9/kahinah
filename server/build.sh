@@ -1,5 +1,13 @@
 #!/bin/bash
 
+if ! hash ember 2>/dev/null; then
+    echo "! requires ember-cli: install with npm install -g ember-cli"
+fi
+
+if ! hash go 2>/dev/null; then
+    echo "! requires golang"
+fi
+
 echo "~> removing previous build directories"
 rm -r build/
 

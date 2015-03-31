@@ -4,97 +4,62 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
+	"github.com/robxu9/kahinah/server/common"
+	"github.com/unrolled/render"
 )
 
 type APIv1 struct {
-	k *kahinah.Kahinah
-	c *common.Config
-	r *mux.Router
+	c *common.Common
+	r *render.Render
 }
 
-func (a *APIv1) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	a.r.ServeHTTP(w, r)
-}
-
-func NewAPIv1(k *kahinah.Kahinah, c *common.Config) *APIv1 {
-
-}
-
-// The standard endpoints:
-// find ~> GET /$obj/{id:[0-9]+}
-// findall ~> GET /$obj
-// update ~> PUT /$obj/{id:[0-9]+}
-// create ~> POST /$obj
-// delete ~> DELETE /$obj/{id:[0-9]+}
-//
-// If one is not supported, return 405/http.StatusMethodNotAllowed.
-type StandardHandlers interface {
-	Find(http.ResponseWriter, *http.Request)
-	FindAll(http.ResponseWriter, *http.Request)
-	Update(http.ResponseWriter, *http.Request)
-	Create(http.ResponseWriter, *http.Request)
-	Delete(http.ResponseWriter, *http.Request)
-}
-
-func v1RegisterStandardHandlers(r *mux.Router, s StandardHandlers) {
-	specificRouter := r.Path("/{id:[0-9]+}").Subrouter()
-	specificRouter.Methods("GET").HandlerFunc(s.Find)
-	specificRouter.Methods("PUT").HandlerFunc(s.Update)
-	specificRouter.Methods("DELETE").HandlerFunc(s.Delete)
-
-	r.Path("/").Methods("GET").HandlerFunc(s.FindAll)
-	r.Path("/").Methods("POST").HandlerFunc(s.Create)
-}
-
-func NewAPIv1Endpoint(k *kahinah.Kahinah, config *common.Config) *mux.Router {
-	rend := render.New(render.Options{
-		IsDevelopment: config.DevMode,
-	})
+func New(c *common.Common) http.Handler {
+	api := &APIv1{
+		c: c,
+		r: render.New(render.Options{
+			IndentJSON: true,
+			IndentXML:  true,
+		}),
+	}
 
 	r := mux.NewRouter()
 
-	// ~> version
-	r.HandleFunc("/", func(rw http.ResponseWriter, r *http.Request) {
-		rend.JSON(rw, http.StatusOK, map[string]interface{}{
-			"name":    "kahinah",
-			"api":     1,
-			"version": VERSION,
-			})
-		})
+	// Routes:
+	// /auth: authentication functions
+	// /updates: list of updates
+	// /advisories: list of advisories
 
-	// ~> updates
-	// standard router
-	v1RegisterStandardHandlers(r.Path("/updates/").Subrouter(), &v1UpdateHandlers{})
-
-	// advisories
-
-	// users
+	// /: return apiv1 server version
+	r.HandleFunc("/", c.UserWrapHandler(api.Root))
 
 	return r
 }
 
-type v1UpdateHandlers struct{
-	k *kahinah.Kahinah
-	r *render.Render
-	c *common.Config
-}
+/**
+ * @apiDefine Lists
+ * @apiSuccess {Object} pages				Page List
+ * @apiSuccess {String} pages.next	Next Page of List
+ * @apiSuccess {String} pages.prev	Previous Page of List
+ * @apiSuccess {String} pages.head	First Page of List
+ * @apiSuccess {String} pages.tail	Last Page of List
+ */
 
-func (v *v1UpdateHandlers) Find(rw http.ResponseWriter, r *http.Request) {
+/**
+ * @apiDefine Authentication
+ * @apiParam {String} token API Token via Query (should only be used for server to server)
+ * @apiHeader {String} Authentication Authentication Token (Should be Bearer <token>)
+ * @apiError Unauthorized The authentication token failed.
+ */
 
-}
-
-func (v *v1UpdateHandlers) FindAll(rw http.ResponseWriter, r *http.Request) {
-
-}
-
-func (v *v1UpdateHandlers) Update(rw http.ResponseWriter, r *http.Request) {
-
-}
-
-func (v *v1UpdateHandlers) Create(rw http.ResponseWriter, r *http.Request) {
-
-}
-
-func (v *v1UpdateHandlers) Delete(rw http.ResponseWriter, r *http.Request) {
-
+/**
+ * @api {get} / Kahinah Server Version
+ * @apiName Version
+ * @apiDescription Retrieves Kahinah's server version
+ * @apiGroup Server Internals
+ * @apiSuccess {Number} version Version of the Server
+ */
+func (a *APIv1) Root(rw http.ResponseWriter, r *http.Request, t *common.UserToken) {
+	a.r.JSON(rw, http.StatusOK, map[string]interface{}{
+		"version": a.c.C.Version,
+	})
 }

@@ -24,15 +24,13 @@
               <tr>
                 <td>{{item.name}}</td>
                 <td>{{item.for}}</td>
-                <td><a href="/update/id" class="button tiny">More</a>
-                </td>
+                <td>{{link-to 'More' 'update' item class="button tiny"}}</td>
               </tr>
             {{/each}}
             <tr>
               <td>NAME</td>
               <td>FOR</td>
-              <td><a href="/update/id">More</a>
-              </td>
+              <td>{{link-to 'More' 'update' 1 class="button tiny"}}</td>
             </tr>
           </tbody>
         </table>
