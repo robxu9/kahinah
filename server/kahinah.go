@@ -7,6 +7,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/robxu9/kahinah/server/apiv1"
 	"github.com/robxu9/kahinah/server/common"
 
 	"github.com/BurntSushi/toml"
@@ -15,6 +16,7 @@ import (
 )
 
 const (
+	// VERSION contains the server version. Bump for configuration changes.
 	VERSION = 0
 )
 
@@ -58,6 +60,8 @@ func main() {
 		defaultAndExit()
 	}
 	defer configFile.Close()
+
+	config := common.DefaultConfig(VERSION)
 
 	if _, err := toml.DecodeReader(configFile, config); err != nil {
 		log.Print("[err] failed to decode config.toml")
