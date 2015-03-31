@@ -2,10 +2,16 @@ package apiv1
 
 import (
 	"net/http"
+	"net/url"
+	"strconv"
 
 	"github.com/gorilla/mux"
 	"github.com/robxu9/kahinah/server/common"
 	"github.com/unrolled/render"
+)
+
+const (
+	LIST_LIMIT = 50 // only do 50 per page
 )
 
 type APIv1 struct {
@@ -42,7 +48,45 @@ func New(c *common.Common) http.Handler {
  * @apiSuccess {String} pages.prev	Previous Page of List
  * @apiSuccess {String} pages.head	First Page of List
  * @apiSuccess {String} pages.tail	Last Page of List
+ * @apiSuccess {Number} pages.total	Total Number of Pages of List
  */
+// makeLists takes in the original url, the current page, and the total
+// number of entries, then using LIST_LIMIT, it returns the links map
+func (a *APIv1) makeLists(originalURL *url.URL, page, totalEntries int) map[string]string {
+	// get limit from LIST_LIMIT
+	result := map[string]string{}
+
+	// clone url object
+	copyURL, err := url.Parse(originalURL.String())
+	if err != nil {
+		panic(err)
+	}
+
+	// next
+	if (page+1)*LIST_LIMIT <= totalEntries {
+		copyURL.Query().Set("page", strconv.Itoa(page+1))
+		result["next"] = copyURL.String()
+	}
+
+	// prev
+	if (page-1) >= 1 && (page-1)*LIST_LIMIT <= totalEntries {
+		copyURL.Query().Set("page", strconv.Itoa(page-1))
+		result["prev"] = copyURL.String()
+	}
+
+	// head
+	copyURL.Query().Set("page", "1")
+	result["head"] = copyURL.String()
+
+	// tail
+	copyURL.Query().Set("page", strconv.Itoa(totalEntries/LIST_LIMIT+1))
+	result["tail"] = copyURL.String()
+
+	// total # of pages
+	result["total"] = strconv.Itoa(totalEntries/LIST_LIMIT + 1)
+
+	return result
+}
 
 /**
  * @apiDefine Authentication
