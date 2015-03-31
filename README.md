@@ -1,68 +1,32 @@
-Kahinah
-=======
+# Kahinah: the karma manager
 
-Kahinah is the QA system for OpenMandriva. It hooks into ABF to retrieve packages that have been recently built and automates the QA portion of the package process (pushing to testing, karma, pushing to updates).
+This rewrite carries the same principle as the last one, except
+that updates aren't automatically votable. Instead, updates are
+immutable, and as they are automatically imported by connectors,
+they must be submitted for testing and comment via advisories.
 
-Requirements
-------------
+Advisories brings Kahinah in line with standards, at least
+where managing package updates are concerned.
 
-* Git
-* mktemp -d
-* Go 1.2+
-* sqlite3 or mysql
+A broken mess that was, before.
 
-Setup
------
+### Regarding ABF
 
-1. Configure your application in conf/app.conf (use conf/app.conf.example as a template.)
-1. Configure news.txt.
-1. Make sure your databases are created, if needed.
-1. Run it.
+I still poll for ABF every hour. ABF provides no known form of
+push notifications (not that I'm expecting them to) and I'm still
+aways off from connecting to an email client and reading email
+notifications, so you'll have to bear with me. I may decrease the
+polling limit to every 5-10 minutes, depending on if I can get
+alternate approval from the administrators (not a high priority
+right now though, truth be told).
 
-Tips
-----
+When updates hit "Build Completed", they will make their way to
+the updates section of Kahinah, but WILL NOT get sent to testing
+automatically (breaking change!). You need to create an advisory
+and fill out the details (that's not optional) and then Kahinah
+will send all those updates to testing.
 
-* Make sure to run `go clean -i -r -x` before every build.
-** go run tends to link to old static libraries... somehow.
-* Update the source every time with `go get -u`.
-** If you get errors, the above cleaning command helps.
+### Developing
+go1.4 is currently the targeted version.
 
-Administration
---------------
-
-To be able to control users and permissions, you need to have an admin account.
-
-1. Login with your account to Persona. This will create an account in the database.
-1. Add your email address to adminwhitelist (you may add several emails, seperated by semicolons)
-1. Restart Kahinah and navigate to /admin. Add the kahinah.admin permission to your users.
-
-It's recommended that you remove your email addresses from adminwhitelist afterwards, and replace them with impossible ones (e.g. 1y8oehowhfoinwdaf).
-
-
-Whitelist
----------
-
-Kahinah, by default, allows everyone to vote up/down builds. This may have unintended effects.
-
-Currently, there is a whitelist system embedded - set "whitelist" in app.conf to true to use it.
-
-This allows only users in the whitelist to vote. It also adds a permanent notice to the front page
-that indicates that it is only available for whitelisted users.
-
-Administrators should use the above administration tool to add the "kahinah.whitelist" permission
-to users that should be allowed to vote.
-
-Database
---------
-
-`db_type` is either `sqlite3` or `mysql`. For `sqlite3`, the `db_name` is the filename of the database.
-
-The rest should be self-explainatory. Hopefully.
-
-No major database changes are expected, I think. Maybe we'll introduce migrations with hood or goose
-when the time comes to change the database schema, but I don't anticipate major changes anytime soon.
-
-News
-----
-
-It's a simple text file... That's pretty much it. Nothing fancy, no HTML will be rendered, etc.
+Do a `vagrant up` if you want to develop. It's much easier.

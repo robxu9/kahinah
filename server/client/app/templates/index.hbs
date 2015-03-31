@@ -1,0 +1,84 @@
+<!-- header -->
+<div class="row">
+  {{partial "index-header"}}
+</div>
+
+<!-- latest updates -->
+<div class="row" data-equalizer>
+  <div class="large-6 columns panel" data-equalizer-watch>
+      <div class="row">
+        <h4 class="text-center">Latest Updates</h4>
+      </div> <!-- header -->
+
+      <div class="row">
+        <table cellpadding="0" cellspacing="1" style="width: 100%;">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>For</th>
+              <th width="10%"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {{#each item in model.updates}}
+              <tr>
+                <td>{{item.name}}</td>
+                <td>{{item.for}}</td>
+                <td>{{link-to 'More' 'update' item class="button tiny"}}</td>
+              </tr>
+            {{/each}}
+            <tr>
+              <td>NAME</td>
+              <td>FOR</td>
+              <td>{{link-to 'More' 'update' 1 class="button tiny"}}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <!-- update results -->
+
+      <a href="#" class="button right tiny"> all updates &raquo;</a>
+  </div>
+  <!-- latest updates -->
+
+  <div class="large-6 columns panel" data-equalizer-watch>
+    <div class="row">
+      <h4 class="text-center">Latest Advisories</h4>
+      </div> <!-- header -->
+
+      <div class="row">
+        <table cellpadding="0" cellspacing="1" style="width: 100%;">
+          <thead>
+            <tr>
+              <th>Advisory</th>
+              <th>Includes</th>
+              <th width="10%"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {{#each item in model.advisories}}
+            <tr>
+              <td>{{item.update_id}}</td>
+              <td><ul>{{#each update in item.updates}}
+                <li>{{update.name}} ~> {{update.for}}</li>{{/each}}
+              </ul></td>
+              <td><a href="/advisory/id" class="button tiny">More</a>
+              </td>
+            </tr>
+            {{/each}}
+            <tr>
+              <td>NAME</td>
+              <td>FOR</td>
+              <td><a href="/advisory/id">More</a>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <!-- advisory results -->
+
+      <a href="#" class="button right tiny"> all advisories &raquo;</a>
+    </div>
+    <!-- latest advisories -->
+</div>
+<!-- top row, data-equalizer -->
