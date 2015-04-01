@@ -65,6 +65,49 @@ func (t *TestingConnector) MakeNewUpdate(test *testing.T) int64 {
 	return id
 }
 
+func (t *TestingConnector) MakeNewUpdate2(test *testing.T) int64 {
+	id, err := t.k.NewUpdate(t.Name(), "robxu9/2015/main", "test-1.0.0/amd64", "joe@example.com", BUGFIX, &UpdateContent{
+		From:    "120",
+		To:      "126",
+		Url:     "http://example.com/",
+		BuiltAt: time.Now(),
+		Packages: []*UpdatePackage{
+			&UpdatePackage{
+				Name:    "test",
+				Epoch:   0,
+				Version: "1.0.0",
+				Release: "1.robxu9",
+				Arch:    "amd64",
+				Type:    "src",
+				Url:     "http://example.com/test.tar.xz",
+			},
+			&UpdatePackage{
+				Name:    "test",
+				Epoch:   0,
+				Version: "1.0.0",
+				Release: "1.robxu9",
+				Arch:    "amd64",
+				Type:    "binary",
+				Url:     "http://example.com/test.pkg",
+			},
+		},
+		Changes: []*UpdateChange{
+			&UpdateChange{
+				ChangeAt: time.Now(),
+				For:      "1.0.0-1.robxu9",
+				By:       "joe@example.com",
+				Details:  "did some stuff",
+			},
+		},
+	}, "1234567891", "info here")
+
+	if err != nil {
+		test.Fatal(err)
+	}
+
+	return id
+}
+
 func (t *TestingConnector) Name() string {
 	return "com.robxu9.kahinah.connector.test"
 }

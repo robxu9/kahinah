@@ -47,7 +47,7 @@ func (c *Common) UserWrapHandler(u UserHandler) http.HandlerFunc {
 			// try via header
 			if header := r.Header.Get("Authorization"); header != "" {
 				split := strings.Split(header, " ")
-				if len(split) == 2 && strings.ToLower(split[0]) == "Bearer" { // based on auth0/go-jwt-middleware
+				if len(split) == 2 && strings.ToLower(split[0]) == "bearer" { // based on auth0/go-jwt-middleware
 					token = split[1]
 				}
 			}

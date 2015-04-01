@@ -1,5 +1,6 @@
 package common
 
+// Config represents server configuration
 type Config struct {
 	Version   int
 	SecretKey string
@@ -56,6 +57,7 @@ type advisory struct {
 	Families []string
 }
 
+// DefaultConfig represents the default configuration with the specified version
 func DefaultConfig(version int) *Config {
 	return &Config{
 		Version:   version,

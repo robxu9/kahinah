@@ -169,3 +169,53 @@ func TestUpdateListFiltering(t *testing.T) {
 		t.Fatalf("list of updates is not 1")
 	}
 }
+
+func TestUpdateTargetList(t *testing.T) {
+	k := setupTest(t)
+	defer k.Close()
+
+	c := setupConnector()
+	k.Attach(c)
+
+	c.MakeNewUpdate(t)
+
+	list, err := k.ListUpdateTargets()
+	if err != nil {
+		t.Fatalf("failed to list update targets: %v", err)
+	}
+
+	if len(list) != 1 {
+		t.Fatalf("size of list of update targets is not 1: %v", len(list))
+	}
+
+	if list[0] != "robxu9/2014/main" {
+		t.Fatalf("list of update targets does not contain robxu9/2014/main: %v", list[0])
+	}
+
+	c.MakeNewUpdate(t) // again
+
+	list, err = k.ListUpdateTargets()
+	if err != nil {
+		t.Fatalf("failed to list update targets: %v", err)
+	}
+
+	if len(list) != 1 {
+		t.Fatalf("size of list of update targets is not 1: %v", len(list))
+	}
+
+	if list[0] != "robxu9/2014/main" {
+		t.Fatalf("list of update targets does not contain robxu9/2014/main: %v", list[0])
+	}
+
+	c.MakeNewUpdate2(t)
+
+	list, err = k.ListUpdateTargets()
+	if err != nil {
+		t.Fatalf("failed to list update targets: %v", err)
+	}
+
+	if len(list) != 2 {
+		t.Fatalf("size of list of update targets is not 2: %v", len(list))
+	}
+
+}

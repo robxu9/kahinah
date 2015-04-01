@@ -22,10 +22,7 @@ type APIv1 struct {
 func New(c *common.Common) http.Handler {
 	api := &APIv1{
 		c: c,
-		r: render.New(render.Options{
-			IndentJSON: true,
-			IndentXML:  true,
-		}),
+		r: render.New(render.Options{}),
 	}
 
 	r := mux.NewRouter()
@@ -33,6 +30,7 @@ func New(c *common.Common) http.Handler {
 	// Routes:
 	// /auth: authentication functions
 	// /updates: list of updates
+	r.HandleFunc("/updates", c.UserWrapHandler(api.Updates))
 	// /advisories: list of advisories
 
 	// /: return apiv1 server version

@@ -42,19 +42,19 @@ type Update struct {
 
 	AdvisoryId int64 // attached to certain advisory
 
-	Connector string     // connector that handled this update
+	Connector string     `json:"-"` // connector that handled this update
 	For       string     // update target
 	Name      string     // update name
 	Submitter string     // update submitter (their email)
 	Type      UpdateType // update type
 
-	Content   *UpdateContent `sql:"-"`       // contents of the update
-	ContentId int64          `sql:"content"` // content ID
+	Content   *UpdateContent `sql:"-"`                // contents of the update
+	ContentId int64          `sql:"content" json:"-"` // content ID
 
-	ConnectorId   string // connector id
-	ConnectorInfo string // connector information
+	ConnectorId   string `json:"-"` // connector id
+	ConnectorInfo string `json:"-"` // connector information
 
-	Available bool // is this update available for an advisory?
+	Available bool `json:"-"` // is this update available for an advisory?
 	// ^ rationale: connectors may set this false while not being attached
 	// to an advisory, if the status changes on the connected build system.
 
@@ -86,7 +86,7 @@ type ConnectUpdateContentUpdatePackage struct {
 
 // UpdatePackage represents a package in the update
 type UpdatePackage struct {
-	Id int64
+	Id int64 `json:"-"`
 
 	// name [epoch]:version-release.arch.type
 	Name    string
@@ -109,7 +109,7 @@ type ConnectUpdateContentUpdateChange struct {
 
 // UpdateChange is a changelog entry in the update
 type UpdateChange struct {
-	Id int64
+	Id int64 `json:"-"`
 
 	ChangeAt time.Time
 	For      string // epoch:version-release
@@ -284,6 +284,17 @@ func (k *Kahinah) ListUpdates(from, limit int64, filterType UpdateType, filterFo
 	}
 
 	return records, nil
+}
+
+// ListUpdateTargets returns a list of all targets in the system that updates are for.
+func (k *Kahinah) ListUpdateTargets() ([]string, error) {
+	var targets []string
+
+	if err := k.db.Raw("SELECT DISTINCT for FROM updates").Pluck("for", &targets).Error; err != nil {
+		return nil, err
+	}
+
+	return targets, nil
 }
 
 // FindUpdatesWithConnector looks for an update with the specified connector name, id, and/or info.
