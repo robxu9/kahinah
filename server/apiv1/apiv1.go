@@ -30,6 +30,7 @@ func New(c *common.Common) http.Handler {
 	// Routes:
 	// /auth: authentication functions
 	// /updates: list of updates
+	r.HandleFunc("/updates/targets", c.UserWrapHandler(api.UpdateTargets))
 	r.HandleFunc("/updates", c.UserWrapHandler(api.Updates))
 	// /advisories: list of advisories
 
@@ -97,7 +98,7 @@ func (a *APIv1) makeLists(originalURL *url.URL, page, totalEntries int) map[stri
  * @api {get} / Kahinah Server Version
  * @apiName Version
  * @apiDescription Retrieves Kahinah's server version
- * @apiGroup Server Internals
+ * @apiGroup Internals
  * @apiSuccess {Number} version Version of the Server
  */
 func (a *APIv1) Root(rw http.ResponseWriter, r *http.Request, t *common.UserToken) {

@@ -1,0 +1,5 @@
+Requires the following:
+
+1. a sane go1.4 or better compiler (for go get -u -v ./...)
+2. apidocjs for generating documentation (npm install apidoc -g)
+3. ember-cli for generating the client (npm install ember-cli -g)

@@ -15,3 +15,14 @@ func TestUpdates(t *testing.T) {
 
 	setup.NetTest("GET", "/updates", "", false, http.StatusOK, wantedResponse, MatchGlob)
 }
+
+func TestUpdateTargets(t *testing.T) {
+	setup := setupAPIv1(t)
+	defer setup.Close()
+
+	setup.MakeUpdate()
+
+	wantedResponse := `{"targets":["robxu9/2014/main"]}`
+
+	setup.NetTest("GET", "/updates/targets", "", false, http.StatusOK, wantedResponse, MatchEqual)
+}

@@ -8,8 +8,9 @@ import (
 	"github.com/robxu9/kahinah/server/common"
 )
 
+// Updates lists the latest updates coming into kahinah.
 /**
- * @api {get} /updates
+ * @api {get} /updates List Updates
  * @apiName ListUpdates
  * @apiDescription List the latest updates coming into Kahinah
  * @apiGroup Updates
@@ -65,5 +66,24 @@ func (a *APIv1) Updates(rw http.ResponseWriter, r *http.Request, t *common.UserT
 	a.r.JSON(rw, http.StatusOK, map[string]interface{}{
 		"updates": updates,
 		"links":   links,
+	})
+}
+
+// UpdateTargets lists the distinct update targets for updates in Kahinah
+/**
+ * @api {get} /updates/targets List Update Targets
+ * @apiName ListUpdateTargets
+ * @apiDescription List distinct update targets for updates in Kahinah
+ * @apiGroup Updates
+ * @apiSuccess {String[]} targets     List of Targets
+ */
+func (a *APIv1) UpdateTargets(rw http.ResponseWriter, r *http.Request, t *common.UserToken) {
+	targets, err := a.c.K.ListUpdateTargets()
+	if err != nil {
+		panic(err)
+	}
+
+	a.r.JSON(rw, http.StatusOK, map[string]interface{}{
+		"targets": targets,
 	})
 }
