@@ -15,14 +15,14 @@ fi
 echo "~> removing previous build directories"
 rm -r build/
 
-echo "~> clearing cache"
-go clean -i -r -x
+#echo "~> clearing cache"
+#go clean -i -r -x
 
 echo "~> creating build/"
 mkdir -p build/
 
 echo "~> generating server binary..."
-go build -o build/khserver -i -race -v -x -a
+go build -o build/khserver -i -race -v -x
 
 echo "~> generating client files..."
 (

@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/gorilla/mux"
 	"github.com/robxu9/kahinah/kahinah"
 	"github.com/robxu9/kahinah/server/common"
 )
@@ -18,8 +19,8 @@ import (
  * @apiParam {String="none","bugfix","security","enhancement","new"} type Filter Update Type
  * @apiParam {String} for Filter Update Target
  * @apiUse Lists
- * @apiSuccess {Object[]} updates     List of Updates
- * @apiSuccess {Number} updates.id    Update ID
+ * @apiSuccess (200) {Object[]} updates     List of Updates
+ * @apiSuccess (200) {Number} updates.id    Update ID
  */
 func (a *APIv1) Updates(rw http.ResponseWriter, r *http.Request, t *common.UserToken) {
 	filterPage := 1
@@ -75,7 +76,7 @@ func (a *APIv1) Updates(rw http.ResponseWriter, r *http.Request, t *common.UserT
  * @apiName ListUpdateTargets
  * @apiDescription List distinct update targets for updates in Kahinah
  * @apiGroup Updates
- * @apiSuccess {String[]} targets     List of Targets
+ * @apiSuccess (200) {String[]} targets     List of Targets
  */
 func (a *APIv1) UpdateTargets(rw http.ResponseWriter, r *http.Request, t *common.UserToken) {
 	targets, err := a.c.K.ListUpdateTargets()
@@ -85,5 +86,32 @@ func (a *APIv1) UpdateTargets(rw http.ResponseWriter, r *http.Request, t *common
 
 	a.r.JSON(rw, http.StatusOK, map[string]interface{}{
 		"targets": targets,
+	})
+}
+
+// Update displays a specific update with the specified ID.
+/**
+ * @api {get} /updates/:id Get Update
+ * @apiName GetUpdate
+ * @apiDescription Retrieve a specific update
+ * @apiGroup Updates
+ * @apiSuccess (200) {Object} update Update
+ * @apiError (404) UpdateNotFound No update with the id specified was found.
+ */
+func (a *APIv1) Update(rw http.ResponseWriter, r *http.Request, t *common.UserToken) {
+	idStr := mux.Vars(r)["id"]
+	id, err := strconv.ParseInt(idStr, 10, 0)
+	if err != nil {
+		panic(err)
+	}
+
+	update, err := a.c.K.RetrieveUpdate(id)
+	if err != nil {
+		a.makeError(rw, http.StatusNotFound)
+		return
+	}
+
+	a.r.JSON(rw, http.StatusOK, map[string]interface{}{
+		"update": update,
 	})
 }

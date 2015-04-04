@@ -3,8 +3,7 @@
   <nav class="top-bar" data-topbar role="navigation">
     <ul class="title-area">
       <li class="name">
-        <h1><a href="/">Kahinah</a>
-        </h1>
+        <h1>{{#link-to 'index'}}Kahinah{{/link-to}}</h1>
       </li>
       <!-- Remove the class "menu-icon" to get rid of menu icon. Take out "Menu" to just have icon alone -->
       <li class="toggle-topbar menu-icon">
@@ -46,6 +45,7 @@
 
 <!-- body -->
 <div class="row">
+  {{outlet "flash"}}
   <!-- content -->
   {{outlet}}
 </div>
@@ -56,7 +56,7 @@
     <hr/>
     <div class="row">
       <div class="large-6 columns">
-        <p>Kahinah <small>Copyright © 2014-2015 Robert Xu &amp; contributors.
+        <p>Kahinah <small>Copyright © 2013-2015 Robert Xu &amp; contributors.
         Licensed under the MIT license.</small></p>
       </div>
       <div class="large-6 columns">

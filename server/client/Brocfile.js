@@ -2,16 +2,7 @@
 
 var EmberApp = require('ember-cli/lib/broccoli/ember-app');
 
-var app = new EmberApp({
-  'ember-cli-foundation-sass': {
-    'modernizr': true,
-    'fastclick': true,
-    'foundationJs': 'all'
-  },
-  vendorFiles: {
-    'handlebars.js': null
-  }
-});
+var app = new EmberApp();
 
 // Use `app.import` to add additional libraries to the generated
 // output files.
@@ -25,5 +16,9 @@ var app = new EmberApp({
 // modules that you would like to import into your application
 // please specify an object with the list of modules as keys
 // along with the exports of each module as its value.
+
+app.import('bower_components/fastclick/lib/fastclick.js');
+app.import('bower_components/foundation/js/foundation.min.js');
+app.import('bower_components/moment/min/moment-with-locales.min.js');
 
 module.exports = app.toTree();
