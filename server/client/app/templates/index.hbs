@@ -20,24 +20,19 @@
             </tr>
           </thead>
           <tbody>
-            {{#each item in model.updates.updates}}
+            {{#each item in updates.updates}}
               <tr>
                 <td>{{item.name}}</td>
                 <td>{{item.for}}</td>
                 <td>{{#link-to 'update' item}}{{fa-icon "share"}}{{/link-to}}</td>
               </tr>
             {{/each}}
-            <tr>
-              <td>NAME</td>
-              <td>FOR</td>
-              <td>{{#link-to 'update' 1}}{{fa-icon "share"}}{{/link-to}}</td>
-            </tr>
           </tbody>
         </table>
       </div>
       <!-- update results -->
 
-      {{#link-to 'updates' class="button right tiny"}}> all updates &raquo{{/link-to}}
+      {{#link-to 'updates' class="button right tiny"}}all updates &raquo;{{/link-to}}
   </div>
   <!-- latest updates -->
 
