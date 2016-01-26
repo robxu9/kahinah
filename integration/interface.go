@@ -1,7 +1,7 @@
 package integration
 
 import (
-	"github.com/robxu9/kahinah/models"
+	"gopkg.in/robxu9/kahinah.v3/models"
 	"log"
 )
 

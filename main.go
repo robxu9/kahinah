@@ -10,12 +10,12 @@ import (
 	"net/http"
 	"strings"
 	"time"
-	"github.com/robxu9/kahinah/util"
+	"gopkg.in/robxu9/kahinah.v3/util"
 
 	"github.com/astaxie/beego"
-	"github.com/robxu9/kahinah/controllers"
-	"github.com/robxu9/kahinah/integration"
-	"github.com/robxu9/kahinah/models"
+	"gopkg.in/robxu9/kahinah.v3/controllers"
+	"gopkg.in/robxu9/kahinah.v3/integration"
+	"gopkg.in/robxu9/kahinah.v3/models"
 	"menteslibres.net/gosexy/to"
 )
 

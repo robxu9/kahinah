@@ -14,8 +14,8 @@ import (
 
 	"github.com/astaxie/beego"
 	"github.com/astaxie/beego/orm"
-	"github.com/robxu9/kahinah/models"
-	"github.com/robxu9/kahinah/util"
+	"gopkg.in/robxu9/kahinah.v3/models"
+	"gopkg.in/robxu9/kahinah.v3/util"
 	"menteslibres.net/gosexy/dig"
 	"menteslibres.net/gosexy/to"
 )
