@@ -90,5 +90,5 @@ func (this *PersonaLoginController) Post() {
 	this.SetSession("persona", body)
 
 	this.Data["json"] = &pr
-	this.ServeJson()
+	this.ServeJSON()
 }

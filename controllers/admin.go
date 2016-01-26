@@ -75,7 +75,7 @@ func (this *AdminController) Get() {
 
 	this.Data["Title"] = "Admin"
 	this.Data["Permissions"] = perms
-	this.TplNames = "admin.tpl"
+	this.TplName = "admin.tpl"
 }
 
 func (this *AdminController) Post() {

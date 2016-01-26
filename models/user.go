@@ -122,7 +122,7 @@ func PermAbortCheck(c *beego.Controller, perm string) {
 
 	c.Ctx.Request.Form = url.Values{}
 	c.Ctx.Request.Form.Set("permission", perm)
-	c.Ctx.Request.Form.Set("xsrf", c.XsrfToken())
+	c.Ctx.Request.Form.Set("xsrf", c.XSRFToken())
 	c.Abort("550")
 }
 

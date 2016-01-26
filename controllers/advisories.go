@@ -70,7 +70,7 @@ func (this *AdvisoryMainController) Get() {
 
 	this.Data["Tab"] = 1
 	this.Data["Title"] = "Advisories"
-	this.TplNames = "advisories/main.tpl"
+	this.TplName = "advisories/main.tpl"
 
 	this.Data["Platforms"] = platforms
 }
@@ -94,7 +94,7 @@ func (this *AdvisoryNewController) Get() {
 
 	this.Data["Tab"] = -1
 	this.Data["Title"] = "New Advisory"
-	this.TplNames = "advisories/new.tpl"
+	this.TplName = "advisories/new.tpl"
 }
 
 func (this *AdvisoryNewController) Post() {

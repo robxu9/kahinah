@@ -12,8 +12,8 @@ type BaseController struct {
 }
 
 func (this *BaseController) Prepare() {
-	this.Data["xsrf_token"] = this.XsrfToken()
-	this.Data["xsrf_data"] = template.HTML(this.XsrfFormHtml())
+	this.Data["xsrf_token"] = this.XSRFToken()
+	this.Data["xsrf_data"] = template.HTML(this.XSRFFormHTML())
 
 	this.Data["copyright"] = time.Now().Year()
 }
