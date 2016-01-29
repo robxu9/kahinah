@@ -7,35 +7,52 @@ import (
 	"sort"
 	"time"
 
-	"gopkg.in/robxu9/kahinah.v3/util"
+	"golang.org/x/net/context"
 
 	"github.com/astaxie/beego"
 	"github.com/astaxie/beego/orm"
-	"gopkg.in/robxu9/kahinah.v3/integration"
-	"gopkg.in/robxu9/kahinah.v3/models"
+	"github.com/robxu9/kahinah/conf"
+	"github.com/robxu9/kahinah/data"
+	"github.com/robxu9/kahinah/integration"
+	"github.com/robxu9/kahinah/models"
+	"github.com/robxu9/kahinah/util"
 	"menteslibres.net/gosexy/to"
 )
 
 const (
-	block_karma = 9999
-	push_karma  = 9999
+	blockKarma = 9999
+	pushKarma  = 9999
 )
 
 var (
-	maintainer_karma = to.Int64(beego.AppConfig.String("karma::maintainerkarma"))
-	maintainer_hours = to.Int64(beego.AppConfig.String("karma::maintainerhours"))
+	maintainerKarma = to.Int64(conf.Config.Get("karma.maintainerKarma"))
+	maintainerHours = to.Int64(conf.Config.Get("karma.maintainerHours"))
 )
 
-type ByUpdateDate []*models.BuildList
+// Sorters
 
-func (b ByUpdateDate) Len() int {
+type sortByUpdateDate []*models.BuildList
+
+func (b sortByUpdateDate) Len() int {
 	return len(b)
 }
-func (b ByUpdateDate) Swap(i, j int) {
+func (b sortByUpdateDate) Swap(i, j int) {
 	b[i], b[j] = b[j], b[i]
 }
-func (b ByUpdateDate) Less(i, j int) bool {
+func (b sortByUpdateDate) Less(i, j int) bool {
 	return b[i].Updated.Unix() > b[j].Updated.Unix()
+}
+
+type sortByBuildDate []*models.BuildList
+
+func (b sortByBuildDate) Len() int {
+	return len(b)
+}
+func (b sortByBuildDate) Swap(i, j int) {
+	b[i], b[j] = b[j], b[i]
+}
+func (b sortByBuildDate) Less(i, j int) bool {
+	return b[i].BuildDate.Unix() > b[j].BuildDate.Unix()
 }
 
 //
@@ -44,20 +61,14 @@ func (b ByUpdateDate) Less(i, j int) bool {
 // --------------------------------------------------------------------
 //
 
-// ALL BUILDS
-type BuildsController struct {
-	BaseController
-}
+// BuildsHandler shows the list of all available builds, paginated.
+func BuildsHandler(ctx context.Context, rw http.ResponseWriter, r *http.Request) {
+	dataRenderer := data.FromContext(ctx)
 
-func (this *BuildsController) Get() {
-	pageint, err := this.GetInt("page")
-	if err != nil {
-		pageint = 1
-	} else if pageint <= 0 {
-		pageint = 1
+	page := to.Int64(r.FormValue("page"))
+	if page <= 0 {
+		page = 1
 	}
-
-	page := int64(pageint)
 
 	var packages []*models.BuildList
 
@@ -67,8 +78,7 @@ func (this *BuildsController) Get() {
 
 	cnt, err := qt.Count()
 	if err != nil {
-		log.Println(err)
-		this.Abort("500")
+		panic(err)
 	}
 
 	totalpages := cnt / 50
@@ -82,41 +92,36 @@ func (this *BuildsController) Get() {
 
 	_, err = qt.Limit(50, (page-1)*50).OrderBy("-Updated").All(&packages)
 	if err != nil && err != orm.ErrNoRows {
-		log.Println(err)
-		this.Abort("500")
+		panic(err)
 	}
 
 	for _, v := range packages {
 		o.LoadRelated(v, "Submitter")
 	}
 
-	sort.Sort(ByUpdateDate(packages))
+	sort.Sort(sortByUpdateDate(packages))
 
-	this.Data["Title"] = "Builds"
-	this.Data["Loc"] = 1
-	this.Data["Tab"] = 4
-	this.Data["Packages"] = packages
-	this.Data["PrevPage"] = page - 1
-	this.Data["Page"] = page
-	this.Data["NextPage"] = page + 1
-	this.Data["Pages"] = totalpages
-	this.TplName = "builds/builds_list.tpl"
-}
-
-// REJECTED BUILDS
-type RejectedController struct {
-	BaseController
-}
-
-func (this *RejectedController) Get() {
-	pageint, err := this.GetInt("page")
-	if err != nil {
-		pageint = 1
-	} else if pageint <= 0 {
-		pageint = 1
+	dataRenderer.Data = map[string]interface{}{
+		"Title":    "Builds",
+		"Loc":      1,
+		"Tab":      4,
+		"Packages": packages,
+		"PrevPage": page - 1,
+		"Page":     page,
+		"NextPage": page + 1,
+		"Pages":    totalpages,
 	}
+	dataRenderer.Template = "builds/builds_list"
+}
 
-	page := int64(pageint)
+// RejectedHandler shows the list of all rejected builds, paginated.
+func RejectedHandler(ctx context.Context, rw http.ResponseWriter, r *http.Request) {
+	dataRenderer := data.FromContext(ctx)
+
+	page := to.Int64(r.FormValue("page"))
+	if page <= 0 {
+		page = 1
+	}
 
 	var packages []*models.BuildList
 
@@ -125,8 +130,7 @@ func (this *RejectedController) Get() {
 
 	cnt, err := qt.Filter("status", models.STATUS_REJECTED).Count()
 	if err != nil {
-		log.Println(err)
-		this.Abort("500")
+		panic(err)
 	}
 
 	totalpages := cnt / 50
@@ -140,43 +144,38 @@ func (this *RejectedController) Get() {
 
 	_, err = qt.Limit(50, (page-1)*50).OrderBy("-Updated").Filter("status", models.STATUS_REJECTED).All(&packages)
 	if err != nil && err != orm.ErrNoRows {
-		log.Println(err)
-		this.Abort("500")
+		panic(err)
 	}
 
 	for _, v := range packages {
 		o.LoadRelated(v, "Submitter")
 	}
 
-	sort.Sort(ByUpdateDate(packages))
+	sort.Sort(sortByUpdateDate(packages))
 
-	this.Data["Title"] = "Rejected"
-	this.Data["Loc"] = 1
-	this.Data["Tab"] = 3
-	this.Data["Packages"] = packages
-	this.Data["PrevPage"] = page - 1
-	this.Data["Page"] = page
-	this.Data["NextPage"] = page + 1
-	this.Data["Pages"] = totalpages
-	this.TplName = "builds/builds_list.tpl"
-}
-
-// PUBLISHED BUILDS
-type PublishedController struct {
-	BaseController
-}
-
-func (this *PublishedController) Get() {
-	filterPlatform := this.GetString("platform")
-
-	pageint, err := this.GetInt("page")
-	if err != nil {
-		pageint = 1
-	} else if pageint <= 0 {
-		pageint = 1
+	dataRenderer.Data = map[string]interface{}{
+		"Title":    "Rejected",
+		"Loc":      1,
+		"Tab":      3,
+		"Packages": packages,
+		"PrevPage": page - 1,
+		"Page":     page,
+		"NextPage": page + 1,
+		"Pages":    totalpages,
 	}
+	dataRenderer.Template = "builds/builds_list"
+}
 
-	page := int64(pageint)
+// PublishedHandler shows the list of all published builds, paginated.
+func PublishedHandler(ctx context.Context, rw http.ResponseWriter, r *http.Request) {
+	dataRenderer := data.FromContext(ctx)
+
+	filterPlatform := r.FormValue("platform")
+
+	page := to.Int64(r.FormValue("page"))
+	if page <= 0 {
+		page = 1
+	}
 
 	var packages []*models.BuildList
 
@@ -189,8 +188,7 @@ func (this *PublishedController) Get() {
 
 	cnt, err := qt.Filter("status", models.STATUS_PUBLISHED).Count()
 	if err != nil {
-		log.Println(err)
-		this.Abort("500")
+		panic(err)
 	}
 
 	totalpages := cnt / 50
@@ -204,45 +202,32 @@ func (this *PublishedController) Get() {
 
 	_, err = qt.Limit(50, (page-1)*50).OrderBy("-Updated").Filter("status", models.STATUS_PUBLISHED).All(&packages)
 	if err != nil && err != orm.ErrNoRows {
-		log.Println(err)
-		this.Abort("500")
+		panic(err)
 	}
 
 	for _, v := range packages {
 		o.LoadRelated(v, "Submitter")
 	}
 
-	sort.Sort(ByUpdateDate(packages))
+	sort.Sort(sortByUpdateDate(packages))
 
-	this.Data["Title"] = "Published"
-	this.Data["Loc"] = 1
-	this.Data["Tab"] = 2
-	this.Data["Packages"] = packages
-	this.Data["PrevPage"] = page - 1
-	this.Data["Page"] = page
-	this.Data["NextPage"] = page + 1
-	this.Data["Pages"] = totalpages
-	this.TplName = "builds/builds_list.tpl"
+	dataRenderer.Data = map[string]interface{}{
+		"Title":    "Published",
+		"Loc":      1,
+		"Tab":      2,
+		"Packages": packages,
+		"PrevPage": page - 1,
+		"Page":     page,
+		"NextPage": page + 1,
+		"Pages":    totalpages,
+	}
+	dataRenderer.Template = "builds/builds_list"
 }
 
-// TESTING BUILDS
-type ByBuildDate []*models.BuildList
+// TestingHandler shows the list of builds that have yet to be approved, paginated.
+func TestingHandler(ctx context.Context, rw http.ResponseWriter, r *http.Request) {
+	dataRenderer := data.FromContext(ctx)
 
-func (b ByBuildDate) Len() int {
-	return len(b)
-}
-func (b ByBuildDate) Swap(i, j int) {
-	b[i], b[j] = b[j], b[i]
-}
-func (b ByBuildDate) Less(i, j int) bool {
-	return b[i].BuildDate.Unix() > b[j].BuildDate.Unix()
-}
-
-type TestingController struct {
-	BaseController
-}
-
-func (this *TestingController) Get() {
 	var packages []*models.BuildList
 
 	o := orm.NewOrm()
@@ -250,8 +235,7 @@ func (this *TestingController) Get() {
 
 	num, err := qt.Filter("status", models.STATUS_TESTING).All(&packages)
 	if err != nil && err != orm.ErrNoRows {
-		log.Println(err)
-		this.Abort("500")
+		panic(err)
 	}
 
 	pkgkarma := make(map[string]string)
@@ -264,15 +248,17 @@ func (this *TestingController) Get() {
 		o.LoadRelated(v, "Submitter")
 	}
 
-	sort.Sort(ByBuildDate(packages))
+	sort.Sort(sortByBuildDate(packages))
 
-	this.Data["Title"] = "Testing"
-	this.Data["Loc"] = 1
-	this.Data["Tab"] = 1
-	this.Data["Packages"] = packages
-	this.Data["PkgKarma"] = pkgkarma
-	this.Data["Entries"] = num
-	this.TplName = "builds/generic_list.tpl"
+	dataRenderer.Data = map[string]interface{}{
+		"Title":    "Testing",
+		"Loc":      1,
+		"Tab":      1,
+		"Packages": packages,
+		"PkgKarma": pkgkarma,
+		"Entries":  num,
+	}
+	dataRenderer.Template = "builds/generic_list"
 }
 
 //
@@ -397,8 +383,8 @@ func (this *BuildController) Get() {
 			this.Data["KarmaControls"] = true
 			if pkg.Submitter != nil && pkg.Submitter.Email == user {
 				this.Data["MaintainerControls"] = true
-				this.Data["MaintainerHoursNeeded"] = maintainer_hours
-				if time.Since(pkg.BuildDate).Hours() >= float64(maintainer_hours) {
+				this.Data["MaintainerHoursNeeded"] = maintainerHours
+				if time.Since(pkg.BuildDate).Hours() >= float64(maintainerHours) {
 					this.Data["MaintainerTime"] = true
 					delete(this.Data, "MaintainerHoursNeeded")
 				}
@@ -449,7 +435,7 @@ func (this *BuildController) Post() {
 		if pkg.Submitter.Email != user {
 			this.Abort("403")
 		} else {
-			if time.Since(pkg.BuildDate).Hours() < float64(maintainer_hours) { // week
+			if time.Since(pkg.BuildDate).Hours() < float64(maintainerHours) { // week
 				this.Abort("400")
 			}
 		}
@@ -538,11 +524,11 @@ func getTotalKarma(id uint64) int {
 		case models.KARMA_DOWN:
 			totalKarma--
 		case models.KARMA_MAINTAINER:
-			totalKarma += int(maintainer_karma)
+			totalKarma += int(maintainerKarma)
 		case models.KARMA_BLOCK:
-			totalKarma -= int(block_karma)
+			totalKarma -= int(blockKarma)
 		case models.KARMA_PUSH:
-			totalKarma += int(push_karma)
+			totalKarma += int(pushKarma)
 		}
 
 		set.Add(v.User.Email)

@@ -12,54 +12,52 @@ import (
 	"strings"
 	"time"
 
-	"github.com/astaxie/beego"
 	"github.com/astaxie/beego/orm"
-	"gopkg.in/robxu9/kahinah.v3/models"
-	"gopkg.in/robxu9/kahinah.v3/util"
+	"github.com/robxu9/kahinah/conf"
+	"github.com/robxu9/kahinah/models"
+	"github.com/robxu9/kahinah/util"
 	"menteslibres.net/gosexy/dig"
 	"menteslibres.net/gosexy/to"
 )
 
-const (
-	ABF_URL = "https://abf.io/api/v1"
-)
-
 var (
-	user          = beego.AppConfig.String("abf::abf_user")
-	pass          = beego.AppConfig.String("abf::abf_pass")
-	api_key       = beego.AppConfig.String("abf::abf_api_key")
-	use_ssh       = to.Bool(beego.AppConfig.String("abf::abf_use_ssh"))
-	platforms     *util.Set
-	platformids   *util.Set
-	archwhitelist *util.Set
-	client        = &http.Client{}
+	abfEnable        = conf.Config.GetDefault("integration.abf.enable", false).(bool)
+	abfURL           = conf.Config.GetDefault("integration.abf.host", "https://abf.io/api/v1").(string)
+	abfUser          = conf.Config.Get("integration.abf.user").(string)
+	abfAPIKey        = conf.Config.Get("integration.abf.apiKey").(string)
+	abfPlatforms     = conf.Config.Get("integration.abf.readPlatforms").([]interface{})
+	abfArchWhitelist = conf.Config.Get("integration.abf.archWhitelist").([]interface{})
+	abfGitDiff       = conf.Config.Get("integration.abf.gitDiff").(bool)
+	abfGitDiffSSH    = conf.Config.Get("integration.abf.gitDiffSSH").(bool)
+
+	abfPlatformsSet     *util.Set
+	abfArchWhitelistSet *util.Set
+	abfClient           *http.Client
 )
 
 func init() {
-	platforms = util.NewSet()
-	platformids = util.NewSet()
-	for _, v := range strings.Split(beego.AppConfig.String("abf::abf_platforms"), ";") {
-		platform := strings.Split(v, ":")
-		platforms.Add(platform[0])
-		platformids.Add(platform[1])
+	abfPlatformsSet = util.NewSet()
+	for _, v := range abfPlatforms {
+		abfPlatformsSet.Add(v.(string))
 	}
 
-	// whitelisted arches
-	if beego.AppConfig.String("abf::abf_whitelistarch") != "" {
-		archwhitelist = util.NewSet()
-		for _, v := range strings.Split(beego.AppConfig.String("abf::abf_whitelistarch"), ";") {
-			archwhitelist.Add(v)
-		}
-	} else {
-		archwhitelist = nil
+	abfArchWhitelistSet = util.NewSet()
+	for _, v := range abfArchWhitelist {
+		abfArchWhitelistSet.Add(v.(string))
 	}
+
+	abfClient = &http.Client{}
 }
 
 type ABF byte
 
 func (a ABF) Ping() error {
 
-	for v := range platformids.Iterator() {
+	if !abfEnable {
+		return nil // disabled
+	}
+
+	for v := range abfPlatformsSet.Iterator() {
 		a.pingBuildCompleted(v)
 		a.pingTestingBuilds(v)
 	}
@@ -109,18 +107,18 @@ func (a ABF) handleResponse(resp *http.Response, testing bool) error {
 		if num <= 0 || err != nil {
 			json, err := a.getJSONList(id)
 			if err != nil {
-				log.Printf("abf: error retrieving build list json %s: %s\n", id, err)
+				log.Printf("abf: error retrieving build list json %v: %v\n", id, err)
 				continue
 			}
 
 			// check if arch is on whitelist
-			if archwhitelist != nil && !archwhitelist.Contains(dig.String(&json, "arch", "name")) {
+			if abfArchWhitelistSet != nil && !abfArchWhitelistSet.Contains(dig.String(&json, "arch", "name")) {
 				// we are ignoring this buildlist
 				continue
 			}
 
 			// check if platform is on whitelist
-			if !platforms.Contains(dig.String(&json, "save_to_repository", "platform", "name")) {
+			if !abfPlatformsSet.Contains(dig.String(&json, "save_to_repository", "platform", "name")) {
 				// we are ignoring this platform
 				continue
 			}
@@ -152,7 +150,7 @@ func (a ABF) handleResponse(resp *http.Response, testing bool) error {
 
 			list, err := a.makeBuildList(json)
 			if err != nil {
-				log.Printf("abf: Error retrieving build list %s: %s\n", id, err)
+				log.Printf("abf: Error retrieving build list %v: %v\n", id, err)
 				continue
 			}
 
@@ -163,7 +161,7 @@ func (a ABF) handleResponse(resp *http.Response, testing bool) error {
 
 			_, err = o.Insert(list)
 			if err != nil {
-				log.Printf("abf: Error saving build list %s: %s\n", id, err)
+				log.Printf("abf: Error saving build list %v: %v\n", id, err)
 				continue
 			}
 
@@ -182,14 +180,14 @@ func (a ABF) handleResponse(resp *http.Response, testing bool) error {
 func (a ABF) pingBuildCompleted(platformId string) error {
 	// regular usage: use 0 (Build has been completed)
 	// below: use 12000 ([testing] build has been published)
-	req, err := http.NewRequest("GET", ABF_URL+"/build_lists.json?per_page=100&filter[status]=0&filter[ownership]=index&filter[platform_id]="+platformId, nil)
+	req, err := http.NewRequest("GET", abfURL+"/build_lists.json?per_page=100&filter[status]=0&filter[ownership]=index&filter[platform_id]="+platformId, nil)
 	if err != nil {
 		return err
 	}
 
-	req.SetBasicAuth(user, pass)
+	req.SetBasicAuth(abfUser, abfAPIKey)
 
-	resp, err := client.Do(req)
+	resp, err := abfClient.Do(req)
 	if err != nil {
 		return err
 	}
@@ -198,14 +196,14 @@ func (a ABF) pingBuildCompleted(platformId string) error {
 }
 
 func (a ABF) pingTestingBuilds(platformId string) error {
-	req, err := http.NewRequest("GET", ABF_URL+"/build_lists.json?per_page=100&filter[status]=12000&filter[ownership]=index&filter[platform_id]="+platformId, nil)
+	req, err := http.NewRequest("GET", abfURL+"/build_lists.json?per_page=100&filter[status]=12000&filter[ownership]=index&filter[platform_id]="+platformId, nil)
 	if err != nil {
 		return err
 	}
 
-	req.SetBasicAuth(user, pass)
+	req.SetBasicAuth(abfUser, abfAPIKey)
 
-	resp, err := client.Do(req)
+	resp, err := abfClient.Do(req)
 	if err != nil {
 		return err
 	}
@@ -231,15 +229,15 @@ func (a ABF) Publish(m *models.BuildList) error {
 	for _, v := range strings.Split(m.HandleId, ";") {
 
 		id := to.Uint64(v)
-		req, err := http.NewRequest("PUT", ABF_URL+"/build_lists/"+to.String(id)+"/publish.json", nil)
+		req, err := http.NewRequest("PUT", abfURL+"/build_lists/"+to.String(id)+"/publish.json", nil)
 		if err != nil {
 			return err
 		}
 
-		req.SetBasicAuth(user, pass)
+		req.SetBasicAuth(abfUser, abfAPIKey)
 		req.Header.Add("Content-Length", "0")
 
-		resp, err := client.Do(req)
+		resp, err := abfClient.Do(req)
 		if err != nil {
 			return err
 		}
@@ -254,15 +252,15 @@ func (a ABF) Reject(m *models.BuildList) error {
 
 	for _, v := range strings.Split(m.HandleId, ";") {
 		id := to.Uint64(v)
-		req, err := http.NewRequest("PUT", ABF_URL+"/build_lists/"+to.String(id)+"/reject_publish.json", nil)
+		req, err := http.NewRequest("PUT", abfURL+"/build_lists/"+to.String(id)+"/reject_publish.json", nil)
 		if err != nil {
 			return err
 		}
 
-		req.SetBasicAuth(user, pass)
+		req.SetBasicAuth(abfUser, abfAPIKey)
 		req.Header.Add("Content-Length", "0")
 
-		resp, err := client.Do(req)
+		resp, err := abfClient.Do(req)
 		if err != nil {
 			return err
 		}
@@ -274,15 +272,15 @@ func (a ABF) Reject(m *models.BuildList) error {
 }
 
 func (a ABF) sendToTesting(id uint64) error {
-	req, err := http.NewRequest("PUT", ABF_URL+"/build_lists/"+to.String(id)+"/publish_into_testing.json", nil)
+	req, err := http.NewRequest("PUT", abfURL+"/build_lists/"+to.String(id)+"/publish_into_testing.json", nil)
 	if err != nil {
 		return err
 	}
 
-	req.SetBasicAuth(user, pass)
+	req.SetBasicAuth(abfUser, abfAPIKey)
 	req.Header.Add("Content-Length", "0")
 
-	resp, err := client.Do(req)
+	resp, err := abfClient.Do(req)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "failed to send %d to testing: %s\n", id, err.Error())
 		return err
@@ -296,14 +294,14 @@ func (a ABF) sendToTesting(id uint64) error {
 }
 
 func (a ABF) getJSONList(id uint64) (list map[string]interface{}, err error) {
-	req, err := http.NewRequest("GET", ABF_URL+"/build_lists/"+to.String(id)+".json", nil)
+	req, err := http.NewRequest("GET", abfURL+"/build_lists/"+to.String(id)+".json", nil)
 	if err != nil {
 		return
 	}
 
-	req.SetBasicAuth(user, pass)
+	req.SetBasicAuth(abfUser, abfAPIKey)
 
-	resp, err := client.Do(req)
+	resp, err := abfClient.Do(req)
 	if err != nil {
 		return
 	}
@@ -330,7 +328,7 @@ func (a ABF) makeBuildList(list map[string]interface{}) (*models.BuildList, erro
 
 	changelog := ""
 
-	logs := make([]interface{}, 0)
+	var logs []interface{}
 	dig.Get(&list, &logs, "logs")
 
 	for _, v := range logs {
@@ -366,6 +364,11 @@ func (a ABF) makeBuildList(list map[string]interface{}) (*models.BuildList, erro
 }
 
 func (a ABF) makeDiff(gitUrl, fromHash, toHash string) string {
+	// make sure it's not disabled
+	if !abfGitDiff {
+		return "Diff creation disabled."
+	}
+
 	// ugh, looks like we'll have to do this the sadly hard way
 	tmpdir, err := ioutil.TempDir("", "kahinah_")
 	if err != nil {
@@ -379,7 +382,7 @@ func (a ABF) makeDiff(gitUrl, fromHash, toHash string) string {
 	}
 
 	urlToUse := gitUrl
-	if use_ssh {
+	if abfGitDiffSSH {
 		urlToUse = strings.Replace("git@"+gitUrl[strings.Index(gitUrl, "//")+2:], "/", ":", 1)
 	}
 
@@ -475,14 +478,14 @@ func (a ABF) getUser(id uint64) *models.User {
 	err := o.QueryTable(new(models.User)).Filter("Integration", id).One(&userIntegration)
 	if err == orm.ErrNoRows {
 
-		req, err := http.NewRequest("GET", ABF_URL+"/users/"+to.String(id)+".json", nil)
+		req, err := http.NewRequest("GET", abfURL+"/users/"+to.String(id)+".json", nil)
 		if err != nil {
 			return nil
 		}
 
-		req.SetBasicAuth(user, pass)
+		req.SetBasicAuth(abfUser, abfAPIKey)
 
-		resp, err := client.Do(req)
+		resp, err := abfClient.Do(req)
 		if err != nil {
 			return nil
 		}

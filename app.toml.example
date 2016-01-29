@@ -1,0 +1,81 @@
+# Kahinah v4 configuration file
+
+# basic configuration
+# - baseURL defines the URL that pages are rendered with
+baseURL = "https://kahinah.openmandriva.org"
+# - listenAddr defines the listening address
+listenAddr = "0.0.0.0"
+# - listenPort defines the listening port
+listenPort = 3001
+# - listenFCGI starts the FCGI listener instead of the HTTP listener
+listenFCGI = false
+# - runMode determines whether on panics, we should dump the stacktrace too.
+# -- it also determines whether we should reparse templates on every load.
+# -- dev means yes, prod means no.
+runMode = "dev"
+# - urlPrefix determines whether kahinah should prefix all its routes (for use
+# -- behind a reverse proxy if needed). Leave empty if not needed.
+urlPrefix = ""
+
+# database configuration
+[database]
+# - prefix defines the prefix for the database tables
+prefix = "kh_"
+# - type defines the database type. postgres, mysql, sqlite3 are supported.
+type = "sqlite3"
+# - name defines the database name
+name = "data.sqlite"
+# - host, user, pass (self-explanatory)
+host = "localhost:3306"
+user = "root"
+pass = "toor"
+
+# integration configuration
+# - integration with abf
+[integration.abf]
+enable = false
+host = "https://abf.io/api/v1"
+user = "kahinah_abf"
+apiKey = "apikey"
+# -- read the following platforms for updates. you should have write access to
+# the groups; else, pushing to testing will fail.
+readPlatforms = [ "openmandriva2014.0", "cooker" ]
+# -- whitelist the following architectures
+archWhitelist = [ "x86_64", "i586" ]
+# -- enable git cloning for diff creation
+gitDiff = false
+# --- enable ssh for git cloning
+gitDiffSSH = false
+
+# karma configuration
+[karma]
+upperKarma = 3
+lowerKarma = -3
+# - maintainerKarma and maintainerHours define the time and amount of karma
+# granted to maintainers when the elapsed number of hours have passed. This
+# allows maintainers to push packages if testers are slow.
+maintainerKarma = 3
+maintainerHours = 168
+
+# administrator configuration
+[admin]
+# - allow only people whitelisted to vote
+whitelist = false
+# - set the list of administrators
+administrators = "rxu"
+
+# mail configuration
+[mail]
+# - enable mails
+enable = false
+# - set up smtp
+smtpUser = "me@example.com"
+smtpPass = "password"
+smtpDomain = "example.com"
+smtpHost = "mail.example.com:25"
+smtpTLSVerify = true
+smtpFrom = "me@example.com"
+
+# - set up a global mailing list address. any global mails emailed to users will
+# also be sent to this mailing list.
+globalList = "mailing_list@example.com"

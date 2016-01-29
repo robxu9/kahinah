@@ -3,11 +3,9 @@ package controllers
 import (
 	"fmt"
 	"log"
-	"strings"
 
-	"github.com/astaxie/beego"
 	"github.com/astaxie/beego/orm"
-	"gopkg.in/robxu9/kahinah.v3/models"
+	"github.com/robxu9/kahinah/models"
 )
 
 var (
@@ -15,18 +13,18 @@ var (
 	types            = make([]string, 4)
 )
 
-func init() {
-	configPlatforms := strings.Split(beego.AppConfig.String("advisory::platforms"), ";")
-	for _, v := range configPlatforms {
-		parts := strings.Split(v, ":")
-		enabledPlatforms[parts[0]] = parts[1]
-	}
-
-	types[0] = "Security"
-	types[1] = "Recommended"
-	types[2] = "Bug Fix"
-	types[3] = "New Release"
-}
+// func init() {
+// 	configPlatforms := strings.Split(beego.AppConfig.String("advisory::platforms"), ";")
+// 	for _, v := range configPlatforms {
+// 		parts := strings.Split(v, ":")
+// 		enabledPlatforms[parts[0]] = parts[1]
+// 	}
+//
+// 	types[0] = "Security"
+// 	types[1] = "Recommended"
+// 	types[2] = "Bug Fix"
+// 	types[3] = "New Release"
+// }
 
 //
 // our base controller

@@ -1,4 +1,3 @@
-{{template "header.tpl" .}}
 
       <div class="row">
         <div class="col-md-10 col-md-offset-1">
@@ -194,5 +193,3 @@
       <script src="{{url "/static/js/shCore.js"}}" type="text/javascript"></script>
       <script src="{{url "/static/js/shBrushDiff.js"}}" type="text/javascript"></script>
       <script>SyntaxHighlighter.all();</script>
-
-{{template "footer.tpl" .}}

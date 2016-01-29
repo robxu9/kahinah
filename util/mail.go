@@ -13,7 +13,7 @@ import (
 
 	"github.com/astaxie/beego"
 	"github.com/astaxie/beego/orm"
-	"gopkg.in/robxu9/kahinah.v3/models"
+	"github.com/robxu9/kahinah/models"
 	"menteslibres.net/gosexy/to"
 )
 

@@ -8,16 +8,16 @@
     <meta name="author" content="">
 
     <meta name="_xsrf" content="{{.xsrf_token}}" />
-    
+
     <link rel="shortcut icon" href="{{url "/static/img/favicon.png"}}">
 
     <title>{{.Title}} | Kahinah</title>
 
     <!-- Bootstrap core CSS -->
-    <link href="//netdna.bootstrapcdn.com/bootswatch/3.1.1/spacelab/bootstrap.min.css" rel="stylesheet">
+    <link href="https://maxcdn.bootstrapcdn.com/bootswatch/3.3.6/paper/bootstrap.min.css" rel="stylesheet" integrity="sha256-ZSKfhECi0yCEmGVAuQLWTHtJEn2vBNPexEWsJCIC/Nc= sha512-b+mSnD4QXw1uYwkgJ3d0XxoMXo+ZKHJNTNNFIddJ0IazcwKvKYtIlWADZ1JEREJzxUG428sfCw7qDuswAFcrOQ==" crossorigin="anonymous">
 
     <!-- Font Awesome -->
-    <link href="//netdna.bootstrapcdn.com/font-awesome/4.0.3/css/font-awesome.min.css" rel="stylesheet">
+    <link href="https://maxcdn.bootstrapcdn.com/font-awesome/4.5.0/css/font-awesome.min.css" rel="stylesheet" integrity="sha256-3dkvEK0WLHRJ7/Csr0BZjAWxERc5WH7bdeUya2aXxdU= sha512-+L4yy6FRcDGbXJ9mPG8MT/3UCDzwR9gPeyFNMCtInsol++5m3bk2bXWKdZjvybmohrAsn3Ua5x8gfLnbE1YkOg==" crossorigin="anonymous">
 
     <link href="{{url "/static/css/justified-nav.css"}}" rel="stylesheet">
 
@@ -114,3 +114,18 @@
       {{if .flash.error}}<div class="alert alert-danger">{{.flash.error}}</div>{{end}}
       {{if .flash.warning}}<div class="alert alert-warning">{{.flash.warning}}</div>{{end}}
       {{if .flash.notice}}<div class="alert alert-success">{{.flash.notice}}</div>{{end}}
+
+      {{yield}}
+
+      <!-- Site footer -->
+      <div class="footer">
+        &copy; 2013-{{.copyright}} Robert Xu.<div class="pull-right">Licensed under the MIT license - <a href="//github.com/robxu9/kahinah"><i class="fa fa-github"></i> Github</a></div>
+      </div>
+
+    </div> <!-- /container -->
+
+    <script src="//code.jquery.com/ui/1.10.3/jquery-ui.min.js"></script>
+    <script src="//netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+
+  </body>
+</html>

@@ -1,12 +1,14 @@
-{{template "header.tpl" .}}
 
-      <!-- Jumbotron -->
       <div class="jumbotron">
-        <h1>oh god OH GOD</h1>
-        <p class="lead">EVErYTHING'S ON FIRE AHHH THE SITE IS FLUCTUATING</p>
-        <p class="lead">[that means 500 internal server error so we'll wait for the monkeys]</p>
+        <h1>500.</h1>
+        <p class="lead">{{.error}}</p>
+        <p class="lead">Internal Server Error.</p>
         <br/>
+        {{if .stacktrace}}
+        <p class="lead">Stacktrace:</p>
+        <pre>
+{{.stacktrace}}
+        </pre>
+        {{end}}
         <p><a class="btn btn-lg btn-default" href="#" onclick="history.back();" role="button">Back</a></p>
       </div>
-
-{{template "footer.tpl" .}}

@@ -1,7 +1,6 @@
-{{template "header.tpl" .}}
 
       <div class="page-header">
-        <h1>{{.Title}} <small>Eh, nothing special.</small></h1>
+        <h1>{{.Title}} <small>List of Builds.</small></h1>
       </div>
 
       <div class="row table-responsive">
@@ -57,5 +56,3 @@
           </form>
         </div>
       </div>
-
-{{template "footer.tpl" .}}

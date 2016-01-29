@@ -1,35 +1,95 @@
 package main
 
 import (
-	"bytes"
 	"crypto/rand"
-	"encoding/json"
 	"fmt"
 	"html/template"
-	"io/ioutil"
 	"net/http"
 	"strings"
 	"time"
 
-	"gopkg.in/robxu9/kahinah.v3/util"
+	"golang.org/x/net/context"
 
-	"github.com/astaxie/beego"
-	"gopkg.in/robxu9/kahinah.v3/controllers"
-	"gopkg.in/robxu9/kahinah.v3/integration"
-	"gopkg.in/robxu9/kahinah.v3/models"
+	"gopkg.in/guregu/kami.v1"
+
+	"github.com/gorilla/securecookie"
+	"github.com/robxu9/kahinah/conf"
+	"github.com/robxu9/kahinah/controllers"
+	"github.com/robxu9/kahinah/data"
+	"github.com/robxu9/kahinah/log"
+	"github.com/robxu9/kahinah/render"
+	"github.com/robxu9/kahinah/sessions"
+	"github.com/robxu9/kahinah/util"
+	urender "github.com/unrolled/render"
+	"github.com/zenazn/goji/web/mutil"
 	"menteslibres.net/gosexy/to"
 )
 
 func main() {
-	beego.BConfig.WebConfig.Session.SessionOn = true
+	// Initialise an empty context
+	ctx := context.Background()
 
-	beego.BConfig.WebConfig.EnableXSRF = true
-	beego.BConfig.WebConfig.XSRFKey = getRandomString(50)
-	beego.BConfig.WebConfig.XSRFExpire = 3600
+	// Set up logging
+	kami.LogHandler = func(ctx context.Context, wp mutil.WriterProxy, r *http.Request) {
+		log.Logger.Debugf("request: addr (%v), path (%v), user-agent (%v), referrer (%v)", r.RemoteAddr, r.RequestURI, r.UserAgent(), r.Referer())
+		log.Logger.Debugf("response: status (%v), bytes written (%v)", wp.Status(), wp.BytesWritten())
+	}
 
-	beego.SetStaticPath(util.GetPrefixString("/static"), "static")
+	// Set up rendering
+	r := urender.New(urender.Options{
+		Directory:  "views",
+		Layout:     "layout",
+		Extensions: []string{".tmpl", ".tpl"},
+		Funcs: []template.FuncMap{
+			template.FuncMap{
+				"since": func(t time.Time) string {
+					hrs := time.Since(t).Hours()
+					return fmt.Sprintf("%dd %02dhrs", int(hrs)/24, int(hrs)%24)
+				},
+				"emailat": func(s string) string {
+					return strings.Replace(s, "@", " [@T] ", -1)
+				},
+				"mapaccess": func(s interface{}, m map[string]string) string {
+					return m[to.String(s)]
+				},
+				"url":     util.GetPrefixString,
+				"urldata": util.GetPrefixStringWithData,
+			},
+		},
+		IndentJSON:    true,
+		IndentXML:     true,
+		IsDevelopment: conf.Config.GetDefault("runMode", "dev").(string) == "dev",
+	})
+	ctx = render.NewContext(ctx, r)
 
-	beego.Router(util.GetPrefixString("/"), &controllers.MainController{})
+	kami.Use("/", data.RenderMiddleware())
+	kami.After("/", data.RenderAfterware()) // merge data into render pkg?
+
+	// Set up sessions
+	ctx = sessions.NewStore(ctx, securecookie.GenerateRandomKey(64))
+	kami.Use("/", sessions.SessionMiddleware("kahinah"))
+	kami.After("/", sessions.SessionAfterware("kahinah"))
+
+	// FIXME: set up xsrf (getRandomString(50), expire in 3600 minutes)
+
+	// Set up the error handlers
+	panicHandler := &controllers.PanicHandler{}
+	kami.PanicHandler = panicHandler
+	kami.NotFound(panicHandler.Err404)
+	kami.MethodNotAllowed(panicHandler.Err405)
+
+	// Set it up as the god context
+	kami.Context = ctx
+
+	// --------------------------------------------------------------------
+	// HANDLERS
+	// --------------------------------------------------------------------
+
+	// Handle static paths
+	kami.Get(util.GetPrefixString("/static/*path"), controllers.StaticHandler)
+
+	// Show the main page
+	kami.Get(util.GetPrefixString("/"), controllers.MainHandler)
 
 	//
 	// --------------------------------------------------------------------
@@ -38,262 +98,80 @@ func main() {
 	//
 
 	// testing
-	beego.Router(util.GetPrefixString("/builds/testing"), &controllers.TestingController{}) // lists testing updates
+	kami.Get(util.GetPrefixString("/builds/testing"), controllers.TestingHandler)
 	// published
-	beego.Router(util.GetPrefixString("/builds/published"), &controllers.PublishedController{})
+	kami.Get(util.GetPrefixString("/builds/published"), controllers.PublishedHandler)
 	// rejected
-	beego.Router(util.GetPrefixString("/builds/rejected"), &controllers.RejectedController{}) // lists all rejected updates
+	kami.Get(util.GetPrefixString("/builds/rejected"), controllers.RejectedHandler) // list all rejected updates
 	// all builds
-	beego.Router(util.GetPrefixString("/builds"), &controllers.BuildsController{}) // show all testing, published, rejected (all sorted by date, linking respectively to above)
+	kami.Get(util.GetPrefixString("/builds"), controllers.BuildsHandler) // show all updates sorted by date
 
-	// specific
-	beego.Router(util.GetPrefixString("/builds/:id:int"), &controllers.BuildController{})
-
+	// // specific
+	// beego.Router(util.GetPrefixString("/builds/:id:int"), &controllers.BuildController{})
 	//
-	// --------------------------------------------------------------------
-	// ADVISORIES
-	// --------------------------------------------------------------------
+	// //
+	// // --------------------------------------------------------------------
+	// // ADVISORIES
+	// // --------------------------------------------------------------------
+	// //
 	//
-
-	// advisories
-	beego.Router(util.GetPrefixString("/advisories"), &controllers.AdvisoryMainController{})
-	//beego.Router(util.GetPrefixString("/advisories/:platform:string"), &controllers.AdvisoryPlatformController{})
-	//beego.Router(util.GetPrefixString("/advisories/:id:int"), &controllers.AdvisoryController{})
-	beego.Router(util.GetPrefixString("/advisories/new"), &controllers.AdvisoryNewController{})
-
-	//beego.Router("/about", &controllers.AboutController{})
-
+	// // advisories
+	// beego.Router(util.GetPrefixString("/advisories"), &controllers.AdvisoryMainController{})
+	// //beego.Router(util.GetPrefixString("/advisories/:platform:string"), &controllers.AdvisoryPlatformController{})
+	// //beego.Router(util.GetPrefixString("/advisories/:id:int"), &controllers.AdvisoryController{})
+	// beego.Router(util.GetPrefixString("/advisories/new"), &controllers.AdvisoryNewController{})
 	//
-	// --------------------------------------------------------------------
-	// AUTHENTICATION [persona]
-	// --------------------------------------------------------------------
+	// //beego.Router("/about", &controllers.AboutController{})
 	//
-	beego.Router(util.GetPrefixString("/auth/check"), &models.PersonaCheckController{})
-	beego.Router(util.GetPrefixString("/auth/login"), &models.PersonaLoginController{})
-	beego.Router(util.GetPrefixString("/auth/logout"), &models.PersonaLogoutController{})
-
+	// //
+	// // --------------------------------------------------------------------
+	// // AUTHENTICATION [persona]
+	// // --------------------------------------------------------------------
+	// //
+	// beego.Router(util.GetPrefixString("/auth/check"), &models.PersonaCheckController{})
+	// beego.Router(util.GetPrefixString("/auth/login"), &models.PersonaLoginController{})
+	// beego.Router(util.GetPrefixString("/auth/logout"), &models.PersonaLogoutController{})
 	//
-	// --------------------------------------------------------------------
-	// ADMINISTRATION [crap]
-	// --------------------------------------------------------------------
+	// //
+	// // --------------------------------------------------------------------
+	// // ADMINISTRATION [crap]
+	// // --------------------------------------------------------------------
+	// //
+	// beego.Router(util.GetPrefixString("/admin"), &controllers.AdminController{})
 	//
-	beego.Router(util.GetPrefixString("/admin"), &controllers.AdminController{})
-
+	// //
+	// // --------------------------------------------------------------------
+	// // INTEGRATION
+	// // --------------------------------------------------------------------
+	// //
+	// stop := make(chan bool)
 	//
-	// --------------------------------------------------------------------
-	// TEMPLATING FUNCTIONS
-	// --------------------------------------------------------------------
+	// integration.Integrate(integration.ABF(1))
+	// // ping target (for integration)
+	// //beego.Router("/ping", &controllers.PingController{})
 	//
-	beego.AddFuncMap("since", func(t time.Time) string {
-		hrs := time.Since(t).Hours()
-		return fmt.Sprintf("%dd %02dhrs", int(hrs)/24, int(hrs)%24)
-	})
-
-	beego.AddFuncMap("emailat", func(s string) string {
-		return strings.Replace(s, "@", " [@T] ", -1)
-	})
-
-	beego.AddFuncMap("mapaccess", func(s interface{}, m map[string]string) string {
-		return m[to.String(s)]
-	})
-
-	beego.AddFuncMap("url", util.GetPrefixString)
-	beego.AddFuncMap("urldata", util.GetPrefixStringWithData)
-
+	// go func() {
+	// 	timeout := make(chan bool)
+	// 	go func() {
+	// 		for {
+	// 			timeout <- true
+	// 			time.Sleep(1 * time.Hour)
+	// 		}
+	// 	}()
+	// 	for {
+	// 		select {
+	// 		case <-stop:
+	// 			return
+	// 		case <-timeout:
+	// 			integration.Ping()
+	// 		}
+	// 	}
+	// }()
 	//
-	// --------------------------------------------------------------------
-	// ERROR HANDLERS
-	// --------------------------------------------------------------------
-	//
-	beego.ErrorHandler("400", func(rw http.ResponseWriter, r *http.Request) {
+	// beego.Run()
+	// <-stop
 
-		templateName := "errors/400.tpl"
-
-		data := make(map[string]interface{})
-		data["Title"] = "huh wut"
-		data["Loc"] = -2
-		data["Tab"] = -1
-		data["copyright"] = time.Now().Year()
-
-		if beego.BConfig.RunMode == "dev" {
-			beego.BuildTemplate(beego.BConfig.WebConfig.ViewsPath)
-		}
-
-		newbytes := bytes.NewBufferString("")
-		if _, ok := beego.BeeTemplates[templateName]; !ok {
-			panic("can't find templatefile in the path:" + templateName)
-		}
-		err := beego.BeeTemplates[templateName].ExecuteTemplate(newbytes, templateName, data)
-		if err != nil {
-			panic("template Execute err: " + err.Error())
-		}
-		tplcontent, _ := ioutil.ReadAll(newbytes)
-		fmt.Fprint(rw, template.HTML(string(tplcontent)))
-	})
-
-	beego.ErrorHandler("403", func(rw http.ResponseWriter, r *http.Request) {
-
-		templateName := "errors/403.tpl"
-
-		data := make(map[string]interface{})
-		data["Title"] = "bzzzt..."
-		data["Loc"] = -2
-		data["Tab"] = -1
-		data["copyright"] = time.Now().Year()
-
-		if beego.BConfig.RunMode == "dev" {
-			beego.BuildTemplate(beego.BConfig.WebConfig.ViewsPath)
-		}
-
-		newbytes := bytes.NewBufferString("")
-		if _, ok := beego.BeeTemplates[templateName]; !ok {
-			panic("can't find templatefile in the path:" + templateName)
-		}
-		err := beego.BeeTemplates[templateName].ExecuteTemplate(newbytes, templateName, data)
-		if err != nil {
-			panic("template Execute err: " + err.Error())
-		}
-		tplcontent, _ := ioutil.ReadAll(newbytes)
-		fmt.Fprint(rw, template.HTML(string(tplcontent)))
-	})
-
-	beego.ErrorHandler("404", func(rw http.ResponseWriter, r *http.Request) {
-
-		templateName := "errors/404.tpl"
-
-		data := make(map[string]interface{})
-		data["Title"] = "i have no idea what i'm doing"
-		data["Loc"] = -2
-		data["Tab"] = -1
-		data["copyright"] = time.Now().Year()
-
-		if j, found := util.Cache.Get("404_xkcd_json"); found {
-
-			v := j.(map[string]interface{})
-			data["xkcd_today"] = v["img"]
-			data["xkcd_today_title"] = v["alt"]
-
-		} else {
-			resp, err := http.Get("http://xkcd.com/info.0.json")
-			if err == nil {
-				defer resp.Body.Close()
-				bte, err := ioutil.ReadAll(resp.Body)
-
-				if err == nil {
-					var v map[string]interface{}
-
-					if json.Unmarshal(bte, &v) == nil {
-						util.Cache.Set("404_xkcd_json", v, 0)
-
-						data["xkcd_today"] = v["img"]
-						data["xkcd_today_title"] = v["alt"]
-					}
-				}
-			}
-		}
-
-		if beego.BConfig.RunMode == "dev" {
-			beego.BuildTemplate(beego.BConfig.WebConfig.ViewsPath)
-		}
-
-		newbytes := bytes.NewBufferString("")
-		if _, ok := beego.BeeTemplates[templateName]; !ok {
-			panic("can't find templatefile in the path:" + templateName)
-		}
-		err := beego.BeeTemplates[templateName].ExecuteTemplate(newbytes, templateName, data)
-		if err != nil {
-			panic("template Execute err: " + err.Error())
-		}
-		tplcontent, _ := ioutil.ReadAll(newbytes)
-		fmt.Fprint(rw, template.HTML(string(tplcontent)))
-	})
-
-	beego.ErrorHandler("500", func(rw http.ResponseWriter, r *http.Request) {
-
-		templateName := "errors/500.tpl"
-
-		data := make(map[string]interface{})
-		data["Title"] = "eek fire FIRE"
-		data["Loc"] = -2
-		data["Tab"] = -1
-		data["copyright"] = time.Now().Year()
-
-		if beego.BConfig.RunMode == "dev" {
-			beego.BuildTemplate(beego.BConfig.WebConfig.ViewsPath)
-		}
-
-		newbytes := bytes.NewBufferString("")
-		if _, ok := beego.BeeTemplates[templateName]; !ok {
-			panic("can't find templatefile in the path:" + templateName)
-		}
-		err := beego.BeeTemplates[templateName].ExecuteTemplate(newbytes, templateName, data)
-		if err != nil {
-			panic("template Execute err: " + err.Error())
-		}
-		tplcontent, _ := ioutil.ReadAll(newbytes)
-		fmt.Fprint(rw, template.HTML(string(tplcontent)))
-	})
-
-	beego.ErrorHandler("550", func(rw http.ResponseWriter, r *http.Request) {
-
-		templateName := "errors/550.tpl"
-
-		data := make(map[string]interface{})
-		data["Title"] = "Oh No!"
-		data["Permission"] = r.Form.Get("permission")
-		data["Loc"] = -2
-		data["Tab"] = -1
-		data["copyright"] = time.Now().Year()
-
-		data["xsrf_token"] = r.Form.Get("xsrf")
-
-		if beego.BConfig.RunMode == "dev" {
-			beego.BuildTemplate(beego.BConfig.WebConfig.ViewsPath)
-		}
-
-		newbytes := bytes.NewBufferString("")
-		if _, ok := beego.BeeTemplates[templateName]; !ok {
-			panic("can't find templatefile in the path:" + templateName)
-		}
-		err := beego.BeeTemplates[templateName].ExecuteTemplate(newbytes, templateName, data)
-		if err != nil {
-			panic("template Execute err: " + err.Error())
-		}
-		tplcontent, _ := ioutil.ReadAll(newbytes)
-		fmt.Fprint(rw, template.HTML(string(tplcontent)))
-	})
-
-	//
-	// --------------------------------------------------------------------
-	// INTEGRATION
-	// --------------------------------------------------------------------
-	//
-	stop := make(chan bool)
-
-	integration.Integrate(integration.ABF(1))
-	// ping target (for integration)
-	//beego.Router("/ping", &controllers.PingController{})
-
-	go func() {
-		timeout := make(chan bool)
-		go func() {
-			for {
-				timeout <- true
-				time.Sleep(1 * time.Hour)
-			}
-		}()
-		for {
-			select {
-			case <-stop:
-				return
-			case <-timeout:
-				integration.Ping()
-			}
-		}
-	}()
-
-	beego.Run()
-	<-stop
+	kami.Serve()
 }
 
 func getRandomString(n int) string {

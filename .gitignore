@@ -1,6 +1,7 @@
 kahinah
-conf/*
-!conf/*.conf.example
+*.toml
+!*.toml.example
+gin-bin
 news.txt
 *~
 data.sqlite

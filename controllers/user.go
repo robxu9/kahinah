@@ -1,8 +1,6 @@
 package controllers
 
-import (
-	"gopkg.in/robxu9/kahinah.v3/models"
-)
+import "github.com/robxu9/kahinah/models"
 
 type UserController struct {
 	BaseController

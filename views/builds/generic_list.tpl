@@ -1,4 +1,3 @@
-{{template "header.tpl" .}}
 
       <link rel="stylesheet" href="{{url "/static/css/theme.bootstrap.css"}}">
 
@@ -8,7 +7,7 @@
 
       <script>
         // With customizations
-        $(document).ready(function() { 
+        $(document).ready(function() {
           $.extend($.tablesorter.themes.bootstrap, {
             // these classes are added to the table. To see other table classes available,
             // look here: http://twitter.github.com/bootstrap/base-css.html#tables
@@ -45,7 +44,7 @@
       </script>
 
       <div class="page-header">
-        <h1>{{.Title}} <small>much sortable such searchable wow</small></h1>
+        <h1>{{.Title}} <small>Sortable.</small></h1>
       </div>
 
       <div class="row table-responsive">
@@ -77,5 +76,3 @@
         </table>
         <center><span class="label label-default">{{.Entries}} {{if eq .Entries 1}}entry{{else}}entries returned.{{end}}</span></center>
       </div>
-
-{{template "footer.tpl" .}}

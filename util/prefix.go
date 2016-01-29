@@ -4,11 +4,11 @@ import (
 	"bytes"
 	"html/template"
 
-	"github.com/astaxie/beego"
+	"github.com/robxu9/kahinah/conf"
 )
 
 var (
-	PREFIX = beego.AppConfig.String("urlprefix")
+	urlPrefix = conf.Config.GetDefault("urlPrefix", "").(string)
 )
 
 func GetPrefixStringWithData(dest string, data interface{}) string {
@@ -26,9 +26,9 @@ func GetPrefixStringWithData(dest string, data interface{}) string {
 }
 
 func GetPrefixString(dest string) string {
-	if PREFIX == "" {
+	if urlPrefix == "" {
 		return dest
 	}
 
-	return "/" + PREFIX + dest
+	return "/" + urlPrefix + dest
 }

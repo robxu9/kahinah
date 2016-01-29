@@ -1,32 +1,32 @@
 package controllers
 
 import (
+	"html/template"
 	"io/ioutil"
-	"strings"
+	"net/http"
+
+	"github.com/microcosm-cc/bluemonday"
+	"github.com/robxu9/kahinah/data"
+	"github.com/russross/blackfriday"
+	"golang.org/x/net/context"
 )
 
-type MainController struct {
-	BaseController
-}
+// MainHandler shows the main page.
+func MainHandler(ctx context.Context, rw http.ResponseWriter, r *http.Request) {
+	dataRenderer := data.FromContext(ctx)
 
-// This Get() function displays the list of
-// endpoints that the application has:
-//
-// --> See all packages queued for testing
-// --> See all packages in testing
-// --> See all packages queued for updates
-// --> See all packages in updates
-func (this *MainController) Get() {
-	bte, err := ioutil.ReadFile("news.txt")
-	str := "I couldn't read the news file for you..."
+	bte, err := ioutil.ReadFile("news.md")
+	markdown := []byte("_Couldn't retrieve the latest news._")
 	if err == nil {
-		str = string(bte)
+		markdown = bte
 	}
 
-	split := strings.Split(str, "\n")
+	output := blackfriday.MarkdownCommon(markdown)
 
-	this.Data["Title"] = "Main"
-	this.Data["News"] = split
-	this.Data["Loc"] = 0
-	this.TplName = "index.tpl"
+	dataRenderer.Data = map[string]interface{}{
+		"title": "Main",
+		"News":  template.HTML(bluemonday.UGCPolicy().SanitizeBytes(output)),
+		"Loc":   0,
+	}
+	dataRenderer.Template = "index"
 }

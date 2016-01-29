@@ -1,8 +1,9 @@
 package integration
 
 import (
-	"gopkg.in/robxu9/kahinah.v3/models"
 	"log"
+
+	"github.com/robxu9/kahinah/models"
 )
 
 type Integration interface {
