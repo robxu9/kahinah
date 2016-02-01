@@ -30,6 +30,12 @@ host = "localhost:3306"
 user = "root"
 pass = "toor"
 
+# authentication configuration
+# - authentication with CAS
+[authentication.cas]
+enable = false
+url = "https://auth.openmandriva.org/cas/"
+
 # integration configuration
 # - integration with abf
 [integration.abf]
@@ -62,7 +68,7 @@ maintainerHours = 168
 # - allow only people whitelisted to vote
 whitelist = false
 # - set the list of administrators
-administrators = "rxu"
+administrators = ["rxu"]
 
 # mail configuration
 [mail]

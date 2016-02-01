@@ -22,7 +22,7 @@
               <tr>
                 <td><a href="{{urldata "/builds/{{.Id}}" .}}">UPDATE-{{.BuildDate.Year}}-{{.Id}}</a></td>
                 <td><a href="{{urldata "/builds/{{.Id}}" .}}">{{.Name}}/{{.Architecture}}</a></td>
-                <td>{{.Submitter.Email | emailat}}</td>
+                <td>{{.Submitter.Username}}</td>
                 <td>{{.Platform}}/{{.Repo}}</td>
                 <td>{{if eq .Type "bugfix"}}<i class="fa fa-bug"></i>{{end}}
                     {{if eq .Type "security"}}<i class="fa fa-shield"></i>{{end}}

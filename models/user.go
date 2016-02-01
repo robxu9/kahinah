@@ -1,18 +1,14 @@
 package models
 
-import (
-	"net/url"
-
-	"github.com/astaxie/beego"
-	"github.com/astaxie/beego/orm"
-)
+import "github.com/astaxie/beego/orm"
 
 type User struct {
 	Id          uint64 `orm:"auto;pk"`
+	Username    string `orm:"type(text)"`
 	Email       string `orm:"type(text)"`
 	Integration string `orm:"type(text)"` // abf service user id
 
-	ApiKey string `orm:"type(text)"`
+	APIKey string `orm:"type(text)"`
 
 	Permissions []*UserPermission `orm:"rel(m2m);on_delete(set_null)"`
 	Karma       []*Karma          `orm:"reverse(many);on_delete(set_null)"`
@@ -22,7 +18,7 @@ type User struct {
 }
 
 func (u *User) String() string {
-	return u.Email
+	return u.Username
 }
 
 func (u *User) Save() {
@@ -41,22 +37,19 @@ func (u *UserPermission) Save() {
 	o.Update(u)
 }
 
-// Finds the user with the given email address. If a user doesn't exist,
+// Finds the user with the given username. If a user doesn't exist,
 // it creates one and returns it.
-//
-// This is more commonly used with persona for login details, and with
-// integrators to add buildlists.
-func FindUser(email string) *User {
+func FindUser(username string) *User {
 	o := orm.NewOrm()
 	qt := o.QueryTable(new(User))
 
 	var user User
-	err := qt.Filter("Email", email).One(&user)
+	err := qt.Filter("Username", username).One(&user)
 	if err != nil && err != orm.ErrNoRows {
 		panic(err)
 	} else if err != nil {
 		user = User{
-			Email: email,
+			Username: username,
 		}
 		o.Insert(&user)
 	} else {
@@ -68,12 +61,12 @@ func FindUser(email string) *User {
 	return &user
 }
 
-func FindUserApi(apikey string) *User {
+func FindUserAPI(apikey string) *User {
 	o := orm.NewOrm()
 	qt := o.QueryTable(new(User))
 
 	var user User
-	err := qt.Filter("ApiKey", apikey).One(&user)
+	err := qt.Filter("APIKey", apikey).One(&user)
 	if err != nil && err != orm.ErrNoRows {
 		panic(err)
 	} else if err != nil {
@@ -88,12 +81,12 @@ func FindUserApi(apikey string) *User {
 	return &user
 }
 
-func FindUserNoCreate(email string) *User {
+func FindUserNoCreate(username string) *User {
 	o := orm.NewOrm()
 	qt := o.QueryTable(new(User))
 
 	var user User
-	err := qt.Filter("Email", email).One(&user)
+	err := qt.Filter("Username", username).One(&user)
 	if err != nil && err != orm.ErrNoRows {
 		panic(err)
 	} else if err != nil {
@@ -105,40 +98,6 @@ func FindUserNoCreate(email string) *User {
 	}
 
 	return &user
-}
-
-func PermAbortCheck(c *beego.Controller, perm string) {
-	user := IsLoggedIn(c)
-	if user != "" {
-
-		model := FindUser(user)
-		for _, v := range model.Permissions {
-			if v.Permission == perm {
-				return
-			}
-		}
-
-	}
-
-	c.Ctx.Request.Form = url.Values{}
-	c.Ctx.Request.Form.Set("permission", perm)
-	c.Ctx.Request.Form.Set("xsrf", c.XSRFToken())
-	c.Abort("550")
-}
-
-func PermCheck(c *beego.Controller, perm string) bool {
-	user := IsLoggedIn(c)
-	if user != "" {
-
-		model := FindUser(user)
-		for _, v := range model.Permissions {
-			if v.Permission == perm {
-				return true
-			}
-		}
-
-	}
-	return false
 }
 
 func PermRegister(perm string) {

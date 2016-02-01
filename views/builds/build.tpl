@@ -7,13 +7,13 @@
           {{if eq .Package.Status "published"}}<div class="panel panel-success">{{else}}
           <div class="panel panel-primary">{{end}}{{end}}{{end}}
             <div class="panel-heading">
-              <h1>{{.Package.Name}} <small>[{{.Package.Architecture}}] UPDATE-{{.Package.BuildDate.Year}}-{{.Package.Id}}</small><div class="pull-right">{{.Karma}} {{if .KarmaControls}}<a href="#" class="btn" data-toggle="modal" data-target="#voteModal"><i class="fa fa-3x {{if .UserVote}}fa-check-square-o{{else}}fa-pencil-square-o{{end}}"></i></a>{{end}}</div></h1>
+              <h1>Update {{.Package.Id}} <small>{{.Package.Name}} for {{.Package.Architecture}}, built {{.Package.BuildDate}}</small><div class="pull-right">{{.Karma}} {{if .KarmaControls}}<a href="#" class="btn" data-toggle="modal" data-target="#voteModal"><i class="fa fa-3x {{if .UserVote}}fa-check-square-o{{else}}fa-pencil-square-o{{end}}"></i></a>{{end}}</div></h1>
             </div>
             <table class="table table-condensed">
               <tbody>
                 <tr>
                   <td><b>Submitter</b></td>
-                  <td>{{.Package.Submitter.Email | emailat}}</td>
+                  <td>{{.Package.Submitter.Username}}</td>
                 </tr>
                 <tr>
                   <td><b>Platform<b></td>
@@ -84,21 +84,8 @@
             </div>
           </div>
 
-          <!-- want to test? -->
-          {{if eq .Package.Status "testing"}}
-          <div class="panel panel-warning">
-            <div class="panel-heading"><button class="btn btn-warning" data-toggle="collapse" href="#testinfo">Want to test?</button></div>
-            <div id="testinfo" class="panel-collapse collapse">
-              <div class="panel-body">
-                On your <code>{{.Package.Platform}}/{{.Package.Architecture}}</code> machine, enable the updates-testing repository for {{.Package.Repo}}. Then <code>urpmi.update -a</code> and <code>urpmi</code> the affected packages.<br/>
-                When you're done, you can use <code>urpmi --downgrade</code> to revert back to previous versions.
-              </div>
-            </div>
-          </div>
-          {{end}}
-
           <div class="panel panel-default">
-            <div class="panel-heading"><button class="btn btn-default">Karma</button></div>
+            <div class="panel-heading"><button class="btn btn-default">Recent Activity</button></div>
             <div class="panel-body">
               {{if .Votes}}
               <table class="table table-condensed table-responsive table-bordered">
@@ -109,7 +96,7 @@
                 {{end}}
               </table>
               {{else}}
-              No opinions... yet.
+              No activity recently.
               {{end}}
             </div>
           </div>
@@ -156,7 +143,7 @@
                   </div>
                 </div>
                 {{if .MaintainerControls}}{{if not .MaintainerTime}}
-                <div class="alert alert-info"><b>This is your update!</b> Unfortunately, you need to wait {{.MaintainerHoursNeeded}} hours since the Build Date until you can activate Maintainer Push.</div>
+                <div class="alert alert-info"><b>This is your update!</b> Unfortunately, you need to wait {{.MaintainerHoursNeeded}} hour(s) until you can activate Maintainer Push.</div>
                 {{else}}<div class="alert alert-info"><b>This is your update!</b> You can activate Maintainer Push now.</div>{{end}}{{end}}
                 <div id="voteModalAlertPlaceholder"></div>
                 <div class="modal-body">

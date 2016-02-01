@@ -7,8 +7,6 @@
     <meta name="description" content="">
     <meta name="author" content="">
 
-    <meta name="_xsrf" content="{{.xsrf_token}}" />
-
     <link rel="shortcut icon" href="{{url "/static/img/favicon.png"}}">
 
     <title>{{.Title}} | Kahinah</title>
@@ -29,12 +27,7 @@
 
     <!-- Bootstrap core JavaScript -->
     <script>window.urlPrefix = "{{url ""}}";</script>
-    <script src="//code.jquery.com/jquery-2.0.3.min.js"></script>
-    <script src="{{url "/static/js/xsrf.js"}}"></script>
-
-    <script src="//login.persona.org/include.js"></script>
-    <script src="{{url "/static/js/persona.js"}}"></script>
-
+    <script src="//code.jquery.com/jquery-2.2.0.min.js"></script>
   </head>
 
   <body>
@@ -119,13 +112,13 @@
 
       <!-- Site footer -->
       <div class="footer">
-        &copy; 2013-{{.copyright}} Robert Xu.<div class="pull-right">Licensed under the MIT license - <a href="//github.com/robxu9/kahinah"><i class="fa fa-github"></i> Github</a></div>
+        Copyright &copy; 2013-{{.copyright}} Robert Xu.<div class="pull-right">Licensed under the MIT license - <a href="//github.com/robxu9/kahinah"><i class="fa fa-github"></i> Github</a></div>
       </div>
 
     </div> <!-- /container -->
 
-    <script src="//code.jquery.com/ui/1.10.3/jquery-ui.min.js"></script>
-    <script src="//netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+    <script src="//code.jquery.com/ui/1.11.4/jquery-ui.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js" integrity="sha256-KXn5puMvxCw+dAYznun+drMdG1IFl3agK0p/pqT9KAo= sha512-2e8qq0ETcfWRI4HJBzQiA3UoyFk6tbNyG+qSaIBZLyW9Xf3sWZHN/lxe9fTh1U45DpPf07yj94KsUHHWe4Yk1A==" crossorigin="anonymous"></script>
 
   </body>
 </html>

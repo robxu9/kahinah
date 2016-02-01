@@ -5,11 +5,13 @@ import (
 	"fmt"
 	"html/template"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
 	"golang.org/x/net/context"
 
+	"gopkg.in/cas.v1"
 	"gopkg.in/guregu/kami.v1"
 
 	"github.com/gorilla/securecookie"
@@ -78,6 +80,17 @@ func main() {
 	kami.NotFound(panicHandler.Err404)
 	kami.MethodNotAllowed(panicHandler.Err405)
 
+	// Set up authentication
+	// -- CAS
+	if enable, ok := conf.Config.GetDefault("authentication.cas.enable", false).(bool); ok && enable {
+		url, _ := url.Parse(conf.Config.Get("authentication.cas.url").(string))
+
+		casClient := cas.NewClient(&cas.Options{
+			URL: url,
+		})
+		kami.Use("/", casClient.Handle)
+	}
+
 	// Set it up as the god context
 	kami.Context = ctx
 
@@ -91,12 +104,10 @@ func main() {
 	// Show the main page
 	kami.Get(util.GetPrefixString("/"), controllers.MainHandler)
 
-	//
-	// --------------------------------------------------------------------
-	// BUILDS
-	// --------------------------------------------------------------------
-	//
+	// -- builds --------------------------------------------------------------
 
+	// specific
+	kami.Get(util.GetPrefixString("/build/:id/"), controllers.BuildGetHandler)
 	// testing
 	kami.Get(util.GetPrefixString("/builds/testing"), controllers.TestingHandler)
 	// published
@@ -106,24 +117,10 @@ func main() {
 	// all builds
 	kami.Get(util.GetPrefixString("/builds"), controllers.BuildsHandler) // show all updates sorted by date
 
-	// // specific
-	// beego.Router(util.GetPrefixString("/builds/:id:int"), &controllers.BuildController{})
-	//
-	// //
-	// // --------------------------------------------------------------------
-	// // ADVISORIES
-	// // --------------------------------------------------------------------
-	// //
-	//
-	// // advisories
-	// beego.Router(util.GetPrefixString("/advisories"), &controllers.AdvisoryMainController{})
-	// //beego.Router(util.GetPrefixString("/advisories/:platform:string"), &controllers.AdvisoryPlatformController{})
-	// //beego.Router(util.GetPrefixString("/advisories/:id:int"), &controllers.AdvisoryController{})
-	// beego.Router(util.GetPrefixString("/advisories/new"), &controllers.AdvisoryNewController{})
-	//
-	// //beego.Router("/about", &controllers.AboutController{})
-	//
-	// //
+	// -- admin ---------------------------------------------------------------
+	kami.Get(util.GetPrefixString("/admin"), controllers.AdminGetHandler)
+	kami.Post(util.GetPrefixString("/admin"), controllers.AdminPostHandler)
+
 	// // --------------------------------------------------------------------
 	// // AUTHENTICATION [persona]
 	// // --------------------------------------------------------------------
@@ -131,13 +128,6 @@ func main() {
 	// beego.Router(util.GetPrefixString("/auth/check"), &models.PersonaCheckController{})
 	// beego.Router(util.GetPrefixString("/auth/login"), &models.PersonaLoginController{})
 	// beego.Router(util.GetPrefixString("/auth/logout"), &models.PersonaLogoutController{})
-	//
-	// //
-	// // --------------------------------------------------------------------
-	// // ADMINISTRATION [crap]
-	// // --------------------------------------------------------------------
-	// //
-	// beego.Router(util.GetPrefixString("/admin"), &controllers.AdminController{})
 	//
 	// //
 	// // --------------------------------------------------------------------

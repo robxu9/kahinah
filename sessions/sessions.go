@@ -13,6 +13,13 @@ import (
 	"gopkg.in/guregu/kami.v1"
 )
 
+const (
+	FlashDebug int = iota
+	FlashInfo
+	FlashWarn
+	FlashError
+)
+
 type key int
 
 var sessionKey key

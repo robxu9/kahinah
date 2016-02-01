@@ -7,9 +7,10 @@ import (
 	"sort"
 	"time"
 
+	"gopkg.in/guregu/kami.v1"
+
 	"golang.org/x/net/context"
 
-	"github.com/astaxie/beego"
 	"github.com/astaxie/beego/orm"
 	"github.com/robxu9/kahinah/conf"
 	"github.com/robxu9/kahinah/data"
@@ -263,16 +264,17 @@ func TestingHandler(ctx context.Context, rw http.ResponseWriter, r *http.Request
 
 //
 // --------------------------------------------------------------------
-// INDIVIDUAL BUILD LOOK
+// INDIVIDUAL BUILD
 // --------------------------------------------------------------------
 //
 
-type BuildController struct {
-	BaseController
-}
+// BuildGetHandler displays build information for a specific build
+func BuildGetHandler(ctx context.Context, rw http.ResponseWriter, r *http.Request) {
+	dataRenderer := data.FromContext(ctx)
 
-func (this *BuildController) Get() {
-	id := to.Uint64(this.Ctx.Input.Param(":id"))
+	toRender := map[string]interface{}{}
+
+	id := to.Uint64(kami.Param(ctx, "id"))
 
 	var pkg models.BuildList
 
@@ -281,10 +283,9 @@ func (this *BuildController) Get() {
 
 	err := qt.Filter("Id", id).One(&pkg)
 	if err == orm.ErrNoRows {
-		this.Abort("404")
+		panic(ErrNotFound)
 	} else if err != nil {
-		log.Println(err)
-		this.Abort("500")
+		panic(err)
 	}
 
 	if pkg.Changelog != "" {
@@ -292,15 +293,15 @@ func (this *BuildController) Get() {
 		if err == nil {
 			defer resp.Body.Close()
 			changelog, _ := ioutil.ReadAll(resp.Body)
-			this.Data["Changelog"] = this.processChangelog(string(changelog))
+			toRender["Changelog"] = processChangelog(string(changelog))
 		} else {
-			this.Data["Changelog"] = "Failed to retrieve changelog: " + err.Error()
+			toRender["Changelog"] = "Failed to retrieve changelog: " + err.Error()
 		}
 	}
 
-	this.Data["Commits"] = integration.Commits(&pkg)
+	toRender["Commits"] = integration.Commits(&pkg)
 
-	this.Data["Url"] = integration.Url(&pkg)
+	toRender["Url"] = integration.Url(&pkg)
 
 	o.LoadRelated(&pkg, "Submitter")
 	o.LoadRelated(&pkg, "Packages")
@@ -308,7 +309,7 @@ func (this *BuildController) Get() {
 	// karma controls
 	totalKarma := getTotalKarma(id) // get total karma
 
-	votes := make([]util.Pair, 0) // *models.Karma, int
+	var votes []util.Pair // *models.Karma, int
 
 	// load karma totals
 	var inOrder []*models.Karma
@@ -344,11 +345,11 @@ func (this *BuildController) Get() {
 		votes = append(votes, pair)
 	}
 
-	this.Data["Votes"] = votes
-	this.Data["Karma"] = totalKarma
+	toRender["Votes"] = votes
+	toRender["Karma"] = totalKarma
 
-	this.Data["UserVote"] = 0
-	user := models.IsLoggedIn(&this.Controller)
+	toRender["UserVote"] = 0
+	user := Authenticated(r)
 	if user != "" {
 		kt := o.QueryTable(new(models.Karma))
 		var userkarma models.Karma
@@ -357,65 +358,65 @@ func (this *BuildController) Get() {
 			log.Println(err)
 		} else if err == nil {
 			if userkarma.Vote == models.KARMA_UP {
-				this.Data["UserVote"] = 1
+				toRender["UserVote"] = 1
 			} else if userkarma.Vote == models.KARMA_MAINTAINER {
-				this.Data["UserVote"] = 2
+				toRender["UserVote"] = 2
 			} else if userkarma.Vote == models.KARMA_DOWN {
-				this.Data["UserVote"] = -1
+				toRender["UserVote"] = -1
 			}
 
-			this.Data["KarmaCommentPrev"] = userkarma.Comment
+			toRender["KarmaCommentPrev"] = userkarma.Comment
 		}
 
-		if models.PermCheck(&this.Controller, models.PERMISSION_QA) {
-			this.Data["QAControls"] = true
+		if PermCheck(r, PermissionQA) {
+			toRender["QAControls"] = true
 		}
 
 	}
 
 	// karma controls end
 
-	this.Data["Title"] = "Build " + to.String(id) + ": " + pkg.Name
-	this.Data["Loc"] = 1
+	toRender["Title"] = "Build " + to.String(id) + ": " + pkg.Name
+	toRender["Loc"] = 1
 	if pkg.Status == models.STATUS_TESTING {
-		this.Data["Tab"] = 1
+		toRender["Tab"] = 1
 		if user != "" {
-			this.Data["KarmaControls"] = true
+			toRender["KarmaControls"] = true
 			if pkg.Submitter != nil && pkg.Submitter.Email == user {
-				this.Data["MaintainerControls"] = true
-				this.Data["MaintainerHoursNeeded"] = maintainerHours
+				toRender["MaintainerControls"] = true
+				toRender["MaintainerHoursNeeded"] = maintainerHours
 				if time.Since(pkg.BuildDate).Hours() >= float64(maintainerHours) {
-					this.Data["MaintainerTime"] = true
-					delete(this.Data, "MaintainerHoursNeeded")
+					toRender["MaintainerTime"] = true
+					delete(toRender, "MaintainerHoursNeeded")
 				}
 			}
 		}
 	} else if pkg.Status == models.STATUS_PUBLISHED {
-		this.Data["Tab"] = 2
+		toRender["Tab"] = 2
 	} else if pkg.Status == models.STATUS_REJECTED {
-		this.Data["Tab"] = 3
+		toRender["Tab"] = 3
 	} else {
-		this.Data["Tab"] = 4
+		toRender["Tab"] = 4
 	}
-	this.Data["Package"] = pkg
-	this.TplName = "builds/build.tpl"
+	toRender["Package"] = pkg
+
+	dataRenderer.Data = toRender
+	dataRenderer.Template = "builds/build"
 }
 
-func (this *BuildController) Post() {
-	id := to.Uint64(this.Ctx.Input.Param(":id"))
+// BuildPostHandler handles post actions that occur.
+func BuildPostHandler(ctx context.Context, rw http.ResponseWriter, r *http.Request) {
+	// check for authentication
+	user := MustAuthenticate(r)
 
-	postType := this.GetString("type")
-	if postType != "Neutral" && postType != "Up" && postType != "Down" && postType != "Maintainer" && postType != "QABlock" && postType != "QAPush" {
-		this.Abort("400")
-	}
+	// load parameters
+	dataRenderer := data.FromContext(ctx)
 
-	comment := this.GetString("comment")
+	id := to.Uint64(kami.Param(ctx, "id"))
+	action := r.FormValue("type")
+	comment := r.FormValue("comment")
 
-	user := models.IsLoggedIn(&this.Controller)
-	if user == "" {
-		this.Abort("403") // MUST be logged in
-	}
-
+	// find the build list
 	var pkg models.BuildList
 
 	o := orm.NewOrm()
@@ -423,81 +424,78 @@ func (this *BuildController) Post() {
 
 	err := qt.Filter("Id", id).One(&pkg)
 	if err == orm.ErrNoRows {
-		this.Abort("404")
+		panic(ErrNotFound)
 	} else if err != nil {
-		log.Println(err)
-		this.Abort("500")
+		panic(err)
 	}
 
 	o.LoadRelated(&pkg, "Submitter")
 
-	if postType == "Maintainer" {
-		if pkg.Submitter.Email != user {
-			this.Abort("403")
-		} else {
-			if time.Since(pkg.BuildDate).Hours() < float64(maintainerHours) { // week
-				this.Abort("400")
-			}
+	// FIXME: check for whitelist
+
+	switch action {
+	case "Neutral":
+	case "Up":
+	case "Down":
+	case "Maintainer":
+		if pkg.Submitter.Username != user {
+			panic(ErrForbidden)
 		}
-	} else if postType == "QABlock" || postType == "QAPush" {
-		models.PermAbortCheck(&this.Controller, models.PERMISSION_QA)
-	} else {
-		// whitelist stuff
-		if Whitelist {
-			perm := models.PermCheck(&this.Controller, models.PERMISSION_WHITELIST)
-			if !perm {
-				flash := beego.NewFlash()
-				flash.Warning("Sorry, the whitelist is on and you are not allowed to vote.")
-				flash.Store(&this.Controller)
-				this.Get()
-				return
-			}
+		if time.Since(pkg.BuildDate).Hours() < float64(maintainerHours) {
+			panic(ErrBadRequest)
 		}
+	case "QABlock":
+		fallthrough
+	case "QAPush":
+		PermAbortCheck(r, PermissionQA)
+	case "Accept":
+	case "Reject":
+	default:
+		panic(ErrBadRequest)
 	}
 
 	var userkarma models.Karma
 
 	userkarma.List = &pkg
 	userkarma.User = models.FindUser(user)
-	if postType == "Up" {
+
+	switch action {
+	case "Up":
 		userkarma.Vote = models.KARMA_UP
-	} else if postType == "Maintainer" {
+	case "Maintainer":
 		userkarma.Vote = models.KARMA_MAINTAINER
-	} else if postType == "QABlock" {
+	case "QABlock":
 		userkarma.Vote = models.KARMA_BLOCK
-	} else if postType == "QAPush" {
+	case "QAPush":
 		userkarma.Vote = models.KARMA_PUSH
-	} else if postType == "Neutral" {
-		userkarma.Vote = models.KARMA_NONE
-	} else {
+	case "Down":
 		userkarma.Vote = models.KARMA_DOWN
+	default:
+		userkarma.Vote = models.KARMA_NONE
 	}
+
 	userkarma.Comment = comment
 	o.Insert(&userkarma)
 
-	karmaTotal := getTotalKarma(id)
+	if action == "Accept" || action == "Reject" {
+		karmaTotal := getTotalKarma(id)
 
-	upthreshold, err := beego.AppConfig.Int64("karma::upperkarma")
-	if err != nil {
-		panic(err)
+		upperThreshold := conf.Config.GetDefault("karma.upperKarma", 3).(int)
+		lowerThreshold := conf.Config.GetDefault("karma.lowerKarma", -3).(int)
+
+		if karmaTotal >= upperThreshold {
+			pkg.Status = models.STATUS_PUBLISHED
+			o.Update(&pkg)
+			go integration.Publish(&pkg)
+		} else if karmaTotal <= lowerThreshold {
+			pkg.Status = models.STATUS_REJECTED
+			o.Update(&pkg)
+			go integration.Reject(&pkg)
+		}
 	}
 
-	downthreshold, err := beego.AppConfig.Int64("karma::lowerkarma")
-	if err != nil {
-		panic(err)
-	}
-
-	if karmaTotal >= int(upthreshold) {
-		pkg.Status = models.STATUS_PUBLISHED
-		o.Update(&pkg)
-		go integration.Publish(&pkg)
-	} else if karmaTotal <= int(downthreshold) {
-		pkg.Status = models.STATUS_REJECTED
-		o.Update(&pkg)
-		go integration.Reject(&pkg)
-	}
-
-	this.Get()
+	dataRenderer.Type = data.DataNoRender
+	http.Redirect(rw, r, r.URL.String(), http.StatusTemporaryRedirect)
 }
 
 func getTotalKarma(id uint64) int {
@@ -514,7 +512,7 @@ func getTotalKarma(id uint64) int {
 	for _, v := range karma {
 		o.LoadRelated(v, "User")
 
-		if set.Contains(v.User.Email) {
+		if set.Contains(v.User.Username) {
 			continue // we've already counted this person's most recent vote
 		}
 
@@ -537,7 +535,7 @@ func getTotalKarma(id uint64) int {
 	return totalKarma
 }
 
-func (this *BuildController) processChangelog(changelog string) string {
+func processChangelog(changelog string) string {
 	toreturn := ""
 	open := true
 	for _, c := range changelog {

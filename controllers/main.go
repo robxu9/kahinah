@@ -24,7 +24,7 @@ func MainHandler(ctx context.Context, rw http.ResponseWriter, r *http.Request) {
 	output := blackfriday.MarkdownCommon(markdown)
 
 	dataRenderer.Data = map[string]interface{}{
-		"title": "Main",
+		"Title": "Main",
 		"News":  template.HTML(bluemonday.UGCPolicy().SanitizeBytes(output)),
 		"Loc":   0,
 	}

@@ -10,10 +10,12 @@ import (
 
 	"github.com/robxu9/kahinah/conf"
 	"github.com/robxu9/kahinah/data"
+	"github.com/robxu9/kahinah/log"
 	"github.com/robxu9/kahinah/render"
 	"github.com/robxu9/kahinah/util"
 	"gopkg.in/guregu/kami.v1"
 
+	gcontext "github.com/gorilla/context"
 	"golang.org/x/net/context"
 )
 
@@ -44,6 +46,8 @@ func (p *PanicHandler) ServeHTTPContext(ctx context.Context, rw http.ResponseWri
 	default:
 		p.Err500(ctx, rw, r)
 	}
+
+	gcontext.Clear(r)
 }
 
 func (p *PanicHandler) Err404(ctx context.Context, rw http.ResponseWriter, r *http.Request) {
@@ -129,10 +133,12 @@ func (p *PanicHandler) Err500(ctx context.Context, rw http.ResponseWriter, r *ht
 	data["Tab"] = -1
 	data["error"] = fmt.Sprintf("%v", kami.Exception(ctx))
 
+	var trace []byte
+	runtime.Stack(trace, false)
+	log.Logger.Critical("Internal Server Error: %v\nStacktrace: %v", kami.Exception(ctx), string(trace))
+
 	if mode := conf.Config.GetDefault("runMode", "dev").(string); mode == "dev" {
 		// dump the stacktrace out on the page too
-		var trace []byte
-		runtime.Stack(trace, false)
 		data["stacktrace"] = string(trace)
 	}
 

@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/robxu9/kahinah/log"
 	"github.com/robxu9/kahinah/render"
 	"github.com/zenazn/goji/web/mutil"
 
@@ -54,6 +55,8 @@ func RenderAfterware() kami.Afterware {
 	return func(ctx context.Context, wp mutil.WriterProxy, r *http.Request) context.Context {
 		ret := FromContext(ctx)
 		renderer := render.FromContext(ctx)
+
+		log.Logger.Debugf("bytes written: %v", wp.BytesWritten())
 
 		switch ret.Type {
 		case DataNoRender:
