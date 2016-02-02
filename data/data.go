@@ -4,12 +4,11 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/robxu9/kahinah/log"
+	"gopkg.in/cas.v1"
+
 	"github.com/robxu9/kahinah/render"
-	"github.com/zenazn/goji/web/mutil"
 
 	"golang.org/x/net/context"
-	"gopkg.in/guregu/kami.v1"
 )
 
 type key int
@@ -42,44 +41,44 @@ func FromContext(ctx context.Context) *Render {
 	return r
 }
 
-func RenderMiddleware() kami.Middleware {
-	return func(ctx context.Context, rw http.ResponseWriter, r *http.Request) context.Context {
-		return context.WithValue(ctx, datakey, &Render{
-			Type:   DataHTML,
-			Status: 200,
-		})
-	}
+func RenderMiddleware(ctx context.Context, rw http.ResponseWriter, r *http.Request) context.Context {
+	return context.WithValue(ctx, datakey, &Render{
+		Type:   DataHTML,
+		Status: 200,
+	})
 }
 
-func RenderAfterware() kami.Afterware {
-	return func(ctx context.Context, wp mutil.WriterProxy, r *http.Request) context.Context {
-		ret := FromContext(ctx)
-		renderer := render.FromContext(ctx)
+func RenderAfterware(ctx context.Context, rw http.ResponseWriter, r *http.Request) {
+	ret := FromContext(ctx)
+	renderer := render.FromContext(ctx)
 
-		log.Logger.Debugf("bytes written: %v", wp.BytesWritten())
+	switch ret.Type {
+	case DataNoRender:
+		break
+	case DataHTML:
+		if m, ok := ret.Data.(map[string]interface{}); ok {
+			// Set the copyright on all pages
+			m["copyright"] = time.Now().Year()
 
-		switch ret.Type {
-		case DataNoRender:
-			break
-		case DataHTML:
-			if m, ok := ret.Data.(map[string]interface{}); ok {
-				m["copyright"] = time.Now().Year()
+			// FIXME: xsrf tokens
+
+			// Add authentication information
+			if cas.IsAuthenticated(r) {
+				m["authenticated"] = cas.Username(r)
 			}
-			renderer.HTML(wp, ret.Status, ret.Template, ret.Data)
-		case DataJSON:
-			renderer.JSON(wp, ret.Status, ret.Data)
-		case DataBinary:
-			renderer.Data(wp, ret.Status, ret.Data.([]byte))
-		case DataText:
-			renderer.Text(wp, ret.Status, ret.Data.(string))
-		case DataJSONP:
-			renderer.JSONP(wp, ret.Status, ret.Callback, ret.Data)
-		case DataXML:
-			renderer.XML(wp, ret.Status, ret.Data)
-		default:
-			panic("no such data type")
 		}
-
-		return ctx
+		renderer.HTML(rw, ret.Status, ret.Template, ret.Data)
+	case DataJSON:
+		renderer.JSON(rw, ret.Status, ret.Data)
+	case DataBinary:
+		renderer.Data(rw, ret.Status, ret.Data.([]byte))
+	case DataText:
+		renderer.Text(rw, ret.Status, ret.Data.(string))
+	case DataJSONP:
+		renderer.JSONP(rw, ret.Status, ret.Callback, ret.Data)
+	case DataXML:
+		renderer.XML(rw, ret.Status, ret.Data)
+	default:
+		panic("no such data type")
 	}
 }

@@ -5,9 +5,9 @@ import (
 	"path"
 	"strings"
 
-	"github.com/robxu9/kahinah/data"
+	"goji.io/pattern"
 
-	"gopkg.in/guregu/kami.v1"
+	"github.com/robxu9/kahinah/data"
 
 	"golang.org/x/net/context"
 )
@@ -18,7 +18,7 @@ var (
 )
 
 func StaticHandler(ctx context.Context, rw http.ResponseWriter, r *http.Request) {
-	file := kami.Param(ctx, "path")
+	file := pattern.Path(ctx)
 
 	f, err := staticDir.Open(file)
 	if err != nil {

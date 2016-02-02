@@ -2,36 +2,47 @@ package controllers
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"runtime"
+
+	"gopkg.in/errors.v0"
+
+	"goji.io"
 
 	"github.com/robxu9/kahinah/conf"
-	"github.com/robxu9/kahinah/data"
 	"github.com/robxu9/kahinah/log"
 	"github.com/robxu9/kahinah/render"
 	"github.com/robxu9/kahinah/util"
-	"gopkg.in/guregu/kami.v1"
 
-	gcontext "github.com/gorilla/context"
 	"golang.org/x/net/context"
 )
 
 var (
-	ErrNotFound         = errors.New("kami: path not found")
-	ErrMethodNotAllowed = errors.New("kami: method not allowed")
-	ErrBadRequest       = errors.New("kami: bad request")
-	ErrForbidden        = errors.New("kami: forbidden")
-	ErrPermission       = errors.New("kami: permission error")
+	ErrNotFound         = errors.New("kahinah: path not found")
+	ErrMethodNotAllowed = errors.New("kahinah: method not allowed")
+	ErrBadRequest       = errors.New("kahinah: bad request")
+	ErrForbidden        = errors.New("kahinah: forbidden")
+	ErrPermission       = errors.New("kahinah: permission error")
 )
+
+func PanicMiddleware(inner goji.Handler) goji.Handler {
+	panicHandler := &PanicHandler{}
+
+	return goji.HandlerFunc(func(ctx context.Context, rw http.ResponseWriter, r *http.Request) {
+		defer func() {
+			if err := recover(); err != nil {
+				panicHandler.ServeHTTPC(err, ctx, rw, r)
+			}
+		}()
+
+		inner.ServeHTTPC(ctx, rw, r)
+	})
+}
 
 type PanicHandler struct{}
 
-func (p *PanicHandler) ServeHTTPContext(ctx context.Context, rw http.ResponseWriter, r *http.Request) {
-	ex := kami.Exception(ctx) // retrieve the panic
-
+func (p *PanicHandler) ServeHTTPC(ex interface{}, ctx context.Context, rw http.ResponseWriter, r *http.Request) {
 	switch ex {
 	case ErrNotFound:
 		p.Err404(ctx, rw, r)
@@ -44,10 +55,8 @@ func (p *PanicHandler) ServeHTTPContext(ctx context.Context, rw http.ResponseWri
 	case ErrPermission:
 		p.Err550(ctx, rw, r)
 	default:
-		p.Err500(ctx, rw, r)
+		p.Err500(ex, ctx, rw, r)
 	}
-
-	gcontext.Clear(r)
 }
 
 func (p *PanicHandler) Err404(ctx context.Context, rw http.ResponseWriter, r *http.Request) {
@@ -83,9 +92,6 @@ func (p *PanicHandler) Err404(ctx context.Context, rw http.ResponseWriter, r *ht
 		}
 	}
 
-	dataRenderer := data.FromContext(ctx)
-	dataRenderer.Type = data.DataNoRender
-
 	renderer.HTML(rw, 404, "errors/404", result)
 }
 
@@ -114,9 +120,6 @@ func (p *PanicHandler) Err403(ctx context.Context, rw http.ResponseWriter, r *ht
 func (p *PanicHandler) Err405(ctx context.Context, rw http.ResponseWriter, r *http.Request) {
 	renderer := render.FromContext(ctx)
 
-	dataRenderer := data.FromContext(ctx)
-	dataRenderer.Type = data.DataNoRender
-
 	renderer.HTML(rw, 405, "errors/405", map[string]interface{}{
 		"Title": "Method Not Allowed",
 		"Loc":   -2,
@@ -124,22 +127,23 @@ func (p *PanicHandler) Err405(ctx context.Context, rw http.ResponseWriter, r *ht
 	})
 }
 
-func (p *PanicHandler) Err500(ctx context.Context, rw http.ResponseWriter, r *http.Request) {
+func (p *PanicHandler) Err500(ex interface{}, ctx context.Context, rw http.ResponseWriter, r *http.Request) {
 	renderer := render.FromContext(ctx)
 
 	data := make(map[string]interface{})
 	data["Title"] = "eek fire FIRE"
 	data["Loc"] = -2
 	data["Tab"] = -1
-	data["error"] = fmt.Sprintf("%v", kami.Exception(ctx))
+	data["error"] = fmt.Sprintf("%v", ex)
 
-	var trace []byte
-	runtime.Stack(trace, false)
-	log.Logger.Critical("Internal Server Error: %v\nStacktrace: %v", kami.Exception(ctx), string(trace))
+	stackTrace := errors.Wrap(ex, 4).ErrorStack()
+
+	log.Logger.Critical("Internal Server Error: %v", ex)
+	log.Logger.Critical("Stacktrace: %v", stackTrace)
 
 	if mode := conf.Config.GetDefault("runMode", "dev").(string); mode == "dev" {
 		// dump the stacktrace out on the page too
-		data["stacktrace"] = string(trace)
+		data["stacktrace"] = stackTrace
 	}
 
 	renderer.HTML(rw, 500, "errors/500", data)

@@ -96,9 +96,11 @@
 
           <!-- login -->
           <div class="navbar-right">
-            <a href="{{url "/user"}}"><p class="navbar-text" id="persona-user"></p></a>
-            {{if .xsrf_token}}
-            <button type="button" class="btn btn-primary navbar-btn" style="display: none" id="login">Persona Login</button><button type="button" class="btn btn-warning navbar-btn" style="display: none" id="logout">Logout</button>
+            {{if .authenticated}}
+            <p class="navbar-text">{{.authenticated}}</p>
+            <a href="{{url "/user/logout"}}"><button class="btn btn-warning navbar-btn">Logout</button></a>
+            {{else}}
+            <a href="{{url "/user/login"}}"><button class="btn btn-primary navbar-btn">Login</button></a>
             {{end}}
           </div>
         </div>

@@ -2,6 +2,7 @@ package main
 
 import (
 	"crypto/rand"
+	"flag"
 	"fmt"
 	"html/template"
 	"net/http"
@@ -9,36 +10,48 @@ import (
 	"strings"
 	"time"
 
+	"goji.io/middleware"
+	"goji.io/pat"
+
+	"goji.io"
+
 	"golang.org/x/net/context"
 
 	"gopkg.in/cas.v1"
-	"gopkg.in/guregu/kami.v1"
 
-	"github.com/gorilla/securecookie"
 	"github.com/robxu9/kahinah/conf"
 	"github.com/robxu9/kahinah/controllers"
 	"github.com/robxu9/kahinah/data"
 	"github.com/robxu9/kahinah/log"
 	"github.com/robxu9/kahinah/render"
-	"github.com/robxu9/kahinah/sessions"
 	"github.com/robxu9/kahinah/util"
 	urender "github.com/unrolled/render"
+	"github.com/zenazn/goji/bind"
+	"github.com/zenazn/goji/graceful"
 	"github.com/zenazn/goji/web/mutil"
 	"menteslibres.net/gosexy/to"
 )
 
 func main() {
-	// Initialise an empty context
-	ctx := context.Background()
+	log.Logger.Info("starting kahinah v4")
 
-	// Set up logging
-	kami.LogHandler = func(ctx context.Context, wp mutil.WriterProxy, r *http.Request) {
-		log.Logger.Debugf("request: addr (%v), path (%v), user-agent (%v), referrer (%v)", r.RemoteAddr, r.RequestURI, r.UserAgent(), r.Referer())
-		log.Logger.Debugf("response: status (%v), bytes written (%v)", wp.Status(), wp.BytesWritten())
-	}
+	// -- mux -----------------------------------------------------------------
+	mux := goji.NewMux()
 
-	// Set up rendering
-	r := urender.New(urender.Options{
+	// -- middleware ----------------------------------------------------------
+
+	// logging middleware (base middleware)
+	mux.UseC(func(inner goji.Handler) goji.Handler {
+		return goji.HandlerFunc(func(ctx context.Context, rw http.ResponseWriter, r *http.Request) {
+			log.Logger.Debugf("req  (%v): path (%v), user-agent (%v), referrer (%v)", r.RemoteAddr, r.RequestURI, r.UserAgent(), r.Referer())
+			wp := mutil.WrapWriter(rw) // proxy the rw for info later
+			inner.ServeHTTPC(ctx, wp, r)
+			log.Logger.Debugf("resp (%v): status (%v), bytes written (%v)", r.RemoteAddr, wp.Status(), wp.BytesWritten())
+		})
+	})
+
+	// rendering middleware (required by panic)
+	renderer := urender.New(urender.Options{
 		Directory:  "views",
 		Layout:     "layout",
 		Extensions: []string{".tmpl", ".tpl"},
@@ -62,64 +75,111 @@ func main() {
 		IndentXML:     true,
 		IsDevelopment: conf.Config.GetDefault("runMode", "dev").(string) == "dev",
 	})
-	ctx = render.NewContext(ctx, r)
 
-	kami.Use("/", data.RenderMiddleware())
-	kami.After("/", data.RenderAfterware()) // merge data into render pkg?
+	mux.UseC(func(inner goji.Handler) goji.Handler {
+		return goji.HandlerFunc(func(ctx context.Context, rw http.ResponseWriter, r *http.Request) {
+			newCtx := render.NewContext(ctx, renderer)
+			inner.ServeHTTPC(newCtx, rw, r)
+		})
+	})
 
-	// Set up sessions
-	ctx = sessions.NewStore(ctx, securecookie.GenerateRandomKey(64))
-	kami.Use("/", sessions.SessionMiddleware("kahinah"))
-	kami.After("/", sessions.SessionAfterware("kahinah"))
+	// panic middleware
+	mux.UseC(controllers.PanicMiddleware)
 
-	// FIXME: set up xsrf (getRandomString(50), expire in 3600 minutes)
+	// not found middleware
+	mux.UseC(func(inner goji.Handler) goji.Handler {
+		return goji.HandlerFunc(func(ctx context.Context, rw http.ResponseWriter, r *http.Request) {
+			routeFound := middleware.Pattern(ctx)
 
-	// Set up the error handlers
-	panicHandler := &controllers.PanicHandler{}
-	kami.PanicHandler = panicHandler
-	kami.NotFound(panicHandler.Err404)
-	kami.MethodNotAllowed(panicHandler.Err405)
+			if routeFound != nil {
+				inner.ServeHTTPC(ctx, rw, r)
+				return
+			}
 
-	// Set up authentication
-	// -- CAS
+			panic(controllers.ErrNotFound)
+		})
+	})
+
+	// authentication (cas) middleware
 	if enable, ok := conf.Config.GetDefault("authentication.cas.enable", false).(bool); ok && enable {
 		url, _ := url.Parse(conf.Config.Get("authentication.cas.url").(string))
 
 		casClient := cas.NewClient(&cas.Options{
 			URL: url,
 		})
-		kami.Use("/", casClient.Handle)
+
+		mux.Use(casClient.Handle)
 	}
 
-	// Set it up as the god context
-	kami.Context = ctx
+	// data rendering middleware
+	mux.UseC(func(inner goji.Handler) goji.Handler {
+		return goji.HandlerFunc(func(ctx context.Context, rw http.ResponseWriter, r *http.Request) {
+			newCtx := data.RenderMiddleware(ctx, rw, r)
+			inner.ServeHTTPC(newCtx, rw, r)
+			data.RenderAfterware(newCtx, rw, r)
+		})
+	})
+
+	// session middleware - yikes? sessionmw?
+	// ctx = sessions.NewStore(ctx, securecookie.GenerateRandomKey(64))
+	// kami.Use("/", sessions.SessionMiddleware("kahinah"))
+	// kami.After("/", sessions.SessionAfterware("kahinah"))
+
+	// FIXME: set up xsrf (getRandomString(50), expire in 3600 minutes)
 
 	// --------------------------------------------------------------------
 	// HANDLERS
 	// --------------------------------------------------------------------
 
-	// Handle static paths
-	kami.Get(util.GetPrefixString("/static/*path"), controllers.StaticHandler)
+	getHandlers := map[string]goji.HandlerFunc{
 
-	// Show the main page
-	kami.Get(util.GetPrefixString("/"), controllers.MainHandler)
+		// static paths
+		"/static/*": controllers.StaticHandler,
 
-	// -- builds --------------------------------------------------------------
+		// main page
+		"/": controllers.MainHandler,
 
-	// specific
-	kami.Get(util.GetPrefixString("/build/:id/"), controllers.BuildGetHandler)
-	// testing
-	kami.Get(util.GetPrefixString("/builds/testing"), controllers.TestingHandler)
-	// published
-	kami.Get(util.GetPrefixString("/builds/published"), controllers.PublishedHandler)
-	// rejected
-	kami.Get(util.GetPrefixString("/builds/rejected"), controllers.RejectedHandler) // list all rejected updates
-	// all builds
-	kami.Get(util.GetPrefixString("/builds"), controllers.BuildsHandler) // show all updates sorted by date
+		// build - specific
+		"/builds/:id/": controllers.BuildGetHandler,
 
-	// -- admin ---------------------------------------------------------------
-	kami.Get(util.GetPrefixString("/admin"), controllers.AdminGetHandler)
-	kami.Post(util.GetPrefixString("/admin"), controllers.AdminPostHandler)
+		// build - testing
+		"/builds/testing": controllers.TestingHandler,
+
+		// build - published
+		"/builds/published": controllers.PublishedHandler,
+
+		// build - rejected
+		"/builds/rejected": controllers.RejectedHandler,
+
+		// build - all builds
+		"/builds": controllers.BuildsHandler,
+
+		// admin
+		"/admin": controllers.AdminGetHandler,
+
+		// authentication - login
+		"/user/login": controllers.UserLoginHandler,
+
+		// authentication - logout
+		"/user/logout": controllers.UserLogoutHandler,
+	}
+
+	postHandlers := map[string]goji.HandlerFunc{
+
+		// build - specific
+		"/builds/:id/": controllers.BuildPostHandler,
+
+		// admin
+		"/admin": controllers.AdminPostHandler,
+	}
+
+	for k, v := range getHandlers {
+		mux.HandleC(pat.Get(util.GetPrefixString(k)), v)
+	}
+
+	for k, v := range postHandlers {
+		mux.HandleC(pat.Post(util.GetPrefixString(k)), v)
+	}
 
 	// // --------------------------------------------------------------------
 	// // AUTHENTICATION [persona]
@@ -161,7 +221,22 @@ func main() {
 	// beego.Run()
 	// <-stop
 
-	kami.Serve()
+	// bind and listen
+	if !flag.Parsed() {
+		flag.Parse()
+	}
+
+	listener := bind.Default()
+	graceful.HandleSignals()
+	bind.Ready()
+
+	err := graceful.Serve(listener, mux)
+
+	if err != nil {
+		log.Logger.Fatalf("unable to serve: %v", err)
+	}
+
+	graceful.Wait()
 }
 
 func getRandomString(n int) string {
