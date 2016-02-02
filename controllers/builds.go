@@ -7,7 +7,7 @@ import (
 	"sort"
 	"time"
 
-	"gopkg.in/guregu/kami.v1"
+	"goji.io/pat"
 
 	"golang.org/x/net/context"
 
@@ -274,7 +274,7 @@ func BuildGetHandler(ctx context.Context, rw http.ResponseWriter, r *http.Reques
 
 	toRender := map[string]interface{}{}
 
-	id := to.Uint64(kami.Param(ctx, "id"))
+	id := to.Uint64(pat.Param(ctx, "id"))
 
 	var pkg models.BuildList
 
@@ -412,7 +412,7 @@ func BuildPostHandler(ctx context.Context, rw http.ResponseWriter, r *http.Reque
 	// load parameters
 	dataRenderer := data.FromContext(ctx)
 
-	id := to.Uint64(kami.Param(ctx, "id"))
+	id := to.Uint64(pat.Param(ctx, "id"))
 	action := r.FormValue("type")
 	comment := r.FormValue("comment")
 

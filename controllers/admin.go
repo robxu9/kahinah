@@ -9,7 +9,6 @@ import (
 	"github.com/robxu9/kahinah/conf"
 	"github.com/robxu9/kahinah/data"
 	"github.com/robxu9/kahinah/models"
-	"github.com/robxu9/kahinah/sessions"
 	"github.com/robxu9/kahinah/util"
 )
 
@@ -76,7 +75,7 @@ func AdminGetHandler(ctx context.Context, rw http.ResponseWriter, r *http.Reques
 func AdminPostHandler(ctx context.Context, rw http.ResponseWriter, r *http.Request) {
 	adminCheck(r)
 
-	sess := sessions.FromContext(ctx)
+	// sess := sessions.FromContext(ctx)
 
 	user := r.FormValue("username")
 	if user != "" {
@@ -90,7 +89,7 @@ func AdminPostHandler(ctx context.Context, rw http.ResponseWriter, r *http.Reque
 		if add != "" {
 			addpermobj := models.PermGet(add)
 			if addpermobj == nil {
-				sess.AddFlash(sessions.FlashError, "No such permission "+add+"!")
+				// sess.AddFlash(sessions.FlashError, "No such permission "+add+"!")
 			} else {
 				if !m2m.Exist(addpermobj) {
 					_, err := m2m.Add(addpermobj)
@@ -104,7 +103,7 @@ func AdminPostHandler(ctx context.Context, rw http.ResponseWriter, r *http.Reque
 		if rm != "" {
 			rmpermobj := models.PermGet(rm)
 			if rmpermobj == nil {
-				sess.AddFlash(sessions.FlashError, "No such permission "+rm+"!")
+				// sess.AddFlash(sessions.FlashError, "No such permission "+rm+"!")
 			} else {
 				_, err := m2m.Remove(rmpermobj)
 				if err != nil {
