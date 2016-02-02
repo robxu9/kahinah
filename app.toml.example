@@ -1,7 +1,7 @@
 # Kahinah v4 configuration file
 
 # basic configuration
-# - baseURL defines the URL that pages are rendered with
+# - baseURL defines the base domain that this is served on
 baseURL = "https://kahinah.openmandriva.org"
 # - listenAddr defines the listening address
 listenAddr = "0.0.0.0"
@@ -27,6 +27,8 @@ name = "data.sqlite"
 host = "localhost:3306"
 user = "root"
 pass = "toor"
+# - debug (print out statements - dangerous!)
+debug = false
 
 # authentication configuration
 # - authentication with CAS

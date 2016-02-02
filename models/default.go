@@ -4,41 +4,46 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/astaxie/beego"
 	"github.com/astaxie/beego/orm"
 	_ "github.com/go-sql-driver/mysql"
+	_ "github.com/lib/pq"
 	_ "github.com/mattn/go-sqlite3"
+	"github.com/robxu9/kahinah/conf"
 )
 
 var (
-	Prefix = beego.AppConfig.String("database::db_prefix")
-	DbType = beego.AppConfig.String("database::db_type")
-	DbName = beego.AppConfig.String("database::db_name")
-	DbHost = beego.AppConfig.String("database::db_host")
-	DbUser = beego.AppConfig.String("database::db_user")
-	DbPass = beego.AppConfig.String("database::db_pass")
+	DBPrefix = conf.Config.GetDefault("database.prefix", "kh_").(string)
+	DBType   = conf.Config.GetDefault("database.type", "sqlite3").(string)
+	DBName   = conf.Config.GetDefault("database.name", "data.sqlite").(string)
+	DBHost   = conf.Config.GetDefault("database.host", "localhost:3306").(string)
+	DBUser   = conf.Config.GetDefault("database.user", "root").(string)
+	DBPass   = conf.Config.GetDefault("database.pass", "toor").(string)
+	DBDebug  = conf.Config.GetDefault("database.debug", false).(bool)
 )
 
 func init() {
-	orm.Debug, _ = beego.AppConfig.Bool("orm.debug")
+	orm.Debug = DBDebug
 	orm.DefaultTimeLoc = time.Local
 	//orm.DefaultTimeLoc = time.UTC
 
-	orm.RegisterModelWithPrefix(Prefix, new(BuildList))
-	orm.RegisterModelWithPrefix(Prefix, new(BuildListPkg))
-	orm.RegisterModelWithPrefix(Prefix, new(Karma))
+	orm.RegisterModelWithPrefix(DBPrefix, new(BuildList))
+	orm.RegisterModelWithPrefix(DBPrefix, new(BuildListPkg))
+	orm.RegisterModelWithPrefix(DBPrefix, new(Karma))
 
-	orm.RegisterModelWithPrefix(Prefix, new(Advisory))
+	orm.RegisterModelWithPrefix(DBPrefix, new(Advisory))
 
-	orm.RegisterModelWithPrefix(Prefix, new(User))
-	orm.RegisterModelWithPrefix(Prefix, new(UserPermission))
+	orm.RegisterModelWithPrefix(DBPrefix, new(User))
+	orm.RegisterModelWithPrefix(DBPrefix, new(UserPermission))
 
-	if DbType == "mysql" {
-		orm.RegisterDataBase("default", "mysql", fmt.Sprintf("%s:%s@tcp(%s)/%s", DbUser, DbPass, DbHost, DbName), 30)
-	} else {
-		orm.RegisterDataBase("default", "sqlite3", "file:"+DbName, 30)
-
+	switch DBType {
+	case "mysql":
+		orm.RegisterDataBase("default", "mysql", fmt.Sprintf("%s:%s@tcp(%s)/%s", DBUser, DBPass, DBHost, DBName), 30)
+	case "sqlite3":
+		orm.RegisterDataBase("default", "sqlite3", "file:"+DBName, 30)
+	case "postgres":
+		orm.RegisterDataBase("default", "postgres", fmt.Sprintf("postgres://%s:%s@%s/%s", DBUser, DBPass, DBHost, DBName))
 	}
+
 	err := orm.RunSyncdb("default", false, true)
 	if err != nil {
 		panic(err)

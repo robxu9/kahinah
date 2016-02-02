@@ -195,14 +195,6 @@ func main() {
 		mux.HandleC(pat.Post(util.GetPrefixString(k)), v)
 	}
 
-	// // --------------------------------------------------------------------
-	// // AUTHENTICATION [persona]
-	// // --------------------------------------------------------------------
-	// //
-	// beego.Router(util.GetPrefixString("/auth/check"), &models.PersonaCheckController{})
-	// beego.Router(util.GetPrefixString("/auth/login"), &models.PersonaLoginController{})
-	// beego.Router(util.GetPrefixString("/auth/logout"), &models.PersonaLogoutController{})
-	//
 	// //
 	// // --------------------------------------------------------------------
 	// // INTEGRATION
@@ -231,9 +223,6 @@ func main() {
 	// 		}
 	// 	}
 	// }()
-	//
-	// beego.Run()
-	// <-stop
 
 	// bind and listen
 	if !flag.Parsed() {
