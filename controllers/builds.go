@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -12,6 +13,7 @@ import (
 	"golang.org/x/net/context"
 
 	"github.com/astaxie/beego/orm"
+	"github.com/knq/sessionmw"
 	"github.com/robxu9/kahinah/conf"
 	"github.com/robxu9/kahinah/data"
 	"github.com/robxu9/kahinah/integration"
@@ -495,6 +497,7 @@ func BuildPostHandler(ctx context.Context, rw http.ResponseWriter, r *http.Reque
 	}
 
 	dataRenderer.Type = data.DataNoRender
+	sessionmw.Set(ctx, data.FlashInfo, fmt.Sprintf("Committed \"%v\" with comment \"%v\".", action, comment))
 	http.Redirect(rw, r, r.URL.String(), http.StatusTemporaryRedirect)
 }
 

@@ -7,6 +7,7 @@ import (
 	"gopkg.in/cas.v1"
 
 	"github.com/goji/ctx-csrf"
+	"github.com/knq/sessionmw"
 	"github.com/robxu9/kahinah/render"
 
 	"golang.org/x/net/context"
@@ -77,18 +78,18 @@ func RenderAfterware(ctx context.Context, rw http.ResponseWriter, r *http.Reques
 			}
 
 			// Add session flash stuff
-			// if f, has := sessionmw.Get(ctx, FlashErr); has {
-			// 	m["flash_err"] = f
-			// 	sessionmw.Delete(ctx, FlashErr)
-			// }
-			// if f, has := sessionmw.Get(ctx, FlashWarn); has {
-			// 	m["flash_warn"] = f
-			// 	sessionmw.Delete(ctx, FlashWarn)
-			// }
-			// if f, has := sessionmw.Get(ctx, FlashInfo); has {
-			// 	m["flash_info"] = f
-			// 	sessionmw.Delete(ctx, FlashInfo)
-			// }
+			if f, has := sessionmw.Get(ctx, FlashErr); has {
+				m["flash_err"] = f
+				sessionmw.Delete(ctx, FlashErr)
+			}
+			if f, has := sessionmw.Get(ctx, FlashWarn); has {
+				m["flash_warn"] = f
+				sessionmw.Delete(ctx, FlashWarn)
+			}
+			if f, has := sessionmw.Get(ctx, FlashInfo); has {
+				m["flash_info"] = f
+				sessionmw.Delete(ctx, FlashInfo)
+			}
 		}
 		renderer.HTML(rw, ret.Status, ret.Template, ret.Data)
 	case DataJSON:

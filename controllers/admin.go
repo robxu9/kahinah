@@ -6,6 +6,7 @@ import (
 	"golang.org/x/net/context"
 
 	"github.com/astaxie/beego/orm"
+	"github.com/knq/sessionmw"
 	"github.com/robxu9/kahinah/conf"
 	"github.com/robxu9/kahinah/data"
 	"github.com/robxu9/kahinah/models"
@@ -75,8 +76,6 @@ func AdminGetHandler(ctx context.Context, rw http.ResponseWriter, r *http.Reques
 func AdminPostHandler(ctx context.Context, rw http.ResponseWriter, r *http.Request) {
 	adminCheck(r)
 
-	// sess := sessions.FromContext(ctx)
-
 	user := r.FormValue("username")
 	if user != "" {
 		model := models.FindUser(user)
@@ -89,7 +88,7 @@ func AdminPostHandler(ctx context.Context, rw http.ResponseWriter, r *http.Reque
 		if add != "" {
 			addpermobj := models.PermGet(add)
 			if addpermobj == nil {
-				// sess.AddFlash(sessions.FlashError, "No such permission "+add+"!")
+				sessionmw.Set(ctx, data.FlashErr, "No such permission "+add+"!")
 			} else {
 				if !m2m.Exist(addpermobj) {
 					_, err := m2m.Add(addpermobj)
@@ -103,7 +102,7 @@ func AdminPostHandler(ctx context.Context, rw http.ResponseWriter, r *http.Reque
 		if rm != "" {
 			rmpermobj := models.PermGet(rm)
 			if rmpermobj == nil {
-				// sess.AddFlash(sessions.FlashError, "No such permission "+rm+"!")
+				sessionmw.Set(ctx, data.FlashErr, "No such permission "+rm+"!")
 			} else {
 				_, err := m2m.Remove(rmpermobj)
 				if err != nil {
