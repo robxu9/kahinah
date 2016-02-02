@@ -6,6 +6,7 @@ import (
 
 	"gopkg.in/cas.v1"
 
+	"github.com/goji/ctx-csrf"
 	"github.com/robxu9/kahinah/render"
 
 	"golang.org/x/net/context"
@@ -23,6 +24,12 @@ const (
 	DataJSON
 	DataJSONP
 	DataXML
+)
+
+const (
+	FlashErr  = "_flash_err"
+	FlashWarn = "_flash_warn"
+	FlashInfo = "_flash_info"
 )
 
 type Render struct {
@@ -60,12 +67,28 @@ func RenderAfterware(ctx context.Context, rw http.ResponseWriter, r *http.Reques
 			// Set the copyright on all pages
 			m["copyright"] = time.Now().Year()
 
-			// FIXME: xsrf tokens
+			// Add xsrf tokens
+			m["xsrf_token"] = csrf.Token(ctx, r)
+			m["xsrf_data"] = csrf.TemplateField(ctx, r)
 
 			// Add authentication information
 			if cas.IsAuthenticated(r) {
 				m["authenticated"] = cas.Username(r)
 			}
+
+			// Add session flash stuff
+			// if f, has := sessionmw.Get(ctx, FlashErr); has {
+			// 	m["flash_err"] = f
+			// 	sessionmw.Delete(ctx, FlashErr)
+			// }
+			// if f, has := sessionmw.Get(ctx, FlashWarn); has {
+			// 	m["flash_warn"] = f
+			// 	sessionmw.Delete(ctx, FlashWarn)
+			// }
+			// if f, has := sessionmw.Get(ctx, FlashInfo); has {
+			// 	m["flash_info"] = f
+			// 	sessionmw.Delete(ctx, FlashInfo)
+			// }
 		}
 		renderer.HTML(rw, ret.Status, ret.Template, ret.Data)
 	case DataJSON:

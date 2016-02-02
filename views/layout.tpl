@@ -7,6 +7,8 @@
     <meta name="description" content="">
     <meta name="author" content="">
 
+    <meta name="_xsrf" content="{{.xsrf_token}}" />
+
     <link rel="shortcut icon" href="{{url "/static/img/favicon.png"}}">
 
     <title>{{.Title}} | Kahinah</title>
@@ -28,6 +30,7 @@
     <!-- Bootstrap core JavaScript -->
     <script>window.urlPrefix = "{{url ""}}";</script>
     <script src="//code.jquery.com/jquery-2.2.0.min.js"></script>
+    <script src="{{url "/static/js/xsrf.js"}}"></script>
   </head>
 
   <body>
@@ -106,9 +109,9 @@
         </div>
       </nav>
 
-      {{if .flash.error}}<div class="alert alert-danger">{{.flash.error}}</div>{{end}}
-      {{if .flash.warning}}<div class="alert alert-warning">{{.flash.warning}}</div>{{end}}
-      {{if .flash.notice}}<div class="alert alert-success">{{.flash.notice}}</div>{{end}}
+      {{if .flash_err}}<div class="alert alert-danger">{{.flash_err}}</div>{{end}}
+      {{if .flash_warn}}<div class="alert alert-warning">{{.flash_warn}}</div>{{end}}
+      {{if .flash_info}}<div class="alert alert-success">{{.flash_info}}</div>{{end}}
 
       {{yield}}
 

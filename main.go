@@ -19,6 +19,7 @@ import (
 
 	"gopkg.in/cas.v1"
 
+	"github.com/goji/ctx-csrf"
 	"github.com/robxu9/kahinah/conf"
 	"github.com/robxu9/kahinah/controllers"
 	"github.com/robxu9/kahinah/data"
@@ -31,6 +32,11 @@ import (
 	"github.com/zenazn/goji/web/mutil"
 	"menteslibres.net/gosexy/to"
 )
+
+func init() {
+	bind.WithFlag()
+	graceful.DoubleKickWindow(2 * time.Second)
+}
 
 func main() {
 	log.Logger.Info("starting kahinah v4")
@@ -110,6 +116,18 @@ func main() {
 
 		mux.Use(casClient.Handle)
 	}
+
+	// sessions middleware
+	// sessionConfig := &sessionmw.Config{
+	// 	Secret:      []byte(getRandomString(30)),
+	// 	BlockSecret: []byte(getRandomString(30)),
+	// 	Store:       kv.NewMemStore(),
+	// 	Name:        "kahinah",
+	// }
+	// mux.UseC(sessionConfig.Handler)
+
+	// csrf middleware
+	mux.UseC(csrf.Protect([]byte(getRandomString(30))))
 
 	// data rendering middleware
 	mux.UseC(func(inner goji.Handler) goji.Handler {
@@ -227,6 +245,7 @@ func main() {
 	}
 
 	listener := bind.Default()
+	log.Logger.Infof("binding to %v", bind.Sniff())
 	graceful.HandleSignals()
 	bind.Ready()
 
