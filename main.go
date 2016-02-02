@@ -20,6 +20,9 @@ import (
 	"gopkg.in/cas.v1"
 
 	"github.com/goji/ctx-csrf"
+	"github.com/gorilla/securecookie"
+	"github.com/knq/kv"
+	"github.com/knq/sessionmw"
 	"github.com/robxu9/kahinah/conf"
 	"github.com/robxu9/kahinah/controllers"
 	"github.com/robxu9/kahinah/data"
@@ -118,13 +121,13 @@ func main() {
 	}
 
 	// sessions middleware
-	// sessionConfig := &sessionmw.Config{
-	// 	Secret:      []byte(getRandomString(30)),
-	// 	BlockSecret: []byte(getRandomString(30)),
-	// 	Store:       kv.NewMemStore(),
-	// 	Name:        "kahinah",
-	// }
-	// mux.UseC(sessionConfig.Handler)
+	sessionConfig := &sessionmw.Config{
+		Secret:      []byte(securecookie.GenerateRandomKey(64)),
+		BlockSecret: []byte(securecookie.GenerateRandomKey(32)),
+		Store:       kv.NewMemStore(),
+		Name:        "kahinah",
+	}
+	mux.UseC(sessionConfig.Handler)
 
 	// csrf middleware
 	mux.UseC(csrf.Protect([]byte(getRandomString(30))))
@@ -137,13 +140,6 @@ func main() {
 			data.RenderAfterware(newCtx, rw, r)
 		})
 	})
-
-	// session middleware - yikes? sessionmw?
-	// ctx = sessions.NewStore(ctx, securecookie.GenerateRandomKey(64))
-	// kami.Use("/", sessions.SessionMiddleware("kahinah"))
-	// kami.After("/", sessions.SessionAfterware("kahinah"))
-
-	// FIXME: set up xsrf (getRandomString(50), expire in 3600 minutes)
 
 	// --------------------------------------------------------------------
 	// HANDLERS
@@ -248,6 +244,13 @@ func main() {
 	log.Logger.Infof("binding to %v", bind.Sniff())
 	graceful.HandleSignals()
 	bind.Ready()
+
+	graceful.PreHook(func() {
+		log.Logger.Info("caught shutdown signal, stopping...")
+	})
+	graceful.PostHook(func() {
+		log.Logger.Info("http server shut down")
+	})
 
 	err := graceful.Serve(listener, mux)
 

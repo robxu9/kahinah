@@ -7,8 +7,6 @@ baseURL = "https://kahinah.openmandriva.org"
 listenAddr = "0.0.0.0"
 # - listenPort defines the listening port
 listenPort = 3001
-# - listenFCGI starts the FCGI listener instead of the HTTP listener
-listenFCGI = false
 # - runMode determines whether on panics, we should dump the stacktrace too.
 # -- it also determines whether we should reparse templates on every load.
 # -- dev means yes, prod means no.
