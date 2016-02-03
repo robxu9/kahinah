@@ -2,6 +2,10 @@ package models
 
 import "github.com/astaxie/beego/orm"
 
+const (
+	UserSystem = "[System]"
+)
+
 type User struct {
 	Id          uint64 `orm:"auto;pk"`
 	Username    string `orm:"type(text)"`
@@ -35,6 +39,11 @@ type UserPermission struct {
 func (u *UserPermission) Save() {
 	o := orm.NewOrm()
 	o.Update(u)
+}
+
+func init() {
+	// make sure we have a system user
+	FindUser(UserSystem)
 }
 
 // Finds the user with the given username. If a user doesn't exist,
