@@ -2,8 +2,6 @@ package controllers
 
 import (
 	"fmt"
-	"io/ioutil"
-	"log"
 	"net/http"
 	"sort"
 	"time"
@@ -17,6 +15,7 @@ import (
 	"github.com/robxu9/kahinah/conf"
 	"github.com/robxu9/kahinah/data"
 	"github.com/robxu9/kahinah/integration"
+	"github.com/robxu9/kahinah/log"
 	"github.com/robxu9/kahinah/models"
 	"github.com/robxu9/kahinah/util"
 	"menteslibres.net/gosexy/to"
@@ -131,7 +130,7 @@ func RejectedHandler(ctx context.Context, rw http.ResponseWriter, r *http.Reques
 	o := orm.NewOrm()
 	qt := o.QueryTable(new(models.BuildList))
 
-	cnt, err := qt.Filter("status", models.STATUS_REJECTED).Count()
+	cnt, err := qt.Filter("status", models.StatusRejected).Count()
 	if err != nil {
 		panic(err)
 	}
@@ -145,7 +144,7 @@ func RejectedHandler(ctx context.Context, rw http.ResponseWriter, r *http.Reques
 		page = totalpages
 	}
 
-	_, err = qt.Limit(50, (page-1)*50).OrderBy("-Updated").Filter("status", models.STATUS_REJECTED).All(&packages)
+	_, err = qt.Limit(50, (page-1)*50).OrderBy("-Updated").Filter("status", models.StatusRejected).All(&packages)
 	if err != nil && err != orm.ErrNoRows {
 		panic(err)
 	}
@@ -189,7 +188,7 @@ func PublishedHandler(ctx context.Context, rw http.ResponseWriter, r *http.Reque
 		qt = qt.Filter("platform", filterPlatform)
 	}
 
-	cnt, err := qt.Filter("status", models.STATUS_PUBLISHED).Count()
+	cnt, err := qt.Filter("status", models.StatusPublished).Count()
 	if err != nil {
 		panic(err)
 	}
@@ -203,7 +202,7 @@ func PublishedHandler(ctx context.Context, rw http.ResponseWriter, r *http.Reque
 		page = totalpages
 	}
 
-	_, err = qt.Limit(50, (page-1)*50).OrderBy("-Updated").Filter("status", models.STATUS_PUBLISHED).All(&packages)
+	_, err = qt.Limit(50, (page-1)*50).OrderBy("-Updated").Filter("status", models.StatusPublished).All(&packages)
 	if err != nil && err != orm.ErrNoRows {
 		panic(err)
 	}
@@ -236,7 +235,7 @@ func TestingHandler(ctx context.Context, rw http.ResponseWriter, r *http.Request
 	o := orm.NewOrm()
 	qt := o.QueryTable(new(models.BuildList))
 
-	num, err := qt.Filter("status", models.STATUS_TESTING).All(&packages)
+	num, err := qt.Filter("status", models.StatusTesting).All(&packages)
 	if err != nil && err != orm.ErrNoRows {
 		panic(err)
 	}
@@ -290,23 +289,9 @@ func BuildGetHandler(ctx context.Context, rw http.ResponseWriter, r *http.Reques
 		panic(err)
 	}
 
-	if pkg.Changelog != "" {
-		resp, err := http.Get(pkg.Changelog)
-		if err == nil {
-			defer resp.Body.Close()
-			changelog, _ := ioutil.ReadAll(resp.Body)
-			toRender["Changelog"] = processChangelog(string(changelog))
-		} else {
-			toRender["Changelog"] = "Failed to retrieve changelog: " + err.Error()
-		}
-	}
-
-	toRender["Commits"] = integration.Commits(&pkg)
-
-	toRender["Url"] = integration.Url(&pkg)
-
 	o.LoadRelated(&pkg, "Submitter")
 	o.LoadRelated(&pkg, "Packages")
+	o.LoadRelated(&pkg, "Links")
 
 	// karma controls
 	totalKarma := getTotalKarma(id) // get total karma
@@ -357,7 +342,7 @@ func BuildGetHandler(ctx context.Context, rw http.ResponseWriter, r *http.Reques
 		var userkarma models.Karma
 		err = kt.Filter("User__Email", user).Filter("List__Id", id).OrderBy("-Time").Limit(1).One(&userkarma)
 		if err != orm.ErrNoRows && err != nil {
-			log.Println(err)
+			panic(err)
 		} else if err == nil {
 			if userkarma.Vote == models.KARMA_UP {
 				toRender["UserVote"] = 1
@@ -380,7 +365,7 @@ func BuildGetHandler(ctx context.Context, rw http.ResponseWriter, r *http.Reques
 
 	toRender["Title"] = "Build " + to.String(id) + ": " + pkg.Name
 	toRender["Loc"] = 1
-	if pkg.Status == models.STATUS_TESTING {
+	if pkg.Status == models.StatusTesting {
 		toRender["Tab"] = 1
 		if user != "" {
 			toRender["KarmaControls"] = true
@@ -393,9 +378,9 @@ func BuildGetHandler(ctx context.Context, rw http.ResponseWriter, r *http.Reques
 				}
 			}
 		}
-	} else if pkg.Status == models.STATUS_PUBLISHED {
+	} else if pkg.Status == models.StatusPublished {
 		toRender["Tab"] = 2
-	} else if pkg.Status == models.STATUS_REJECTED {
+	} else if pkg.Status == models.StatusRejected {
 		toRender["Tab"] = 3
 	} else {
 		toRender["Tab"] = 4
@@ -486,13 +471,24 @@ func BuildPostHandler(ctx context.Context, rw http.ResponseWriter, r *http.Reque
 		lowerThreshold := conf.Config.GetDefault("karma.lowerKarma", -3).(int)
 
 		if karmaTotal >= upperThreshold {
-			pkg.Status = models.STATUS_PUBLISHED
+			pkg.Status = models.StatusPublished
 			o.Update(&pkg)
-			go integration.Publish(&pkg)
+			go func() {
+				err := integration.Accept(&pkg)
+				if err != nil {
+					log.Logger.Critical("Unable to accept update %v: %v", id, err)
+				}
+			}()
 		} else if karmaTotal <= lowerThreshold {
-			pkg.Status = models.STATUS_REJECTED
+			pkg.Status = models.StatusRejected
 			o.Update(&pkg)
-			go integration.Reject(&pkg)
+
+			go func() {
+				err := integration.Reject(&pkg)
+				if err != nil {
+					log.Logger.Critical("Unable to reject update %v: %v", id, err)
+				}
+			}()
 		}
 	}
 
@@ -536,22 +532,4 @@ func getTotalKarma(id uint64) int {
 	}
 
 	return totalKarma
-}
-
-func processChangelog(changelog string) string {
-	toreturn := ""
-	open := true
-	for _, c := range changelog {
-		if c == '<' {
-			toreturn += string(c)
-			toreturn += "email hidden"
-			open = false
-		} else if c == '>' {
-			toreturn += string(c)
-			open = true
-		} else if open {
-			toreturn += string(c)
-		}
-	}
-	return toreturn
 }

@@ -1,24 +1,22 @@
 package integration
 
 import (
-	"log"
+	"errors"
 
 	"github.com/robxu9/kahinah/models"
 )
 
+var (
+	ErrDisabled       = errors.New("integration: disabled")
+	ErrNotImplemented = errors.New("integration: not implemented")
+)
+
 type Integration interface {
-	// Check for new packages to add to the buildsystem
-	Ping() error
-	// Check for new packages to add to the buildsystem, with parameters
-	PingParams(map[string]string) error
-	// Retrieve the url of the buildlist commit page
-	Commits(*models.BuildList) string
-	// Retrieve the url of the corresponding buildlist
-	Url(*models.BuildList) string
-	// Publish the buildlist
-	Publish(*models.BuildList) error
-	// Reject the buildlist
-	Reject(*models.BuildList) error
+	Poll() error            // poll for new updates
+	Hook(interface{}) error // receive and process a webhook from the BS
+
+	Accept(*models.BuildList) error // signal to the BS to accept
+	Reject(*models.BuildList) error // signal to the BS to reject
 }
 
 var handler Integration
@@ -27,42 +25,18 @@ func Integrate(i Integration) {
 	handler = i
 }
 
-func Ping() {
-	go func() {
-		err := handler.Ping()
-		if err != nil {
-			log.Printf("Error pinging integrator: %s\n", err)
-		}
-	}()
+func Poll() error {
+	return handler.Poll()
 }
 
-func PingParams(m map[string]string) {
-	go func() {
-		err := handler.PingParams(m)
-		if err != nil {
-			log.Printf("Error pinging integrator with parameters: %s\n", err)
-		}
-	}()
+func Hook(i interface{}) error {
+	return handler.Hook(i)
 }
 
-func Commits(m *models.BuildList) string {
-	return handler.Commits(m)
+func Accept(l *models.BuildList) error {
+	return handler.Accept(l)
 }
 
-func Url(m *models.BuildList) string {
-	return handler.Url(m)
-}
-
-func Publish(m *models.BuildList) {
-	err := handler.Publish(m)
-	if err != nil {
-		log.Printf("Error calling publishing integrator for id %s: %s\n", m.HandleId, err)
-	}
-}
-
-func Reject(m *models.BuildList) {
-	err := handler.Reject(m)
-	if err != nil {
-		log.Printf("Error calling rejecting integrator for id %s: %s\n", m.HandleId, err)
-	}
+func Reject(l *models.BuildList) error {
+	return handler.Reject(l)
 }

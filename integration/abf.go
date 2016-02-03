@@ -49,33 +49,30 @@ func init() {
 	abfClient = &http.Client{}
 }
 
-type ABF byte
+type ABF struct{}
 
-func (a ABF) Ping() error {
-
+func (a *ABF) Poll() error {
 	if !abfEnable {
-		return nil // disabled
+		return ErrDisabled
 	}
 
 	for v := range abfPlatformsSet.Iterator() {
-		a.pingBuildCompleted(v)
-		a.pingTestingBuilds(v)
+		a.pollBuildsInTesting(v) // poll testing builds first if we missed any
+		a.pollBuildsCompleted(v) // then poll completed builds
 	}
-
-	// FUTURE TODO: ping published & rejected builds to ensure consistency
-
-	//if err != nil && err2 != nil {
-	//	return fmt.Errorf("abf: two errors: %s | %s", err, err2)
-	//} else if err != nil {
-	//	return err
-	//} else if err2 != nil {
-	//	return err2
-	//}
 
 	return nil
 }
 
-func (a ABF) handleResponse(resp *http.Response, testing bool) error {
+func (a *ABF) Hook(i interface{}) error {
+	if !abfEnable {
+		return ErrDisabled
+	}
+
+	return ErrNotImplemented
+}
+
+func (a *ABF) handleResponse(resp *http.Response, testing bool) error {
 
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
@@ -126,7 +123,7 @@ func (a ABF) handleResponse(resp *http.Response, testing bool) error {
 			// *check for duplicates before continuing
 			// *we only check for duuplicates in the same platform; different platforms have different conditions
 			var possibleDuplicate models.BuildList
-			err = o.QueryTable(new(models.BuildList)).Filter("Platform", dig.String(&json, "save_to_repository", "platform", "name")).Filter("HandleCommitId", dig.String(&json, "commit_hash")).Filter("Status", models.STATUS_TESTING).One(&possibleDuplicate)
+			err = o.QueryTable(new(models.BuildList)).Filter("Platform", dig.String(&json, "save_to_repository", "platform", "name")).Filter("HandleCommitId", dig.String(&json, "commit_hash")).Filter("Status", models.StatusTesting).One(&possibleDuplicate)
 			if err == nil { // we found a duplicate... handle and continue
 				possibleDuplicate.HandleId = possibleDuplicate.HandleId + ";" + to.String(id)
 				possibleDuplicate.Architecture += ";" + dig.String(&json, "arch", "name")
@@ -170,6 +167,11 @@ func (a ABF) handleResponse(resp *http.Response, testing bool) error {
 				o.Insert(listpkg)
 			}
 
+			for _, listlinks := range list.Links {
+				listlinks.List = list
+				o.Insert(listlinks)
+			}
+
 			go util.MailModel(list)
 		}
 	}
@@ -177,7 +179,7 @@ func (a ABF) handleResponse(resp *http.Response, testing bool) error {
 	return nil
 }
 
-func (a ABF) pingBuildCompleted(platformId string) error {
+func (a *ABF) pollBuildsCompleted(platformId string) error {
 	// regular usage: use 0 (Build has been completed)
 	// below: use 12000 ([testing] build has been published)
 	req, err := http.NewRequest("GET", abfURL+"/build_lists.json?per_page=100&filter[status]=0&filter[ownership]=index&filter[platform_id]="+platformId, nil)
@@ -195,7 +197,7 @@ func (a ABF) pingBuildCompleted(platformId string) error {
 	return a.handleResponse(resp, true)
 }
 
-func (a ABF) pingTestingBuilds(platformId string) error {
+func (a *ABF) pollBuildsInTesting(platformId string) error {
 	req, err := http.NewRequest("GET", abfURL+"/build_lists.json?per_page=100&filter[status]=12000&filter[ownership]=index&filter[platform_id]="+platformId, nil)
 	if err != nil {
 		return err
@@ -211,19 +213,7 @@ func (a ABF) pingTestingBuilds(platformId string) error {
 	return a.handleResponse(resp, false)
 }
 
-func (a ABF) PingParams(m map[string]string) error {
-	return fmt.Errorf("abf: PingParams not supported yet.")
-}
-
-func (a ABF) Commits(m *models.BuildList) string {
-	return "https://abf.io/" + m.HandleProject + "/commits/" + m.Platform
-}
-
-func (a ABF) Url(m *models.BuildList) string {
-	return "https://abf.io/build_lists/" + strings.Split(m.HandleId, ";")[0]
-}
-
-func (a ABF) Publish(m *models.BuildList) error {
+func (a *ABF) Accept(m *models.BuildList) error {
 	go util.MailModel(m)
 
 	for _, v := range strings.Split(m.HandleId, ";") {
@@ -247,7 +237,7 @@ func (a ABF) Publish(m *models.BuildList) error {
 	return nil
 }
 
-func (a ABF) Reject(m *models.BuildList) error {
+func (a *ABF) Reject(m *models.BuildList) error {
 	go util.MailModel(m)
 
 	for _, v := range strings.Split(m.HandleId, ";") {
@@ -271,7 +261,7 @@ func (a ABF) Reject(m *models.BuildList) error {
 	return nil
 }
 
-func (a ABF) sendToTesting(id uint64) error {
+func (a *ABF) sendToTesting(id uint64) error {
 	req, err := http.NewRequest("PUT", abfURL+"/build_lists/"+to.String(id)+"/publish_into_testing.json", nil)
 	if err != nil {
 		return err
@@ -293,7 +283,7 @@ func (a ABF) sendToTesting(id uint64) error {
 	return nil
 }
 
-func (a ABF) getJSONList(id uint64) (list map[string]interface{}, err error) {
+func (a *ABF) getJSONList(id uint64) (list map[string]interface{}, err error) {
 	req, err := http.NewRequest("GET", abfURL+"/build_lists/"+to.String(id)+".json", nil)
 	if err != nil {
 		return
@@ -323,7 +313,7 @@ func (a ABF) getJSONList(id uint64) (list map[string]interface{}, err error) {
 	return
 }
 
-func (a ABF) makeBuildList(list map[string]interface{}) (*models.BuildList, error) {
+func (a *ABF) makeBuildList(list map[string]interface{}) (*models.BuildList, error) {
 	pkg := a.makePkgList(list)
 
 	changelog := ""
@@ -340,30 +330,46 @@ func (a ABF) makeBuildList(list map[string]interface{}) (*models.BuildList, erro
 	}
 
 	user := a.getUser(dig.Uint64(&list, "user", "id"))
+	handleId := to.String(dig.Uint64(&list, "id"))
+	handleProject := dig.String(&list, "project", "fullname")
+	platform := dig.String(&list, "save_to_repository", "platform", "name")
 
 	bl := models.BuildList{
-		HandleId:       to.String(dig.Uint64(&list, "id")),
-		HandleProject:  dig.String(&list, "project", "fullname"),
+		HandleId:       handleId,
+		HandleProject:  handleProject,
 		HandleCommitId: dig.String(&list, "commit_hash"),
 		Diff:           a.makeDiff(dig.String(&list, "project", "git_url"), dig.String(&list, "last_published_commit_hash"), dig.String(&list, "commit_hash")),
 
 		//Platform:     dig.String(&list, "build_for_platform", "name"),
-		Platform:     dig.String(&list, "save_to_repository", "platform", "name"),
+		Platform:     platform,
 		Repo:         dig.String(&list, "save_to_repository", "name"),
 		Architecture: dig.String(&list, "arch", "name"),
 		Name:         dig.String(&list, "project", "name"),
 		Submitter:    user,
 		Type:         dig.String(&list, "update_type"),
-		Status:       models.STATUS_TESTING,
-		Changelog:    changelog, // url
-		Packages:     pkg,
-		BuildDate:    time.Unix(dig.Int64(&list, "updated_at"), 0),
+		Status:       models.StatusTesting,
+		Links: []*models.BuildListLink{
+			&models.BuildListLink{
+				Name: models.LinkMainURL,
+				Url:  fmt.Sprintf("https://abf.io/build_lists/%v", handleId),
+			},
+			&models.BuildListLink{
+				Name: models.ChangelogURL,
+				Url:  changelog,
+			},
+			&models.BuildListLink{
+				Name: models.SCMLogURL,
+				Url:  fmt.Sprintf("https://abf.io/%v/commits/%v", handleProject, platform),
+			},
+		},
+		Packages:  pkg,
+		BuildDate: time.Unix(dig.Int64(&list, "updated_at"), 0),
 	}
 
 	return &bl, nil
 }
 
-func (a ABF) makeDiff(gitUrl, fromHash, toHash string) string {
+func (a *ABF) makeDiff(gitUrl, fromHash, toHash string) string {
 	// make sure it's not disabled
 	if !abfGitDiff {
 		return "Diff creation disabled."
@@ -437,7 +443,7 @@ func (a ABF) makeDiff(gitUrl, fromHash, toHash string) string {
 	}
 }
 
-func (a ABF) makePkgList(json map[string]interface{}) []*models.BuildListPkg {
+func (a *ABF) makePkgList(json map[string]interface{}) []*models.BuildListPkg {
 	pkgs := make([]interface{}, 0)
 	dig.Get(&json, &pkgs, "packages")
 
@@ -468,7 +474,7 @@ func (a ABF) makePkgList(json map[string]interface{}) []*models.BuildListPkg {
 	return pkg
 }
 
-func (a ABF) getUser(id uint64) *models.User {
+func (a *ABF) getUser(id uint64) *models.User {
 
 	o := orm.NewOrm()
 
@@ -503,9 +509,9 @@ func (a ABF) getUser(id uint64) *models.User {
 			return nil
 		}
 
-		email := dig.String(&result, "user", "email")
+		name := dig.String(&result, "user", "name")
 
-		userModel = models.FindUser(email)
+		userModel = models.FindUser(name)
 		userModel.Integration = to.String(id)
 		userModel.Save()
 
