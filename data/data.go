@@ -64,6 +64,10 @@ func RenderAfterware(ctx context.Context, rw http.ResponseWriter, r *http.Reques
 	case DataNoRender:
 		break
 	case DataHTML:
+		if ret.Template == "" {
+			// guess we're not rendering anything
+			break
+		}
 		if m, ok := ret.Data.(map[string]interface{}); ok {
 			// Set the copyright on all pages
 			m["copyright"] = time.Now().Year()

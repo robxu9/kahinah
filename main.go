@@ -26,6 +26,7 @@ import (
 	"github.com/robxu9/kahinah/conf"
 	"github.com/robxu9/kahinah/controllers"
 	"github.com/robxu9/kahinah/data"
+	"github.com/robxu9/kahinah/integration"
 	"github.com/robxu9/kahinah/log"
 	"github.com/robxu9/kahinah/render"
 	"github.com/robxu9/kahinah/util"
@@ -153,76 +154,63 @@ func main() {
 		// main page
 		"/": controllers.MainHandler,
 
-		// build - specific
-		"/builds/:id/": controllers.BuildGetHandler,
-
 		// build - testing
-		"/builds/testing": controllers.TestingHandler,
+		"/builds/testing/": controllers.TestingHandler,
 
 		// build - published
-		"/builds/published": controllers.PublishedHandler,
+		"/builds/published/": controllers.PublishedHandler,
 
 		// build - rejected
-		"/builds/rejected": controllers.RejectedHandler,
+		"/builds/rejected/": controllers.RejectedHandler,
+
+		// build - specific
+		"/build/:id/": controllers.BuildGetHandler,
 
 		// build - all builds
-		"/builds": controllers.BuildsHandler,
+		"/builds/": controllers.BuildsHandler,
 
 		// admin
-		"/admin": controllers.AdminGetHandler,
+		"/admin/": controllers.AdminGetHandler,
 
 		// authentication - login
-		"/user/login": controllers.UserLoginHandler,
+		"/user/login/": controllers.UserLoginHandler,
 
 		// authentication - logout
-		"/user/logout": controllers.UserLogoutHandler,
+		"/user/logout/": controllers.UserLogoutHandler,
 	}
 
 	postHandlers := map[string]goji.HandlerFunc{
 
 		// build - specific
-		"/builds/:id/": controllers.BuildPostHandler,
+		"/build/:id/": controllers.BuildPostHandler,
 
 		// admin
-		"/admin": controllers.AdminPostHandler,
+		"/admin/": controllers.AdminPostHandler,
 	}
 
 	for k, v := range getHandlers {
+		if len(k) > 1 && strings.HasSuffix(k, "/") {
+			mux.HandleFunc(pat.Get(util.GetPrefixString(k[:len(k)-1])), controllers.RedirectHandler)
+		}
 		mux.HandleC(pat.Get(util.GetPrefixString(k)), v)
 	}
 
 	for k, v := range postHandlers {
+		if len(k) > 1 && strings.HasSuffix(k, "/") {
+			mux.HandleFunc(pat.Get(util.GetPrefixString(k[:len(k)-1])), controllers.RedirectHandler)
+		}
 		mux.HandleC(pat.Post(util.GetPrefixString(k)), v)
 	}
 
-	// //
-	// // --------------------------------------------------------------------
-	// // INTEGRATION
-	// // --------------------------------------------------------------------
-	// //
-	// stop := make(chan bool)
-	//
-	// integration.Integrate(integration.ABF(1))
-	// // ping target (for integration)
-	// //beego.Router("/ping", &controllers.PingController{})
-	//
-	// go func() {
-	// 	timeout := make(chan bool)
-	// 	go func() {
-	// 		for {
-	// 			timeout <- true
-	// 			time.Sleep(1 * time.Hour)
-	// 		}
-	// 	}()
-	// 	for {
-	// 		select {
-	// 		case <-stop:
-	// 			return
-	// 		case <-timeout:
-	// 			integration.Ping()
-	// 		}
-	// 	}
-	// }()
+	// setup integration
+	integration.Integrate(&integration.ABF{})
+	go func() {
+		err := integration.Poll()
+		if err != nil {
+			log.Logger.Critical("integration failed to poll: %v", err)
+		}
+		time.Sleep(1 * time.Hour)
+	}()
 
 	// bind and listen
 	if !flag.Parsed() {

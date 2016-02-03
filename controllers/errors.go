@@ -138,8 +138,8 @@ func (p *PanicHandler) Err500(ex interface{}, ctx context.Context, rw http.Respo
 
 	stackTrace := errors.Wrap(ex, 4).ErrorStack()
 
-	log.Logger.Critical("Internal Server Error: %v", ex)
-	log.Logger.Critical("Stacktrace: %v", stackTrace)
+	log.Logger.Critical("err  (%v): Internal Server Error: %v", r.RemoteAddr, ex)
+	log.Logger.Critical("err  (%v): Stacktrace: %v", r.RemoteAddr, stackTrace)
 
 	if mode := conf.Config.GetDefault("runMode", "dev").(string); mode == "dev" {
 		// dump the stacktrace out on the page too
