@@ -2,6 +2,6 @@ kahinah
 *.toml
 !*.toml.example
 gin-bin
-news.txt
+news.md
 *~
 data.sqlite

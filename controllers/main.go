@@ -4,6 +4,8 @@ import (
 	"html/template"
 	"io/ioutil"
 	"net/http"
+	"os"
+	"time"
 
 	"github.com/microcosm-cc/bluemonday"
 	"github.com/robxu9/kahinah/data"
@@ -14,6 +16,12 @@ import (
 // MainHandler shows the main page.
 func MainHandler(ctx context.Context, rw http.ResponseWriter, r *http.Request) {
 	dataRenderer := data.FromContext(ctx)
+
+	stat, err := os.Stat("news.md")
+	var time time.Time
+	if err == nil {
+		time = stat.ModTime()
+	}
 
 	bte, err := ioutil.ReadFile("news.md")
 	markdown := []byte("_Couldn't retrieve the latest news._")
@@ -26,6 +34,7 @@ func MainHandler(ctx context.Context, rw http.ResponseWriter, r *http.Request) {
 	dataRenderer.Data = map[string]interface{}{
 		"Title": "Main",
 		"News":  template.HTML(bluemonday.UGCPolicy().SanitizeBytes(output)),
+		"Time":  time,
 		"Loc":   0,
 	}
 	dataRenderer.Template = "index"

@@ -172,6 +172,11 @@ func (a *ABF) handleResponse(resp *http.Response, testing bool) error {
 				o.Insert(listlinks)
 			}
 
+			for _, listkarma := range list.Karma {
+				listkarma.List = list
+				o.Insert(listkarma)
+			}
+
 			go util.MailModel(list)
 		}
 	}
@@ -364,6 +369,13 @@ func (a *ABF) makeBuildList(list map[string]interface{}) (*models.BuildList, err
 		},
 		Packages:  pkg,
 		BuildDate: time.Unix(dig.Int64(&list, "updated_at"), 0),
+		Karma: []*models.Karma{
+			&models.Karma{
+				User:    models.FindUser(models.UserSystem),
+				Vote:    models.KARMA_NONE,
+				Comment: "Imported this build from ABF.",
+			},
+		},
 	}
 
 	return &bl, nil

@@ -64,8 +64,7 @@ func (p *PanicHandler) Err404(ctx context.Context, rw http.ResponseWriter, r *ht
 
 	result := make(map[string]interface{})
 	result["Title"] = "i have no idea what i'm doing"
-	result["Loc"] = -2
-	result["Tab"] = -1
+	result["Nav"] = -1
 
 	if j, found := util.Cache.Get("404_xkcd_json"); found {
 
@@ -100,8 +99,7 @@ func (p *PanicHandler) Err400(ctx context.Context, rw http.ResponseWriter, r *ht
 
 	data := make(map[string]interface{})
 	data["Title"] = "huh wut"
-	data["Loc"] = -2
-	data["Tab"] = -1
+	data["Nav"] = -1
 
 	renderer.HTML(rw, 400, "errors/400", data)
 }
@@ -111,8 +109,7 @@ func (p *PanicHandler) Err403(ctx context.Context, rw http.ResponseWriter, r *ht
 
 	data := make(map[string]interface{})
 	data["Title"] = "bzzzt..."
-	data["Loc"] = -2
-	data["Tab"] = -1
+	data["Nav"] = -1
 
 	renderer.HTML(rw, 403, "errors/403", data)
 }
@@ -122,8 +119,7 @@ func (p *PanicHandler) Err405(ctx context.Context, rw http.ResponseWriter, r *ht
 
 	renderer.HTML(rw, 405, "errors/405", map[string]interface{}{
 		"Title": "Method Not Allowed",
-		"Loc":   -2,
-		"Tab":   -1,
+		"Nav":   -1,
 	})
 }
 
@@ -132,8 +128,7 @@ func (p *PanicHandler) Err500(ex interface{}, ctx context.Context, rw http.Respo
 
 	data := make(map[string]interface{})
 	data["Title"] = "eek fire FIRE"
-	data["Loc"] = -2
-	data["Tab"] = -1
+	data["Nav"] = -1
 	data["error"] = fmt.Sprintf("%v", ex)
 
 	stackTrace := errors.Wrap(ex, 4).ErrorStack()
@@ -155,8 +150,7 @@ func (p *PanicHandler) Err550(ctx context.Context, rw http.ResponseWriter, r *ht
 	data := make(map[string]interface{})
 	data["Title"] = "Oh No!"
 	//data["Permission"] = r.Form.Get("permission") // FIXME
-	data["Loc"] = -2
-	data["Tab"] = -1
+	data["Nav"] = -1
 
 	renderer.HTML(rw, 550, "errors/550", data)
 }

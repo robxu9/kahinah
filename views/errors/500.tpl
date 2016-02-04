@@ -1,14 +1,16 @@
-
-      <div class="jumbotron">
-        <h1>500.</h1>
-        <p class="lead">{{.error}}</p>
-        <p class="lead">Internal Server Error.</p>
-        <br/>
+<section class="section">
+    <div class="container">
+        <h1 class="title">500</h1>
+        <h2 class="subtitle">Internal Server Error.</h2>
+        <p>The error was: {{.error}}</p>
         {{if .stacktrace}}
-        <p class="lead">Stacktrace:</p>
+        <p>Stacktrace:</p>
         <pre>
 {{.stacktrace}}
         </pre>
         {{end}}
-        <p><a class="btn btn-lg btn-default" href="#" onclick="history.back();" role="button">Back</a></p>
-      </div>
+        <a href="//github.com/robxu9/kahinah">You should report this to the Kahinah developers.</a>
+        <br/>
+        <p><a class="button" href="#" onclick="history.back();" role="button">Back</a></p>
+    </div>
+</section>

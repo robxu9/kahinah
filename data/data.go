@@ -76,6 +76,11 @@ func RenderAfterware(ctx context.Context, rw http.ResponseWriter, r *http.Reques
 			m["xsrf_token"] = csrf.Token(ctx, r)
 			m["xsrf_data"] = csrf.TemplateField(ctx, r)
 
+			// Add Nav info if it doesn't already exist
+			if _, ok := m["Nav"]; !ok {
+				m["Nav"] = -1
+			}
+
 			// Add authentication information
 			if cas.IsAuthenticated(r) {
 				m["authenticated"] = cas.Username(r)

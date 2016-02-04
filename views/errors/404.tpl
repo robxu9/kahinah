@@ -1,14 +1,13 @@
-
-      <!-- Jumbotron -->
-      <div class="jumbotron">
-        <h1>404.</h1>
+<section class="section">
+    <div class="container">
+        <h1 class="title">404</h1>
+        <h2 class="subtitle">Page Not Found.</h2>
         {{if .xkcd_today}}
-        <p class="lead">Instead, have today's xkcd comic:</p>
-        <p class="lead"><img src="{{.xkcd_today}}" title="{{.xkcd_today_title}}" alt="today's xkcd comic" /></p>
-        {{else}}
-        <p class="lead">I... I dunno what else to tell ya.</p>
-        <p class="lead">...I feel so lost.</p>
+        <p>Instead, have today's xkcd comic:<br/>
+            <img src="{{.xkcd_today}}" title="{{.xkcd_today_title}}" alt="today's xkcd comic" />
+        </p>
         {{end}}
         <br/>
-        <p><a class="btn btn-lg btn-default" href="#" onclick="history.back();" role="button">Back</a></p>
-      </div>
+        <p><a class="button" href="#" onclick="history.back();" role="button">Back</a></p>
+    </div>
+</section>
