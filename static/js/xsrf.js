@@ -10,8 +10,12 @@ $.extend({
         var xsrftoken = $('meta[name=_xsrf]').attr('content');
         var headers = options.headers || {};
         var domain = document.domain.replace(/\./ig, '\\.');
-        if (!/^(http:|https:).*/.test(url) || eval('/^(http:|https:)\\/\\/(.+\\.)*' + domain + '.*/').test(url)) {
-            headers = $.extend(headers, {'X-Xsrftoken':xsrftoken});
+        if (!/^(http:|https:).*/.test(url) || eval(
+                '/^(http:|https:)\\/\\/(.+\\.)*' + domain + '.*/').test(
+                url)) {
+            headers = $.extend(headers, {
+                'X-CSRF-Token': xsrftoken
+            });
         }
         options.headers = headers;
         return ajax(url, options);

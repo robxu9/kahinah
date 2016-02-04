@@ -12,7 +12,7 @@ type User struct {
 	Email       string `orm:"type(text)"`
 	Integration string `orm:"type(text)"` // abf service user id
 
-	APIKey string `orm:"type(text)"`
+	APIKey string `orm:"type(text)" json:"-"`
 
 	Permissions []*UserPermission `orm:"rel(m2m);on_delete(set_null)"`
 	Karma       []*Karma          `orm:"reverse(many);on_delete(set_null)"`

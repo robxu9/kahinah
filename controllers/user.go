@@ -30,6 +30,7 @@ func UserLoginHandler(ctx context.Context, rw http.ResponseWriter, r *http.Reque
 	} else {
 		// get the referrer
 		referrer, has := sessionmw.Get(ctx, CASReferrer)
+		sessionmw.Delete(ctx, CASReferrer)
 
 		// shut off rendering
 		dataRenderer := data.FromContext(ctx)

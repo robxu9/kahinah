@@ -8,6 +8,7 @@ import (
 
 	"github.com/goji/ctx-csrf"
 	"github.com/knq/sessionmw"
+	"github.com/robxu9/kahinah/conf"
 	"github.com/robxu9/kahinah/render"
 
 	"golang.org/x/net/context"
@@ -31,6 +32,10 @@ const (
 	FlashErr  = "_flash_err"
 	FlashWarn = "_flash_warn"
 	FlashInfo = "_flash_info"
+)
+
+var (
+	runMode = conf.Config.GetDefault("runMode", "dev").(string)
 )
 
 type Render struct {
@@ -60,6 +65,9 @@ func RenderAfterware(ctx context.Context, rw http.ResponseWriter, r *http.Reques
 	ret := FromContext(ctx)
 	renderer := render.FromContext(ctx)
 
+	// Set the CSRF token
+	rw.Header().Set("X-CSRF-Token", csrf.Token(ctx, r))
+
 	switch ret.Type {
 	case DataNoRender:
 		break
@@ -76,15 +84,16 @@ func RenderAfterware(ctx context.Context, rw http.ResponseWriter, r *http.Reques
 			m["xsrf_token"] = csrf.Token(ctx, r)
 			m["xsrf_data"] = csrf.TemplateField(ctx, r)
 
+			// Add environment declaration
+			m["environment"] = runMode
+
 			// Add Nav info if it doesn't already exist
 			if _, ok := m["Nav"]; !ok {
 				m["Nav"] = -1
 			}
 
 			// Add authentication information
-			if cas.IsAuthenticated(r) {
-				m["authenticated"] = cas.Username(r)
-			}
+			m["authenticated"] = cas.Username(r)
 
 			// Add session flash stuff
 			if f, has := sessionmw.Get(ctx, FlashErr); has {

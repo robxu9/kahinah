@@ -23,6 +23,10 @@
         <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
     <![endif]-->
 
+    <!-- Offline support -->
+    <link href="{{url "/static/css/offline-theme-chrome.css"}}" rel="stylesheet">
+    <link href="{{url "/static/css/offline-language-english.css"}}" rel="stylesheet">
+
     <!-- Javascript Files -->
     <script>
         window.urlPrefix = "{{url ""}}";
@@ -31,7 +35,17 @@
     <script src="//code.jquery.com/ui/1.11.4/jquery-ui.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.11.2/moment-with-locales.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/moment-timezone/0.5.0/moment-timezone-with-data.min.js"></script>
+    <!-- Vue.js -->
+    {{if eq .environment "dev"}}
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/1.0.16/vue.js"></script>
+    <script src="{{url "/static/js/vue-moment.js"}}"></script>
+    {{else}}
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/1.0.16/vue.min.js"></script>
+    <script src="{{url "/static/js/vue-moment.min.js"}}"></script>
+    {{end}}
     <script src="{{url "/static/js/xsrf.js"}}"></script>
+    <!-- Offline support -->
+    <script src="{{url "/static/js/offline.min.js"}}"></script>
 </head>
 <body>
     <header class="header">

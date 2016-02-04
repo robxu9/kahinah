@@ -1,7 +1,6 @@
 package main
 
 import (
-	"crypto/rand"
 	"flag"
 	"fmt"
 	"html/template"
@@ -131,7 +130,7 @@ func main() {
 	mux.UseC(sessionConfig.Handler)
 
 	// csrf middleware
-	mux.UseC(csrf.Protect([]byte(getRandomString(30))))
+	mux.UseC(csrf.Protect(securecookie.GenerateRandomKey(64)))
 
 	// data rendering middleware
 	mux.UseC(func(inner goji.Handler) goji.Handler {
@@ -155,34 +154,40 @@ func main() {
 		"/": controllers.MainHandler,
 
 		// build - testing
-		"/builds/testing/": controllers.TestingHandler,
+		"/i/pending/": controllers.TestingHandler,
 
 		// build - published
-		"/builds/published/": controllers.PublishedHandler,
+		"/i/accepted/": controllers.PublishedHandler,
 
 		// build - rejected
-		"/builds/rejected/": controllers.RejectedHandler,
+		"/i/rejected/": controllers.RejectedHandler,
 
 		// build - specific
-		"/build/:id/": controllers.BuildGetHandler,
+		"/b/:id/": controllers.BuildGetHandler,
 
 		// build - all builds
-		"/builds/": controllers.BuildsHandler,
+		"/i/": controllers.BuildsHandler,
+
+		// activity - json
+		"/i/activity/json/": controllers.ActivityJSONHandler,
+
+		// activity - html
+		"/i/activity/": controllers.ActivityHandler,
 
 		// admin
 		"/admin/": controllers.AdminGetHandler,
 
 		// authentication - login
-		"/user/login/": controllers.UserLoginHandler,
+		"/u/login/": controllers.UserLoginHandler,
 
 		// authentication - logout
-		"/user/logout/": controllers.UserLogoutHandler,
+		"/u/logout/": controllers.UserLogoutHandler,
 	}
 
 	postHandlers := map[string]goji.HandlerFunc{
 
 		// build - specific
-		"/build/:id/": controllers.BuildPostHandler,
+		"/b/:id/": controllers.BuildPostHandler,
 
 		// admin
 		"/admin/": controllers.AdminPostHandler,
@@ -236,14 +241,4 @@ func main() {
 	}
 
 	graceful.Wait()
-}
-
-func getRandomString(n int) string {
-	const alphanum = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
-	var bytes = make([]byte, n)
-	rand.Read(bytes)
-	for i, b := range bytes {
-		bytes[i] = alphanum[b%byte(len(alphanum))]
-	}
-	return string(bytes)
 }
