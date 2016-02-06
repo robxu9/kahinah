@@ -66,6 +66,9 @@ func main() {
 		Extensions: []string{".tmpl", ".tpl"},
 		Funcs: []template.FuncMap{
 			template.FuncMap{
+				"rfc3339": func(t time.Time) string {
+					return t.Format(time.RFC3339)
+				},
 				"since": func(t time.Time) string {
 					hrs := time.Since(t).Hours()
 					return fmt.Sprintf("%dd %02dhrs", int(hrs)/24, int(hrs)%24)
@@ -130,7 +133,7 @@ func main() {
 	mux.UseC(sessionConfig.Handler)
 
 	// csrf middleware
-	mux.UseC(csrf.Protect(securecookie.GenerateRandomKey(64)))
+	mux.UseC(csrf.Protect(securecookie.GenerateRandomKey(64), csrf.Secure(false)))
 
 	// data rendering middleware
 	mux.UseC(func(inner goji.Handler) goji.Handler {
@@ -164,6 +167,9 @@ func main() {
 
 		// build - specific
 		"/b/:id/": controllers.BuildGetHandler,
+
+		// build - specific - json
+		"/b/:id/json/": controllers.BuildGetJSONHandler,
 
 		// build - all builds
 		"/i/": controllers.BuildsHandler,

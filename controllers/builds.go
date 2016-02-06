@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"sort"
+	"strings"
 	"time"
 
 	"goji.io/pat"
@@ -12,12 +13,14 @@ import (
 
 	"github.com/astaxie/beego/orm"
 	"github.com/knq/sessionmw"
+	"github.com/microcosm-cc/bluemonday"
 	"github.com/robxu9/kahinah/conf"
 	"github.com/robxu9/kahinah/data"
 	"github.com/robxu9/kahinah/integration"
 	"github.com/robxu9/kahinah/log"
 	"github.com/robxu9/kahinah/models"
 	"github.com/robxu9/kahinah/util"
+	"github.com/russross/blackfriday"
 	"menteslibres.net/gosexy/to"
 )
 
@@ -105,15 +108,14 @@ func BuildsHandler(ctx context.Context, rw http.ResponseWriter, r *http.Request)
 
 	dataRenderer.Data = map[string]interface{}{
 		"Title":    "Builds",
-		"Loc":      1,
-		"Tab":      4,
+		"Nav":      5,
 		"Packages": packages,
 		"PrevPage": page - 1,
 		"Page":     page,
 		"NextPage": page + 1,
 		"Pages":    totalpages,
 	}
-	dataRenderer.Template = "builds/builds_list"
+	dataRenderer.Template = "i/list_paginated"
 }
 
 // RejectedHandler shows the list of all rejected builds, paginated.
@@ -157,15 +159,14 @@ func RejectedHandler(ctx context.Context, rw http.ResponseWriter, r *http.Reques
 
 	dataRenderer.Data = map[string]interface{}{
 		"Title":    "Rejected",
-		"Loc":      1,
-		"Tab":      3,
+		"Nav":      4,
 		"Packages": packages,
 		"PrevPage": page - 1,
 		"Page":     page,
 		"NextPage": page + 1,
 		"Pages":    totalpages,
 	}
-	dataRenderer.Template = "builds/builds_list"
+	dataRenderer.Template = "i/list_paginated"
 }
 
 // PublishedHandler shows the list of all published builds, paginated.
@@ -214,16 +215,15 @@ func PublishedHandler(ctx context.Context, rw http.ResponseWriter, r *http.Reque
 	sort.Sort(sortByUpdateDate(packages))
 
 	dataRenderer.Data = map[string]interface{}{
-		"Title":    "Published",
-		"Loc":      1,
-		"Tab":      2,
+		"Title":    "Accepted",
+		"Nav":      3,
 		"Packages": packages,
 		"PrevPage": page - 1,
 		"Page":     page,
 		"NextPage": page + 1,
 		"Pages":    totalpages,
 	}
-	dataRenderer.Template = "builds/builds_list"
+	dataRenderer.Template = "i/list_paginated"
 }
 
 // TestingHandler shows the list of builds that have yet to be approved, paginated.
@@ -254,13 +254,12 @@ func TestingHandler(ctx context.Context, rw http.ResponseWriter, r *http.Request
 
 	dataRenderer.Data = map[string]interface{}{
 		"Title":    "Testing",
-		"Loc":      1,
-		"Tab":      1,
+		"Nav":      2,
 		"Packages": packages,
 		"PkgKarma": pkgkarma,
 		"Entries":  num,
 	}
-	dataRenderer.Template = "builds/generic_list"
+	dataRenderer.Template = "i/list_sortable"
 }
 
 //
@@ -289,106 +288,145 @@ func BuildGetHandler(ctx context.Context, rw http.ResponseWriter, r *http.Reques
 		panic(err)
 	}
 
-	o.LoadRelated(&pkg, "Submitter")
-	o.LoadRelated(&pkg, "Packages")
-	o.LoadRelated(&pkg, "Links")
-
-	// karma controls
-	totalKarma := getTotalKarma(id) // get total karma
-
-	var votes []util.Pair // *models.Karma, int
-
-	// load karma totals
-	var inOrder []*models.Karma
-	kt := o.QueryTable(new(models.Karma))
-	kt.Filter("List__Id", id).OrderBy("Time").All(&inOrder)
-
-	// only count most recent votes
-	for _, v := range inOrder {
-		o.LoadRelated(v, "User")
-
-		pair := util.Pair{}
-		pair.Key = v
-
-		switch v.Vote {
-		case models.KARMA_UP:
-			pair.Value = 1
-		case models.KARMA_DOWN:
-			pair.Value = 2
-		case models.KARMA_MAINTAINER:
-			pair.Value = 1
-		case models.KARMA_BLOCK:
-			pair.Value = 2
-		case models.KARMA_PUSH:
-			pair.Value = 1
-		case models.KARMA_NONE:
-			if v.Comment != "" {
-				pair.Value = 0
-			} else {
-				continue // no karma and no comment? useless
-			}
-		}
-
-		votes = append(votes, pair)
-	}
-
-	toRender["Votes"] = votes
-	toRender["Karma"] = totalKarma
-
-	toRender["UserVote"] = 0
-	user := Authenticated(r)
-	if user != "" {
-		kt := o.QueryTable(new(models.Karma))
-		var userkarma models.Karma
-		err = kt.Filter("User__Email", user).Filter("List__Id", id).OrderBy("-Time").Limit(1).One(&userkarma)
-		if err != orm.ErrNoRows && err != nil {
-			panic(err)
-		} else if err == nil {
-			if userkarma.Vote == models.KARMA_UP {
-				toRender["UserVote"] = 1
-			} else if userkarma.Vote == models.KARMA_MAINTAINER {
-				toRender["UserVote"] = 2
-			} else if userkarma.Vote == models.KARMA_DOWN {
-				toRender["UserVote"] = -1
-			}
-
-			toRender["KarmaCommentPrev"] = userkarma.Comment
-		}
-
-		if PermCheck(r, PermissionQA) {
-			toRender["QAControls"] = true
-		}
-
-	}
-
-	// karma controls end
-
 	toRender["Title"] = "Build " + to.String(id) + ": " + pkg.Name
-	toRender["Loc"] = 1
 	if pkg.Status == models.StatusTesting {
-		toRender["Tab"] = 1
-		if user != "" {
-			toRender["KarmaControls"] = true
-			if pkg.Submitter != nil && pkg.Submitter.Email == user {
-				toRender["MaintainerControls"] = true
-				toRender["MaintainerHoursNeeded"] = maintainerHours
-				if time.Since(pkg.BuildDate).Hours() >= float64(maintainerHours) {
-					toRender["MaintainerTime"] = true
-					delete(toRender, "MaintainerHoursNeeded")
-				}
-			}
-		}
+		toRender["Nav"] = 2
 	} else if pkg.Status == models.StatusPublished {
-		toRender["Tab"] = 2
+		toRender["Nav"] = 3
 	} else if pkg.Status == models.StatusRejected {
-		toRender["Tab"] = 3
+		toRender["Nav"] = 4
 	} else {
-		toRender["Tab"] = 4
+		toRender["Nav"] = 5
 	}
-	toRender["Package"] = pkg
+	toRender["ID"] = to.String(id)
 
 	dataRenderer.Data = toRender
 	dataRenderer.Template = "builds/build"
+}
+
+type buildGetJSONKarma struct {
+	User    string
+	Karma   string
+	Comment string
+	Time    time.Time
+}
+
+type buildGetJSON struct {
+	ID        uint64
+	Platform  string
+	Channel   string   // maps to repo
+	Arch      []string // maps to architectures
+	Name      string
+	Submitter string
+	Type      string // update type
+	Status    string // testing/published/rejected
+	Artifacts []*models.BuildListPkg
+	Links     []*models.BuildListLink
+	BuildDate time.Time
+	Updated   time.Time
+	Activity  []*buildGetJSONKarma
+	Diff      string
+	Advisory  *models.Advisory
+
+	TotalKarma int64
+	User       string
+	UserIsQA   bool
+	Maintainer bool
+
+	MaintainerKarma int64
+	PushKarma       int
+	BlockKarma      int
+	Acceptable      bool
+	Rejectable      bool
+}
+
+// BuildGetJSONHandler displays build information in JSON for a specific build.
+func BuildGetJSONHandler(ctx context.Context, rw http.ResponseWriter, r *http.Request) {
+	dataRenderer := data.FromContext(ctx)
+	id := to.Uint64(pat.Param(ctx, "id"))
+
+	// load the requested build list
+	var pkg models.BuildList
+
+	o := orm.NewOrm()
+	qt := o.QueryTable(new(models.BuildList))
+
+	err := qt.Filter("Id", id).One(&pkg)
+	if err == orm.ErrNoRows {
+		panic(ErrNotFound)
+	} else if err != nil {
+		panic(err)
+	}
+
+	o.LoadRelated(&pkg, "Submitter")
+	o.LoadRelated(&pkg, "Packages")
+	o.LoadRelated(&pkg, "Links")
+	o.LoadRelated(&pkg, "Advisory")
+	o.LoadRelated(&pkg, "Karma")
+
+	// load karma
+	totalKarma := getTotalKarma(id) // get total karma
+	var renderedKarma []*buildGetJSONKarma
+	for _, v := range pkg.Karma {
+		o.LoadRelated(v, "User")
+		renderedKarma = append(renderedKarma, &buildGetJSONKarma{
+			User:    v.User.Username,
+			Karma:   v.Vote,
+			Comment: string(bluemonday.UGCPolicy().SanitizeBytes(blackfriday.MarkdownCommon([]byte(v.Comment)))),
+			Time:    v.Time,
+		})
+	}
+
+	user := Authenticated(r)
+	isQA := PermCheck(r, PermissionQA)
+	maintainerAllowed := pkg.Submitter.Username == user && time.Since(pkg.BuildDate).Hours() >= float64(maintainerHours)
+
+	// check if we can accept or reject
+	acceptable := false
+	rejectable := false
+
+	if pkg.Status == models.StatusTesting {
+		upperThreshold := conf.Config.GetDefault("karma.upperKarma", 3).(int64)
+		lowerThreshold := conf.Config.GetDefault("karma.lowerKarma", -3).(int64)
+
+		if totalKarma >= upperThreshold {
+			acceptable = true
+		} else if totalKarma <= lowerThreshold {
+			rejectable = true
+		}
+	}
+
+	// render the data in a nice way
+
+	dataRenderer.Data = &buildGetJSON{
+		ID:        pkg.Id,
+		Platform:  pkg.Platform,
+		Channel:   pkg.Repo,
+		Arch:      strings.Split(pkg.Architecture, ";"),
+		Name:      pkg.Name,
+		Submitter: pkg.Submitter.Username,
+		Type:      pkg.Type,
+		Status:    pkg.Status,
+		Artifacts: pkg.Packages,
+		Links:     pkg.Links,
+		BuildDate: pkg.BuildDate,
+		Updated:   pkg.Updated,
+		Activity:  renderedKarma,
+		Diff:      pkg.Diff,
+		Advisory:  pkg.Advisory,
+
+		TotalKarma: totalKarma,
+		User:       user,
+		UserIsQA:   isQA,
+		Maintainer: maintainerAllowed,
+
+		MaintainerKarma: maintainerKarma,
+		PushKarma:       pushKarma,
+		BlockKarma:      blockKarma,
+		Acceptable:      acceptable,
+		Rejectable:      rejectable,
+	}
+	dataRenderer.Type = data.DataJSON
 }
 
 // BuildPostHandler handles post actions that occur.
@@ -467,8 +505,8 @@ func BuildPostHandler(ctx context.Context, rw http.ResponseWriter, r *http.Reque
 	if action == "Accept" || action == "Reject" {
 		karmaTotal := getTotalKarma(id)
 
-		upperThreshold := conf.Config.GetDefault("karma.upperKarma", 3).(int)
-		lowerThreshold := conf.Config.GetDefault("karma.lowerKarma", -3).(int)
+		upperThreshold := conf.Config.GetDefault("karma.upperKarma", 3).(int64)
+		lowerThreshold := conf.Config.GetDefault("karma.lowerKarma", -3).(int64)
 
 		if karmaTotal >= upperThreshold {
 			pkg.Status = models.StatusPublished
@@ -497,7 +535,7 @@ func BuildPostHandler(ctx context.Context, rw http.ResponseWriter, r *http.Reque
 	http.Redirect(rw, r, r.URL.String(), http.StatusTemporaryRedirect)
 }
 
-func getTotalKarma(id uint64) int {
+func getTotalKarma(id uint64) int64 {
 	o := orm.NewOrm()
 	kt := o.QueryTable(new(models.Karma))
 
@@ -505,7 +543,7 @@ func getTotalKarma(id uint64) int {
 	kt.Filter("List__Id", id).OrderBy("-Time").All(&karma)
 
 	set := util.NewSet()
-	totalKarma := 0
+	var totalKarma int64
 
 	// only count most recent votes
 	for _, v := range karma {
@@ -521,14 +559,14 @@ func getTotalKarma(id uint64) int {
 		case models.KARMA_DOWN:
 			totalKarma--
 		case models.KARMA_MAINTAINER:
-			totalKarma += int(maintainerKarma)
+			totalKarma += maintainerKarma
 		case models.KARMA_BLOCK:
-			totalKarma -= int(blockKarma)
+			totalKarma -= blockKarma
 		case models.KARMA_PUSH:
-			totalKarma += int(pushKarma)
+			totalKarma += pushKarma
 		}
 
-		set.Add(v.User.Email)
+		set.Add(v.User.Username)
 	}
 
 	return totalKarma

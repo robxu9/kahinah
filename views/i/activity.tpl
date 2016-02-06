@@ -14,7 +14,7 @@
                                 <small>on update <span v-text="activity.ListId"></span></small>
                                 <small v-text="activity.Time | moment &quot;from&quot;"></small>
                                 <br>
-                                <span v-text="activity.Comment"></span>
+                                <span v-html="activity.Comment"></span>
                             </p>
                         </div>
                         <nav class="navbar">
@@ -65,5 +65,5 @@
                 }
             }
         });
-    })
+    });
 </script>

@@ -35,7 +35,7 @@ func MainHandler(ctx context.Context, rw http.ResponseWriter, r *http.Request) {
 		"Title": "Main",
 		"News":  template.HTML(bluemonday.UGCPolicy().SanitizeBytes(output)),
 		"Time":  time,
-		"Loc":   0,
+		"Nav":   0,
 	}
 	dataRenderer.Template = "index"
 }

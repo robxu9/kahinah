@@ -34,7 +34,7 @@ func MustAuthenticate(r *http.Request) string {
 	if u := Authenticated(r); u != "" {
 		return u
 	}
-	panic(ErrPermission)
+	panic(ErrForbidden)
 }
 
 func PermAbortCheck(r *http.Request, perm string) {

@@ -1,182 +1,284 @@
+<div id="app">
+    <section class="section">
+        <div class="container">
+            <nav class="navbar">
+                <div class="navbar-left">
+                    <p class="title is-5">
+                        <strong v-text="nevr"></strong>: update <span v-text="ID"></span>
+                        <small>last updated <span v-text="Updated | moment &quot;from&quot;"></span></small>
+                    </p>
+                </div>
 
-      <div class="row">
-        <div class="col-md-10 col-md-offset-1">
-          <br/>
-          {{if eq .Package.Status "testing"}}<div class="panel panel-warning">{{else}}
-          {{if eq .Package.Status "rejected"}}<div class="panel panel-danger">{{else}}
-          {{if eq .Package.Status "published"}}<div class="panel panel-success">{{else}}
-          <div class="panel panel-primary">{{end}}{{end}}{{end}}
-            <div class="panel-heading">
-              <h1>Update {{.Package.Id}} <small>{{.Package.Name}} for {{.Package.Architecture}}, built {{.Package.BuildDate}}</small><div class="pull-right">{{.Karma}} {{if .KarmaControls}}<a href="#" class="btn" data-toggle="modal" data-target="#voteModal"><i class="fa fa-3x {{if .UserVote}}fa-check-square-o{{else}}fa-pencil-square-o{{end}}"></i></a>{{end}}</div></h1>
-            </div>
-            <table class="table table-condensed">
-              <tbody>
-                <tr>
-                  <td><b>Submitter</b></td>
-                  <td>{{.Package.Submitter.Username}}</td>
-                </tr>
-                <tr>
-                  <td><b>Platform<b></td>
-                  <td>{{.Package.Platform}}</td>
-                </tr>
-                <tr>
-                  <td><b>Repository<b></td>
-                  <td>{{.Package.Repo}}</td>
-                </tr>
-                <tr>
-                  <td><b>Update Type<b></td>
-                  <td>
-                    {{if eq .Package.Type "bugfix"}}<i class="fa fa-bug"></i>{{end}}
-                    {{if eq .Package.Type "security"}}<i class="fa fa-shield"></i>{{end}}
-                    {{if eq .Package.Type "enhancement"}}<i class="fa fa-gift"></i>{{end}}
-                    {{if eq .Package.Type "recommended"}}<i class="fa fa-star-o"></i>{{end}}
-                    {{if eq .Package.Type "newpackage"}}<i class="fa fa-plus-square-o"></i>{{end}}
-                    {{.Package.Type}}</td>
-                </tr>
-                <tr>
-                  <td><b>URL<b></td>
-                  <td><a href="{{.Url}}">{{.Url}}</a></td>
-                </tr>
-                <tr>
-                  <td><b>Packages<b></td>
-                  <td>
-                    <table class="table table-bordered table-condensed table-responsive">
-                      <tbody>
-                        {{with .Package.Packages}}
-                          {{range .}}
-                        <tr>
-                          <td>{{.Name}}-{{if gt .Epoch 0}}{{.Epoch}}:{{end}}{{.Version}}-{{.Release}}{{if .Arch}}.{{.Arch}}{{end}}.{{.Type}}</td>
-                        </tr>
-                          {{end}}
-                        {{end}}
-                      </tbody>
+                <div class="navbar-right">
+                    <p class="navbar-item"><span v-text="Status"></span></p>
+                    <p class="navbar-item"><a href="#activity" v-bind:class="[&quot;button&quot;, &quot;is-large&quot;, statusModifier]"><strong v-text="TotalKarma"></strong></a></p>
+                </div>
+            </nav>
+
+            <div class="columns">
+                <div class="column"> <!-- buildlist info -->
+                    <table class="table is-bordered">
+                        <tbody>
+                            <tr>
+                                <td><strong>Platform</strong></td>
+                                <td v-text="Platform"></td>
+                            </tr>
+                            <tr>
+                                <td><strong>Channel</strong></td>
+                                <td v-text="Channel"></td>
+                            </tr>
+                            <tr>
+                                <td><strong>Variants</strong></td>
+                                <td><ul><li v-for="a in Arch">
+                                    <span v-text="a"></span>
+                                </li>
+                                </ul></td>
+                            </tr>
+                            <tr>
+                                <td><strong>Submitter</strong></td>
+                                <td><a v-bind:href="userURL" v-text="Submitter"></a></td>
+                            </tr>
+                            <tr>
+                                <td><strong>Build Type</strong></td>
+                                <td><span class="icon"><i v-bind:class="[&quot;fa&quot;, typeClass]"></i></span> <span v-text="Type"></span></td>
+                            </tr>
+                            <tr>
+                                <td><strong>Build Date</strong></td>
+                                <td><span v-text="BuildDate | moment &quot;dddd, D MMMM YYYY, HH:mm:ss Z&quot;"></span><br />which was <span v-text="BuildDate | moment &quot;from&quot;"></span></td>
+                            </tr>
+                        </tbody>
                     </table>
-                  </td>
-                </tr>
-                <tr>
-                  <td><b>Build Date</b></td>
-                  <td>{{.Package.BuildDate}}</td>
-                </tr>
-                <tr>
-                  <td><b>Last Updated</b></td>
-                  <td>{{.Package.Updated}}</td>
-                </tr>
-            </table>
-          </div>
+                </div>
+                <div class="column"> <!-- links & artifacts -->
+                    <div v-if="Advisory" class="message is-success">
+                        <div class="message-header">
+                            Advisory
+                        </div>
+                        <div class="message-body">
+                            <strong>This update has been attached to an advisory:</strong>
+                            <a v-bind:href="Advisory.Url">Link to Advisory</a>
+                        </div>
+                    </div>
+                    <div v-if="Acceptable" class="message is-warning">
+                        <div class="message-header">
+                            Acceptable
+                        </div>
+                        <div class="message-body">
+                            <strong>This update is now eligible for publishing:</strong>
+                            <a href="#advisory">Fill out Advisory</a>
+                        </div>
+                    </div>
+                    <div v-if="Rejectable" class="message is-danger">
+                        <div class="message-header">
+                            Rejectable
+                        </div>
+                        <div class="message-body">
+                            <strong>This update is now eligible for rejecting:</strong>
+                            <a href="#activity">Reject</a>
+                        </div>
+                    </div>
+                    <div class="message is-primary">
+                        <div class="message-header">
+                            Links
+                        </div>
+                        <div class="message-body">
+                            <ul>
+                                <li v-for="l in Links">
+                                    <a v-bind:href="l.Url"><strong v-text="l.Name | linkName"></strong></a>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="message">
+                        <div class="message-header">
+                            Artifacts
+                        </div>
+                        <div class="message-body">
+                            <ul>
+                                <li v-for="a in Artifacts">
+                                    <a v-bind:href="a.Url"><strong v-text="a.Name"></strong>-<strong v-text="a.Epoch"></strong>:<strong v-text="a.Version"></strong>-<strong v-text="a.Release"></strong>.<strong v-text="a.Arch"></strong> (<span v-text="a.Type"></span>)</a>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="activity"> <!-- recent activity -->
+                <h2 class="subtitle">Activity</h2>
+                <template v-for="a in Activity">
+                    <article class="media">
+                        <figure class="media-image">
+                            <img src="http://placehold.it/60x60">
+                        </figure>
+                        <div class="media-content">
+                            <div class="content">
+                                <p>
+                                    <strong>@<strong v-text="a.User"></strong></strong>
+                                    <small v-if="a.User == User">this is you</small>
+                                    <small v-text="a.Time | moment &quot;from&quot;"></small>
+                                    <strong v-text="a.Karma | karmaParse"></strong>
+                                    <br>
+                                    <span v-html="a.Comment"></span>
+                                </p>
+                            </div>
+                        </div>
+                    </article>
+                </template>
+                <div class="notification" v-if="!User">
+                    You must login to add karma or comments.
+                </div>
+                <article class="media">
+                    <div class="media-content">
+                        <form class="form-inline" role="form" method="post" id="actform">
+                            {{ .xsrf_data }}
+                            <div class="content">
+                                <p>
+                                    <strong>add some karma, @<strong v-text="User"></strong>?</strong>
+                                    <small>markdown is supported</small>
+                                    <br>
+                                    <textarea class="textarea" name="comment" form="actform" style="width:100%"></textarea>
+                                </p>
+                            </div>
+                            <nav class="navbar">
+                                <div class="navbar-left">
+                                    <p class="control is-grouped">
+                                        <label class="radio">
+                                            <input type="radio" name="type" value="Neutral">
+                                            <i class="fa fa-comment"></i> Comment Only
+                                        </label>
+                                        <label class="radio">
+                                            <input type="radio" name="type" value="Up">
+                                            <i class="fa fa-arrow-up"></i> Upvote
+                                        </label>
+                                        <label class="radio">
+                                            <input type="radio" name="type" value="Down">
+                                            <i class="fa fa-arrow-down"></i> Downvote
+                                        </label>
+                                        <label v-if="Maintainer" class="radio">
+                                            <input type="radio" name="type" value="Maintainer">
+                                            <i class="fa fa-upload"></i> Maintainer Vote
+                                        </label>
+                                        <label v-if="UserIsQA" class="radio">
+                                            <input type="radio" name="type" value="QAPush">
+                                            <i class="fa fa-plus"></i> QA Push
+                                        </label>
+                                        <label v-if="UserIsQA" class="radio">
+                                            <input type="radio" name="type" value="QABlock">
+                                            <i class="fa fa-minus"></i> QA Block
+                                        </label>
+                                        <label v-if="Rejectable" class="radio">
+                                            <input type="radio" name="type" value="Reject">
+                                            <i class="fa fa-hand-paper"></i> Reject
+                                        </label>
+                                    </p>
+                                </div>
+                                <div class="navbar-right">
+                                    <p class="navbar-item">
+                                        <button class="button is-primary" type="submit">Submit</button>
+                                    </p>
+                                </div>
+                            </nav>
+                        </form>
+                    </div>
+                </article>
+            </div>
+
+            <div>
+                <h2 class="subtitle">Stages</h2>
+                <!-- show each stage with a pass/fail, waiting for manual approve, reject, etc -->
+            </div>
+
+            <div class="columns">
+                <div class="column" v-if="!Advisory"> <!-- advisory left -->
+                    <h2 class="subtitle">Advisory</h2>
+                    <form class="form-inline" role="form" method="post" id="advisoryForm">
+                        <div class="content">
+                            <p>
+                                This update has not been attached to an advisory yet. You should fill in
+                                details about this update to the advisory (and link to an existing one,
+                                if necessary), then save it. You may only accept this stage if an advisory is
+                                published.
+                            </p>
+                        </div>
+                    </form>
+                </div>
+                <div class="column"> <!-- diff right -->
+                </div>
+            </div>
+
         </div>
-      </div>
+    </section>
+</div>
 
-      <!-- diff & changelog -->
-      <div class="row">
-        <div class="col-md-10 col-md-offset-1">
-
-          <div class="panel panel-info">
-            <div class="panel-heading"><button class="btn btn-info" data-toggle="collapse" href="#diff">Git Diff</button><div class="pull-right"><a href="{{.Commits}}" class="btn btn-default">Commits</a></div></div>
-            <div id="diff" class="panel-collapse collapse">
-              <pre class="brush: diff">{{.Package.Diff}}</pre>
-            </div>
-          </div>
-
-          <div class="panel panel-primary">
-            <div class="panel-heading"><button class="btn btn-primary" data-toggle="collapse" href="#cnlog">Changelog</button></div>
-            <div id="cnlog" class="panel-collapse collapse">
-              <pre class="pre-scrollable">{{if .Changelog}}{{.Changelog}}{{else}}Not Available{{end}}</pre>
-            </div>
-          </div>
-
-          <div class="panel panel-default">
-            <div class="panel-heading"><button class="btn btn-default">Recent Activity</button></div>
-            <div class="panel-body">
-              {{if .Votes}}
-              <table class="table table-condensed table-responsive table-bordered">
-                {{with .Votes}}
-                  {{range .}}
-                <tr class="{{if eq .Value 1}}success{{end}}{{if eq .Value 2}}danger{{end}}"><td>{{.Key.User.Email | emailat}}</td><td>{{if .Key.Comment}}{{.Key.Comment}}{{else}}<em>No Comment.</em>{{end}}</td><td>{{if .Key.Time}}{{.Key.Time | since}}{{else}}[voted before timekeeping began]{{end}}</td></tr>
-                  {{end}}
-                {{end}}
-              </table>
-              {{else}}
-              No activity recently.
-              {{end}}
-            </div>
-          </div>
-
-        </div>
-      </div>
-
-      <!-- Vote Modal -->
-
-      <div class="modal fade" id="voteModal" tabindex="-1" role="dialog">
-        <div class="modal-dialog">
-          <center>
-            <div class="modal-content">
-              <form class="form-inline" role="form" method="post">
-                {{ .xsrf_data }}
-                <div class="modal-header">
-                  <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
-                  <h4 class="modal-title" id="Vote Modal">Cast Opinion</h4>
-                </div>
-                <div class="modal-body">
-                  <div class="btn-group" data-toggle="buttons">
-                    <label class="btn btn-default {{if eq .UserVote 0}}active{{end}}">
-                      <input type="radio" name="type" value="Neutral" {{if eq .UserVote 0}}checked{{end}}><i class="fa fa-lg fa-meh-o"></i> No Vote
-                    </label>
-                    <label class="btn btn-danger {{if eq .UserVote -1}}active{{end}}">
-                      <input type="radio" name="type" value="Down" {{if eq .UserVote -1}}checked{{end}}><i class="fa fa-lg fa-frown-o"></i> Reject
-                    </label>
-                    <label class="btn btn-success {{if eq .UserVote 1}}active{{end}}">
-                      <input type="radio" name="type" value="Up" {{if eq .UserVote 1}}checked{{end}}><i class="fa fa-lg fa-smile-o"></i> Accept
-                    </label>
-                    {{if .MaintainerControls}}
-                    <label class="btn btn-primary {{if eq .UserVote 2}}active{{end}}" {{if not .MaintainerTime}}disabled="disabled"{{end}}>
-                      {{if .MaintainerTime}}<input type="radio" name="type" value="Maintainer" {{if eq .UserVote 2}}checked{{end}}>{{end}}<i class="fa fa-lg fa-thumbs-o-up"></i> Maintainer Push
-                    </label>
-                    {{end}}
-                    {{if .QAControls}}
-                    <label class="btn btn-warning">
-                      <input type="radio" name="type" id="voteQADown" value="QABlock"><i class="fa fa-lg fa-thumbs-o-down"></i> QA Block
-                    </label>
-                    <label class="btn btn-warning">
-                      <input type="radio" name="type" id="voteQAUp" value="QAPush"><i class="fa fa-lg fa-thumbs-o-up"></i> QA Push
-                    </label>
-                    {{end}}
-                  </div>
-                </div>
-                {{if .MaintainerControls}}{{if not .MaintainerTime}}
-                <div class="alert alert-info"><b>This is your update!</b> Unfortunately, you need to wait {{.MaintainerHoursNeeded}} hour(s) until you can activate Maintainer Push.</div>
-                {{else}}<div class="alert alert-info"><b>This is your update!</b> You can activate Maintainer Push now.</div>{{end}}{{end}}
-                <div id="voteModalAlertPlaceholder"></div>
-                <div class="modal-body">
-                  <div class="input-group">
-                    <span class="input-group-addon"><i class="fa fa-lg fa-comment-o"></i> Comment</span>
-                    <input type="text" class="form-control" name="comment" placeholder="It's recommended to say something." {{if .KarmaCommentPrev}}value="{{.KarmaCommentPrev}}"{{end}}>
-                  </div>
-                </div>
-                <div class="modal-footer">
-                  <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-                  <button type="submit" type="button" class="btn btn-primary">Submit</button>
-                </div>
-              </form>
-            </div>
-          </center>
-        </div>
-      </div>
-
-      <script>
-        $("input").change(function() {
-          if ($("#voteQADown").is(':checked')) {
-            $('#voteModalAlertPlaceholder').html('<div class="alert alert-danger"><b>Heads up!</b> This adds -9999 karma and is <b>UNREVERSABLE</b>!</div>');
-          } else if ($("#voteQAUp").is(':checked')) {
-            $('#voteModalAlertPlaceholder').html('<div class="alert alert-warning"><b>Heads up!</b> This adds 9999 karma and is <b>UNREVERSABLE</b>!</div>');
-          } else {
-            $('#voteModalAlertPlaceholder').html('')
-          }
-        }).change();
-      </script>
-
-      <link href="{{url "/static/css/shCore.css"}}" rel="stylesheet" type="text/css" />
-      <link href="{{url "/static/css/shThemeDefault.css"}}" rel="stylesheet" type="text/css" />
-
-      <script src="{{url "/static/js/shCore.js"}}" type="text/javascript"></script>
-      <script src="{{url "/static/js/shBrushDiff.js"}}" type="text/javascript"></script>
-      <script>SyntaxHighlighter.all();</script>
+<script>
+    Vue.filter('linkName', function (value) {
+        return value.replace("_mainURL", "Main URL")
+            .replace("_changelogURL", "Changelog")
+            .replace("_scmlogURL", "SCM Commits");
+    });
+    Vue.filter('karmaParse', function (value) {
+        switch (value) {
+        case "+":
+            return "+1";
+        case "-":
+            return "-1";
+        case "*":
+            return "+" + this.MaintainerKarma;
+        case "v":
+            return "-" + this.BlockKarma;
+        case "^":
+            return "+" + this.PushKarma;
+        case "_":
+            return "\xB10";
+        }
+    });
+    $.getJSON("{{urldata "/b/{{.ID}}/json" .}}", function(data, status, jqXHR) {
+        var vm = new Vue({
+            el: '#app',
+            data: data,
+            computed: {
+                statusModifier: function() {
+                    if (data.Status == "testing") {
+                        return "is-warning";
+                    } else if (data.Status == "rejected") {
+                        return "is-danger";
+                    } else if (data.Status == "published") {
+                        return "is-success";
+                    } else {
+                        return "is-info";
+                    }
+                },
+                evr: function() {
+                    var evr = "unknown";
+                    data.Artifacts.forEach(function(a) {
+                        if (a.Type == "source") {
+                            evr = a.Epoch + ":" + a.Version + "-" + a.Release;
+                        }
+                    });
+                    return evr;
+                },
+                nevr: function() {
+                    return data.Name + " " + this.evr;
+                },
+                userURL: function() {
+                    return "{{url "/u/"}}" + data.Submitter;
+                },
+                typeClass: function() {
+                    if (data.Type == "bugfix") {
+                        return "fa-bug";
+                    } else if (data.Type == "security") {
+                        return "fa-shield";
+                    } else if (data.Type == "enhancement") {
+                        return "fa-gift";
+                    } else if (data.Type == "recommended") {
+                        return "fa-star";
+                    } else if (data.Type == "newpackage") {
+                        return "fa-plus-square";
+                    }
+                    return "";
+                }
+            }
+        });
+    });
+</script>

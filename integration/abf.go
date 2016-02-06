@@ -99,8 +99,9 @@ func (a *ABF) handleResponse(resp *http.Response, testing bool) error {
 	for _, v := range lists {
 		asserted := v.(map[string]interface{})
 		id := dig.Uint64(&asserted, "id")
+		strId := "[" + to.String(id) + "]"
 
-		num, err := o.QueryTable(new(models.BuildList)).Filter("HandleId__icontains", id).Count()
+		num, err := o.QueryTable(new(models.BuildList)).Filter("HandleId__icontains", strId).Count()
 		if num <= 0 || err != nil {
 			json, err := a.getJSONList(id)
 			if err != nil {
@@ -125,7 +126,7 @@ func (a *ABF) handleResponse(resp *http.Response, testing bool) error {
 			var possibleDuplicate models.BuildList
 			err = o.QueryTable(new(models.BuildList)).Filter("Platform", dig.String(&json, "save_to_repository", "platform", "name")).Filter("HandleCommitId", dig.String(&json, "commit_hash")).Filter("Status", models.StatusTesting).One(&possibleDuplicate)
 			if err == nil { // we found a duplicate... handle and continue
-				possibleDuplicate.HandleId = possibleDuplicate.HandleId + ";" + to.String(id)
+				possibleDuplicate.HandleId = possibleDuplicate.HandleId + ";[" + to.String(id) + "]"
 				possibleDuplicate.Architecture += ";" + dig.String(&json, "arch", "name")
 
 				if testing {
@@ -140,6 +141,14 @@ func (a *ABF) handleResponse(resp *http.Response, testing bool) error {
 					listpkg.List = &possibleDuplicate
 					o.Insert(listpkg)
 				}
+
+				// add a link
+				newLink := &models.BuildListLink{
+					List: &possibleDuplicate,
+					Name: fmt.Sprintf("Build List for %v", dig.String(&json, "arch", "name")),
+					Url:  fmt.Sprintf("https://abf.io/build_lists/%v", id),
+				}
+				o.Insert(newLink)
 
 				// ok, we're done here
 				continue
@@ -222,8 +231,8 @@ func (a *ABF) Accept(m *models.BuildList) error {
 	go util.MailModel(m)
 
 	for _, v := range strings.Split(m.HandleId, ";") {
-
-		id := to.Uint64(v)
+		noBrackets := v[1 : len(v)-1]
+		id := to.Uint64(noBrackets)
 		req, err := http.NewRequest("PUT", abfURL+"/build_lists/"+to.String(id)+"/publish.json", nil)
 		if err != nil {
 			return err
@@ -246,7 +255,8 @@ func (a *ABF) Reject(m *models.BuildList) error {
 	go util.MailModel(m)
 
 	for _, v := range strings.Split(m.HandleId, ";") {
-		id := to.Uint64(v)
+		noBrackets := v[1 : len(v)-1]
+		id := to.Uint64(noBrackets)
 		req, err := http.NewRequest("PUT", abfURL+"/build_lists/"+to.String(id)+"/reject_publish.json", nil)
 		if err != nil {
 			return err
@@ -340,7 +350,7 @@ func (a *ABF) makeBuildList(list map[string]interface{}) (*models.BuildList, err
 	platform := dig.String(&list, "save_to_repository", "platform", "name")
 
 	bl := models.BuildList{
-		HandleId:       handleId,
+		HandleId:       "[" + handleId + "]",
 		HandleProject:  handleProject,
 		HandleCommitId: dig.String(&list, "commit_hash"),
 		Diff:           a.makeDiff(dig.String(&list, "project", "git_url"), dig.String(&list, "last_published_commit_hash"), dig.String(&list, "commit_hash")),
@@ -521,7 +531,7 @@ func (a *ABF) getUser(id uint64) *models.User {
 			return nil
 		}
 
-		name := dig.String(&result, "user", "name")
+		name := dig.String(&result, "user", "uname")
 
 		userModel = models.FindUser(name)
 		userModel.Integration = to.String(id)

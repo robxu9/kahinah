@@ -39,6 +39,7 @@
     {{if eq .environment "dev"}}
     <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/1.0.16/vue.js"></script>
     <script src="{{url "/static/js/vue-moment.js"}}"></script>
+    <script>Vue.config.debug = true</script>
     {{else}}
     <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/1.0.16/vue.min.js"></script>
     <script src="{{url "/static/js/vue-moment.min.js"}}"></script>

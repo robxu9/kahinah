@@ -5,9 +5,11 @@ import (
 	"time"
 
 	"github.com/astaxie/beego/orm"
+	"github.com/microcosm-cc/bluemonday"
 	"github.com/robxu9/kahinah/data"
 	"github.com/robxu9/kahinah/models"
 	"github.com/robxu9/kahinah/util"
+	"github.com/russross/blackfriday"
 
 	"menteslibres.net/gosexy/to"
 
@@ -28,7 +30,7 @@ func ActivityHandler(ctx context.Context, rw http.ResponseWriter, r *http.Reques
 type activityJSON struct {
 	ListId  uint64
 	User    string
-	Karma   int
+	Karma   int64
 	Comment string
 	Time    time.Time
 	URL     string
@@ -82,7 +84,7 @@ func ActivityJSONHandler(ctx context.Context, rw http.ResponseWriter, r *http.Re
 			ListId:  v.List.Id,
 			User:    v.User.Username,
 			Karma:   getTotalKarma(v.List.Id),
-			Comment: v.Comment,
+			Comment: string(bluemonday.UGCPolicy().SanitizeBytes(blackfriday.MarkdownCommon([]byte(v.Comment)))),
 			Time:    v.Time,
 			URL:     util.GetPrefixString("/b/" + to.String(v.List.Id)),
 		})

@@ -54,8 +54,8 @@ type BuildList struct {
 }
 
 type BuildListPkg struct {
-	Id      uint64     `orm:"auto;pk"`
-	List    *BuildList `orm:"rel(fk)"`
+	Id      uint64     `orm:"auto;pk" json:"-"`
+	List    *BuildList `orm:"rel(fk)" json:"-"`
 	Name    string
 	Type    string
 	Epoch   int64
@@ -66,8 +66,8 @@ type BuildListPkg struct {
 }
 
 type BuildListLink struct {
-	Id   uint64     `orm:"auto;pk"`
-	List *BuildList `orm:"rel(fk)"`
+	Id   uint64     `orm:"auto;pk" json:"-"`
+	List *BuildList `orm:"rel(fk)" json:"-"`
 	Name string
 	Url  string
 }
