@@ -57,7 +57,7 @@ func FindUserByID(id uint) *User {
 	var user User
 
 	if err := DB.First(&user, id).Error; err != nil {
-		if err == gorm.RecordNotFound {
+		if err == gorm.ErrRecordNotFound {
 			return nil
 		}
 		panic(err)
@@ -72,7 +72,7 @@ func FindUser(username string) *User {
 	var user User
 
 	if err := DB.First(&user, &User{Username: username}).Error; err != nil {
-		if err == gorm.RecordNotFound {
+		if err == gorm.ErrRecordNotFound {
 			user = User{
 				Username: username,
 			}
@@ -91,7 +91,7 @@ func FindUserByAPI(apikey string) *User {
 	var user User
 
 	if err := DB.First(&user, &User{APIKey: apikey}).Error; err != nil {
-		if err == gorm.RecordNotFound {
+		if err == gorm.ErrRecordNotFound {
 			return nil
 		}
 		panic(err)
@@ -104,7 +104,7 @@ func FindUserNoCreate(username string) *User {
 	var user User
 
 	if err := DB.First(&user, &User{Username: username}).Error; err != nil {
-		if err == gorm.RecordNotFound {
+		if err == gorm.ErrRecordNotFound {
 			return nil
 		}
 		panic(err)

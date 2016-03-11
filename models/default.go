@@ -27,22 +27,20 @@ var (
 )
 
 func init() {
-	var db gorm.DB
 	var err error
 	switch DBType {
 	case "mysql":
-		db, err = gorm.Open("mysql", fmt.Sprintf("%s:%s@tcp(%s)/%s", DBUser, DBPass, DBHost, DBName), 30)
+		DB, err = gorm.Open("mysql", fmt.Sprintf("%s:%s@tcp(%s)/%s", DBUser, DBPass, DBHost, DBName), 30)
 	case "sqlite3":
-		db, err = gorm.Open("sqlite3", "file:"+DBName, 30)
+		DB, err = gorm.Open("sqlite3", "file:"+DBName, 30)
 	case "postgres":
-		db, err = gorm.Open("postgres", fmt.Sprintf("postgres://%s:%s@%s/%s", DBUser, DBPass, DBHost, DBName))
+		DB, err = gorm.Open("postgres", fmt.Sprintf("postgres://%s:%s@%s/%s", DBUser, DBPass, DBHost, DBName))
 	default:
 		log.Logger.Fatalf("db: I don't know how to handle %v", DBType)
 	}
-	DB = &db
 
 	DB.LogMode(DBDebug)
-	DB.SetLogger(gorm.Logger{log.Logger})
+	DB.SetLogger(gorm.Logger{LogWriter: log.Logger})
 	if err = DB.DB().Ping(); err != nil {
 		log.Logger.Fatalf("db: couldn't ping the database: %v", err)
 	}
