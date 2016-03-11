@@ -53,16 +53,6 @@ gitDiff = false
 # --- enable ssh for git cloning
 gitDiffSSH = false
 
-# karma configuration
-[karma]
-upperKarma = 3
-lowerKarma = -3
-# - maintainerKarma and maintainerHours define the time and amount of karma
-# granted to maintainers when the elapsed number of hours have passed. This
-# allows maintainers to push packages if testers are slow.
-maintainerKarma = 3
-maintainerHours = 168
-
 # administrator configuration
 [admin]
 # - allow only people whitelisted to vote

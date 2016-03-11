@@ -2,13 +2,16 @@ package models
 
 import (
 	"fmt"
-	"time"
 
-	"github.com/astaxie/beego/orm"
+	// mysql functionality
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/jinzhu/gorm"
+	// postgresql funcationality
 	_ "github.com/lib/pq"
+	// sqlite3 functionality
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/robxu9/kahinah/conf"
+	"github.com/robxu9/kahinah/log"
 )
 
 var (
@@ -19,34 +22,37 @@ var (
 	DBUser   = conf.Config.GetDefault("database.user", "root").(string)
 	DBPass   = conf.Config.GetDefault("database.pass", "toor").(string)
 	DBDebug  = conf.Config.GetDefault("database.debug", false).(bool)
+
+	DB *gorm.DB
 )
 
 func init() {
-	orm.Debug = DBDebug
-	orm.DefaultTimeLoc = time.Local
-	//orm.DefaultTimeLoc = time.UTC
-
-	orm.RegisterModelWithPrefix(DBPrefix, new(BuildList))
-	orm.RegisterModelWithPrefix(DBPrefix, new(BuildListPkg))
-	orm.RegisterModelWithPrefix(DBPrefix, new(BuildListLink))
-	orm.RegisterModelWithPrefix(DBPrefix, new(Karma))
-
-	orm.RegisterModelWithPrefix(DBPrefix, new(Advisory))
-
-	orm.RegisterModelWithPrefix(DBPrefix, new(User))
-	orm.RegisterModelWithPrefix(DBPrefix, new(UserPermission))
-
+	var db gorm.DB
+	var err error
 	switch DBType {
 	case "mysql":
-		orm.RegisterDataBase("default", "mysql", fmt.Sprintf("%s:%s@tcp(%s)/%s", DBUser, DBPass, DBHost, DBName), 30)
+		db, err = gorm.Open("mysql", fmt.Sprintf("%s:%s@tcp(%s)/%s", DBUser, DBPass, DBHost, DBName), 30)
 	case "sqlite3":
-		orm.RegisterDataBase("default", "sqlite3", "file:"+DBName, 30)
+		db, err = gorm.Open("sqlite3", "file:"+DBName, 30)
 	case "postgres":
-		orm.RegisterDataBase("default", "postgres", fmt.Sprintf("postgres://%s:%s@%s/%s", DBUser, DBPass, DBHost, DBName))
+		db, err = gorm.Open("postgres", fmt.Sprintf("postgres://%s:%s@%s/%s", DBUser, DBPass, DBHost, DBName))
+	default:
+		log.Logger.Fatalf("db: I don't know how to handle %v", DBType)
+	}
+	DB = &db
+
+	DB.LogMode(DBDebug)
+	DB.SetLogger(gorm.Logger{log.Logger})
+	if err = DB.DB().Ping(); err != nil {
+		log.Logger.Fatalf("db: couldn't ping the database: %v", err)
 	}
 
-	err := orm.RunSyncdb("default", false, true)
-	if err != nil {
-		panic(err)
+	DB.DB().SetMaxIdleConns(10)
+	DB.DB().SetMaxOpenConns(100)
+
+	if err = DB.AutoMigrate(&Advisory{}, &List{}, &ListActivity{},
+		&ListArtifact{}, &ListLink{}, &ListStage{}, &ListStageProcess{},
+		&User{}, &UserPermission{}).Error; err != nil {
+		log.Logger.Fatalf("db: failed to automigrate: %v", err)
 	}
 }

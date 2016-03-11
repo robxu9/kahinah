@@ -8,7 +8,6 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/astaxie/beego/orm"
 	"github.com/jordan-wright/email"
 	"github.com/microcosm-cc/bluemonday"
 	"github.com/robxu9/kahinah/conf"
@@ -69,29 +68,18 @@ func Mail(subject string, html, text []byte) error {
 	return MailTo(subject, html, text, emailList)
 }
 
-func MailModel(model *models.BuildList) {
-	if model.Submitter == nil {
-		o := orm.NewOrm()
-		o.LoadRelated(model, "Submitter")
-	}
-
-	if model.Karma == nil {
-		o := orm.NewOrm()
-		o.LoadRelated(model, "Karma")
-		for _, karma := range model.Karma {
-			o.LoadRelated(karma, "User")
-		}
-	}
+func MailList(list *models.List) {
+	models.DB.Related(list, "Activity")
 
 	data := map[string]interface{}{
-		"Update": model,
+		"Update": list,
 		"URL":    baseURL + "/" + urlPrefix,
 	}
 
 	var activityBuf bytes.Buffer
 	activityTemplate.Execute(&activityBuf, data)
 
-	subject := fmt.Sprintf("[kahinah] Update %v (%v, %v) has new activity", model.Id, model.Name, model.Status)
+	subject := fmt.Sprintf("[kahinah] Update %v (%v, %v) has new activity", list.ID, list.Name, list.StageCurrent)
 
 	htmlOutput := bluemonday.UGCPolicy().SanitizeBytes(blackfriday.MarkdownCommon(activityBuf.Bytes()))
 

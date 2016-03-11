@@ -2,72 +2,157 @@ package models
 
 import (
 	"time"
+
+	"github.com/jinzhu/gorm"
 )
 
 const (
-	StatusTesting   = "testing"
-	StatusRejected  = "rejected"
-	StatusPublished = "published"
+	ListRunning  = "running"
+	ListPending  = "pending"
+	ListAccepted = "accepted"
+	ListRejected = "rejected"
 
-	LinkMainURL  = "_mainURL"
-	ChangelogURL = "_changelogURL"
-	SCMLogURL    = "_scmlogURL"
+	LinkMain      = "_mainURL"
+	LinkChangelog = "_changelogURL"
+	LinkSCM       = "_scmlogURL"
+
+	ListStageNotStarted = "_stage_pending"
+	ListStageFinished   = "_stage_finished"
+
+	ArtifactBinary = "binary"
+	ArtifactSource = "source"
 )
 
-type BuildList struct {
-	// represent unique id
-	Id uint64 `xml:"id,attr" orm:"auto;pk"`
-	// represent the platform it came from (e.g. RHEL7)
-	Platform string `xml:"info>platform"`
-	// represent the sub-platform it came from (if any) (e.g. stable/testing/dev)
-	Repo string `xml:"info>platform>repo"`
-	// represent the variations (a.k.a. architectures) (e.g. x86_64/arm64)
-	Architecture string `xml:"info>platform>arch"`
-	// represent its name (e.g. project name like "Mantra")
-	Name string `xml:"info>name"`
-	// represents the submitter
-	Submitter *User `xml:"info>submitter" orm:"rel(fk)"`
-	// represents the update type (bugfix, new package, security, etc)
-	Type string `xml:"type"`
-	// represents the current status of this update
-	Status string `xml:"status"`
-	// lists packages
-	Packages []*BuildListPkg `xml:"packages" orm:"reverse(many)"`
-	// lists links
-	Links []*BuildListLink `xml:"links" orm:"reverse(many)"`
-	// lists the builddate
-	BuildDate time.Time `xml:"time"`
-	// lists the updatetime
-	Updated time.Time `xml:"updated" orm:"auto_now"`
-	// lists the karma (or recent updates)
-	Karma []*Karma `xml:"karma" orm:"reverse(many)"`
-	// shows the diff (defined by the build system)
-	Diff string `xml:"diff" orm:"type(text)"`
-	// shows the link to an advisory (when published)
-	Advisory *Advisory `xml:"advisory" orm:"null;rel(fk);on_delete(set_null)"`
+type List struct {
+	gorm.Model
 
-	// abf specifics (abf is represented as the handler)
-	HandleId       string `xml:"handle>id,attr" json:"-"` // for the handler to identify the package in the buildsystem
-	HandleProject  string `xml:"handle>project" orm:"type(text)" json:"-"`
-	HandleCommitId string `xml:"handle>commitid" orm:"type(text)" json:"-"`
-	// end handler specifics
+	// -- basic information
+	Name     string // project name
+	Platform string // targeted platform
+	Channel  string // targeted sub-platform/repository
+	Variants string // variants/architectures (split by ';')
+
+	// -- contained data
+	Artifacts  []*ListArtifact
+	Links      []*ListLink
+	Changes    string // provide a field which describes changes, whether textual or diff
+	BuildDate  time.Time
+	AdvisoryID uint // link to advisory
+
+	// -- current stage and activity
+	StageCurrent string // either NotStarted, Finished, or the stage defined in between
+	Activity     []*ListActivity
+
+	// -- current stages
+	Stages []*ListStage
+
+	// -- last but not least, integration stuff (five string slots for usage)
+	IntegrationOne   string
+	IntegrationTwo   string
+	IntegrationThree string
+	IntegrationFour  string
+	IntegrationFive  string
 }
 
-type BuildListPkg struct {
-	Id      uint64     `orm:"auto;pk" json:"-"`
-	List    *BuildList `orm:"rel(fk)" json:"-"`
+func (l *List) TableName() string {
+	return DBPrefix + "lists"
+}
+
+func (l *List) AddActivity(u *User, activity string) {
+	newActivity := &ListActivity{
+		ListID:   l.ID,
+		UserID:   u.ID,
+		Activity: activity,
+	}
+	if err := DB.Create(newActivity).Error; err != nil {
+		panic(err) // this shouldn't really panic though..
+	}
+}
+
+type ListArtifact struct {
+	gorm.Model
+
+	ListID uint // link to List
+
 	Name    string
 	Type    string
 	Epoch   int64
 	Version string
 	Release string
-	Arch    string
-	Url     string `orm:"type(text)"`
+	Variant string
+
+	URL string
 }
 
-type BuildListLink struct {
-	Id   uint64     `orm:"auto;pk" json:"-"`
-	List *BuildList `orm:"rel(fk)" json:"-"`
+func (l *ListArtifact) TableName() string {
+	return DBPrefix + "listartifacts"
+}
+
+type ListLink struct {
+	gorm.Model
+
+	ListID uint // link to List
+
 	Name string
-	Url  string
+	URL  string
+}
+
+func (l *ListLink) TableName() string {
+	return DBPrefix + "listlinks"
+}
+
+type ListActivity struct {
+	gorm.Model
+
+	ListID uint // link to List
+	UserID uint // link to User
+
+	Activity string // markdown activity comment
+}
+
+func (l *ListActivity) TableName() string {
+	return DBPrefix + "listactivities"
+}
+
+type ListStage struct {
+	gorm.Model
+
+	ListID uint   // link to List
+	Name   string // stage name
+
+	// -- processes
+	Processes []*ListStageProcess
+}
+
+func (l *ListStage) TableName() string {
+	return DBPrefix + "liststages"
+}
+
+type ListStageProcess struct {
+	gorm.Model
+
+	ListStageID uint   // link to ListStage
+	Name        string // process name
+	Optional    bool   // if this stage is okay to fail
+
+	Data []byte // blob data
+}
+
+func (l *ListStageProcess) ParentList() *List {
+	// find ListStage...
+	var listStage ListStage
+	if err := DB.First(&listStage, l.ListStageID).Error; err != nil {
+		panic(err)
+	}
+	// then find List itself
+	var list List
+	if err := DB.First(&list, listStage.ListID).Error; err != nil {
+		panic(err)
+	}
+
+	return &list
+}
+
+func (l *ListStageProcess) TableName() string {
+	return DBPrefix + "liststageprocesses"
 }

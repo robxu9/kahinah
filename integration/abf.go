@@ -46,7 +46,9 @@ func init() {
 		abfArchWhitelistSet.Add(v.(string))
 	}
 
-	abfClient = &http.Client{}
+	abfClient = &http.Client{
+		Timeout: time.Second * 60,
+	}
 }
 
 type ABF struct{}
