@@ -37,10 +37,14 @@ enable = false
 url = "https://auth.openmandriva.org/cas/"
 
 # integration configuration
+[integration]
+# set the polling rate for integration services to use (if supported).
+# use any crontab specification or description. leave empty to disable.
+poll = "@hourly"
 # - integration with abf
 [integration.abf]
 enable = false
-host = "https://abf.io/api/v1"
+host = "https://abf.io"
 user = "kahinah_abf"
 apiKey = "apikey"
 # -- read the following platforms for updates. you should have write access to

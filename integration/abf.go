@@ -5,15 +5,15 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"os"
 	"os/exec"
 	"strings"
 	"time"
 
-	"github.com/astaxie/beego/orm"
+	"github.com/jinzhu/gorm"
 	"github.com/robxu9/kahinah/conf"
+	"github.com/robxu9/kahinah/log"
 	"github.com/robxu9/kahinah/models"
 	"github.com/robxu9/kahinah/util"
 	"menteslibres.net/gosexy/dig"
@@ -22,7 +22,7 @@ import (
 
 var (
 	abfEnable        = conf.Config.GetDefault("integration.abf.enable", false).(bool)
-	abfURL           = conf.Config.GetDefault("integration.abf.host", "https://abf.io/api/v1").(string)
+	abfURL           = conf.Config.GetDefault("integration.abf.host", "https://abf.io").(string)
 	abfUser          = conf.Config.Get("integration.abf.user").(string)
 	abfAPIKey        = conf.Config.Get("integration.abf.apiKey").(string)
 	abfPlatforms     = conf.Config.Get("integration.abf.readPlatforms").([]interface{})
@@ -49,15 +49,25 @@ func init() {
 	abfClient = &http.Client{
 		Timeout: time.Second * 60,
 	}
+
+	if abfEnable {
+		Implementations["abf"] = &ABF{}
+	}
 }
 
+// ABF is the integration type for the Automated Build Farm.
+// It uses the following fields:
+// IntegrationName = "abf"
+// IntegrationOne = Build List IDs ([id];[id];[id])
+// IntegrationTwo = Commit Hash
+// IntegrationThree
+// IntegrationFour
+// IntegrationFive
 type ABF struct{}
 
+// Poll polls ABF for new build lists with the status
+// [testing] build completed and build completed.
 func (a *ABF) Poll() error {
-	if !abfEnable {
-		return ErrDisabled
-	}
-
 	for v := range abfPlatformsSet.Iterator() {
 		a.pollBuildsInTesting(v) // poll testing builds first if we missed any
 		a.pollBuildsCompleted(v) // then poll completed builds
@@ -66,12 +76,9 @@ func (a *ABF) Poll() error {
 	return nil
 }
 
-func (a *ABF) Hook(i interface{}) error {
-	if !abfEnable {
-		return ErrDisabled
-	}
-
-	return ErrNotImplemented
+// Hook is not implemented by ABF, because ABF does not support webhooks.
+func (a *ABF) Hook(r *http.Request) {
+	// Not implemented
 }
 
 func (a *ABF) handleResponse(resp *http.Response, testing bool) error {
@@ -96,109 +103,118 @@ func (a *ABF) handleResponse(resp *http.Response, testing bool) error {
 		return err
 	}
 
-	o := orm.NewOrm()
-
 	for _, v := range lists {
 		asserted := v.(map[string]interface{})
 		id := dig.Uint64(&asserted, "id")
-		strId := "[" + to.String(id) + "]"
+		strID := "[" + to.String(id) + "]"
 
-		num, err := o.QueryTable(new(models.BuildList)).Filter("HandleId__icontains", strId).Count()
-		if num <= 0 || err != nil {
-			json, err := a.getJSONList(id)
-			if err != nil {
-				log.Printf("abf: error retrieving build list json %v: %v\n", id, err)
-				continue
-			}
+		var num int
+		err = models.DB.Model(&models.List{}).Where("integration_name = ? AND integration_one LIKE ?", "abf", "%"+strID+"%").Count(&num).Error
+		if err != nil && err != gorm.ErrRecordNotFound {
+			log.Logger.Criticalf("abf: couldn't check db for existing (list %v): %v", id, err)
+			continue
+		}
 
-			// check if arch is on whitelist
-			if abfArchWhitelistSet != nil && !abfArchWhitelistSet.Contains(dig.String(&json, "arch", "name")) {
-				// we are ignoring this buildlist
-				continue
-			}
+		if num != 0 {
+			log.Logger.Infof("abf: ignoring list, already processed (list %v)", id)
+			continue
+		}
 
-			// check if platform is on whitelist
-			if !abfPlatformsSet.Contains(dig.String(&json, "save_to_repository", "platform", "name")) {
-				// we are ignoring this platform
-				continue
-			}
+		json, err := a.getJSONList(id)
+		if err != nil {
+			log.Logger.Criticalf("abf: couldn't retrieve the build list JSON (list %v): %v", id, err)
+			continue
+		}
 
-			// *check for duplicates before continuing
-			// *we only check for duuplicates in the same platform; different platforms have different conditions
-			var possibleDuplicate models.BuildList
-			err = o.QueryTable(new(models.BuildList)).Filter("Platform", dig.String(&json, "save_to_repository", "platform", "name")).Filter("HandleCommitId", dig.String(&json, "commit_hash")).Filter("Status", models.StatusTesting).One(&possibleDuplicate)
-			if err == nil { // we found a duplicate... handle and continue
-				possibleDuplicate.HandleId = possibleDuplicate.HandleId + ";[" + to.String(id) + "]"
-				possibleDuplicate.Architecture += ";" + dig.String(&json, "arch", "name")
+		// check if arch is on whitelist
+		if abfArchWhitelistSet != nil && !abfArchWhitelistSet.Contains(dig.String(&json, "arch", "name")) {
+			log.Logger.Infof("abf: ignoring list, arch not on whitelist (list %v)", id)
+			continue
+		}
 
-				if testing {
-					// send id to testing
-					go a.sendToTesting(id)
-				}
+		// check if platform is on whitelist
+		if !abfPlatformsSet.Contains(dig.String(&json, "save_to_repository", "platform", "name")) {
+			log.Logger.Infof("abf: ignoring list, platform not on whitelist (list %v)", id)
+			continue
+		}
 
-				o.Update(&possibleDuplicate)
+		// *check for duplicates before continuing
+		// *we only check for duplicates in the same platform; different platforms have different conditions
 
-				pkgs := a.makePkgList(json)
-				for _, listpkg := range pkgs {
-					listpkg.List = &possibleDuplicate
-					o.Insert(listpkg)
-				}
+		// check for duplicates
+		var duplicate models.List
+		err = models.DB.Where("platform = ? AND integration_two = ? AND stage_current <> ?",
+			dig.String(&json, "save_to_repository", "platform", "name"),
+			dig.String(&json, "commit_hash"),
+			models.ListStageFinished).First(&duplicate).Error
 
-				// add a link
-				newLink := &models.BuildListLink{
-					List: &possibleDuplicate,
-					Name: fmt.Sprintf("Build List for %v", dig.String(&json, "arch", "name")),
-					Url:  fmt.Sprintf("https://abf.io/build_lists/%v", id),
-				}
-				o.Insert(newLink)
+		if err != nil && err != gorm.ErrRecordNotFound {
+			log.Logger.Criticalf("abf: couldn't check db for duplicates (list %v): %v", id, err)
+			continue
+		}
 
-				// ok, we're done here
-				continue
-			}
+		if err == nil { // we had no problem finding a duplicate, so handle and continue
+			duplicate.IntegrationOne += ";" + strID
+			duplicate.Variants += ";" + dig.String(&json, "arch", "name")
 
-			list, err := a.makeBuildList(json)
-			if err != nil {
-				log.Printf("abf: Error retrieving build list %v: %v\n", id, err)
-				continue
-			}
-
-			if testing {
-				// Now send it to testing
+			if testing { // we got this from the build completed (not in testing) list
+				// send id to testing
 				go a.sendToTesting(id)
 			}
 
-			_, err = o.Insert(list)
+			err = models.DB.Save(&duplicate).Error
 			if err != nil {
-				log.Printf("abf: Error saving build list %v: %v\n", id, err)
-				continue
+				log.Logger.Criticalf("abf: couldn't save duplicate modification to %v (list %v): %v", duplicate.ID, id, err)
 			}
 
-			for _, listpkg := range list.Packages {
-				listpkg.List = list
-				o.Insert(listpkg)
+			pkgs := a.makePkgList(json)
+			for _, listpkg := range pkgs {
+				listpkg.ListID = duplicate.ID
+
+				err = models.DB.Create(&listpkg).Error
+				if err != nil {
+					log.Logger.Criticalf("abf: couldn't save new list package to %v (list %v): %v", duplicate.ID, id, err)
+				}
 			}
 
-			for _, listlinks := range list.Links {
-				listlinks.List = list
-				o.Insert(listlinks)
+			// add a link to it
+			newLink := models.ListLink{
+				ListID: duplicate.ID,
+				Name:   fmt.Sprintf("Build List for %v", dig.String(&json, "arch", "name")),
+				URL:    fmt.Sprintf("%s/build_lists/%v", abfURL, id),
+			}
+			if err := models.DB.Create(&newLink).Error; err != nil {
+				log.Logger.Criticalf("abf: couldn't save new list link to %v (list %v): %v", duplicate.ID, id, err)
 			}
 
-			for _, listkarma := range list.Karma {
-				listkarma.List = list
-				o.Insert(listkarma)
-			}
+			// ok, we're done here
+			continue
+		}
 
-			go util.MailModel(list)
+		list, err := a.makeBuildList(json)
+		if err != nil {
+			log.Logger.Criticalf("abf: couldn't make new list (list %v): %v\n", id, err)
+			continue
+		}
+
+		if testing {
+			// Now send it to testing
+			go a.sendToTesting(id)
+		}
+
+		if err := models.DB.Create(list).Error; err != nil {
+			log.Logger.Criticalf("abf: couldn't create new list in db (list %v): %v", id, err)
+			continue
 		}
 	}
 
 	return nil
 }
 
-func (a *ABF) pollBuildsCompleted(platformId string) error {
+func (a *ABF) pollBuildsCompleted(platformID string) error {
 	// regular usage: use 0 (Build has been completed)
 	// below: use 12000 ([testing] build has been published)
-	req, err := http.NewRequest("GET", abfURL+"/build_lists.json?per_page=100&filter[status]=0&filter[ownership]=index&filter[platform_id]="+platformId, nil)
+	req, err := http.NewRequest("GET", abfURL+"/api/v1/build_lists.json?per_page=100&filter[status]=0&filter[ownership]=index&filter[platform_id]="+platformID, nil)
 	if err != nil {
 		return err
 	}
@@ -213,8 +229,8 @@ func (a *ABF) pollBuildsCompleted(platformId string) error {
 	return a.handleResponse(resp, true)
 }
 
-func (a *ABF) pollBuildsInTesting(platformId string) error {
-	req, err := http.NewRequest("GET", abfURL+"/build_lists.json?per_page=100&filter[status]=12000&filter[ownership]=index&filter[platform_id]="+platformId, nil)
+func (a *ABF) pollBuildsInTesting(platformID string) error {
+	req, err := http.NewRequest("GET", abfURL+"/api/v1/build_lists.json?per_page=100&filter[status]=12000&filter[ownership]=index&filter[platform_id]="+platformID, nil)
 	if err != nil {
 		return err
 	}
@@ -229,13 +245,12 @@ func (a *ABF) pollBuildsInTesting(platformId string) error {
 	return a.handleResponse(resp, false)
 }
 
-func (a *ABF) Accept(m *models.BuildList) error {
-	go util.MailModel(m)
-
-	for _, v := range strings.Split(m.HandleId, ";") {
+// Accept tells ABF to publish the build lists specified in the List.
+func (a *ABF) Accept(m *models.List) error {
+	for _, v := range strings.Split(m.IntegrationOne, ";") {
 		noBrackets := v[1 : len(v)-1]
 		id := to.Uint64(noBrackets)
-		req, err := http.NewRequest("PUT", abfURL+"/build_lists/"+to.String(id)+"/publish.json", nil)
+		req, err := http.NewRequest("PUT", abfURL+"/api/v1/build_lists/"+to.String(id)+"/publish.json", nil)
 		if err != nil {
 			return err
 		}
@@ -253,13 +268,12 @@ func (a *ABF) Accept(m *models.BuildList) error {
 	return nil
 }
 
-func (a *ABF) Reject(m *models.BuildList) error {
-	go util.MailModel(m)
-
-	for _, v := range strings.Split(m.HandleId, ";") {
+// Reject tells ABF to reject the build lists specified in the List.
+func (a *ABF) Reject(m *models.List) error {
+	for _, v := range strings.Split(m.IntegrationOne, ";") {
 		noBrackets := v[1 : len(v)-1]
 		id := to.Uint64(noBrackets)
-		req, err := http.NewRequest("PUT", abfURL+"/build_lists/"+to.String(id)+"/reject_publish.json", nil)
+		req, err := http.NewRequest("PUT", abfURL+"/api/v1/build_lists/"+to.String(id)+"/reject_publish.json", nil)
 		if err != nil {
 			return err
 		}
@@ -279,7 +293,7 @@ func (a *ABF) Reject(m *models.BuildList) error {
 }
 
 func (a *ABF) sendToTesting(id uint64) error {
-	req, err := http.NewRequest("PUT", abfURL+"/build_lists/"+to.String(id)+"/publish_into_testing.json", nil)
+	req, err := http.NewRequest("PUT", abfURL+"/api/v1/build_lists/"+to.String(id)+"/publish_into_testing.json", nil)
 	if err != nil {
 		return err
 	}
@@ -301,7 +315,7 @@ func (a *ABF) sendToTesting(id uint64) error {
 }
 
 func (a *ABF) getJSONList(id uint64) (list map[string]interface{}, err error) {
-	req, err := http.NewRequest("GET", abfURL+"/build_lists/"+to.String(id)+".json", nil)
+	req, err := http.NewRequest("GET", abfURL+"/api/v1/build_lists/"+to.String(id)+".json", nil)
 	if err != nil {
 		return
 	}
@@ -330,7 +344,7 @@ func (a *ABF) getJSONList(id uint64) (list map[string]interface{}, err error) {
 	return
 }
 
-func (a *ABF) makeBuildList(list map[string]interface{}) (*models.BuildList, error) {
+func (a *ABF) makeBuildList(list map[string]interface{}) (*models.List, error) {
 	pkg := a.makePkgList(list)
 
 	changelog := ""
@@ -346,54 +360,54 @@ func (a *ABF) makeBuildList(list map[string]interface{}) (*models.BuildList, err
 		}
 	}
 
-	user := a.getUser(dig.Uint64(&list, "user", "id"))
-	handleId := to.String(dig.Uint64(&list, "id"))
+	handleID := to.String(dig.Uint64(&list, "id"))
 	handleProject := dig.String(&list, "project", "fullname")
 	platform := dig.String(&list, "save_to_repository", "platform", "name")
 
-	bl := models.BuildList{
-		HandleId:       "[" + handleId + "]",
-		HandleProject:  handleProject,
-		HandleCommitId: dig.String(&list, "commit_hash"),
-		Diff:           a.makeDiff(dig.String(&list, "project", "git_url"), dig.String(&list, "last_published_commit_hash"), dig.String(&list, "commit_hash")),
+	bl := models.List{
+		Name:     dig.String(&list, "project", "name"),
+		Platform: platform,
+		Channel:  dig.String(&list, "save_to_repository", "name"),
+		Variants: dig.String(&list, "arch", "name"),
 
-		//Platform:     dig.String(&list, "build_for_platform", "name"),
-		Platform:     platform,
-		Repo:         dig.String(&list, "save_to_repository", "name"),
-		Architecture: dig.String(&list, "arch", "name"),
-		Name:         dig.String(&list, "project", "name"),
-		Submitter:    user,
-		Type:         dig.String(&list, "update_type"),
-		Status:       models.StatusTesting,
-		Links: []*models.BuildListLink{
-			&models.BuildListLink{
-				Name: models.LinkMainURL,
-				Url:  fmt.Sprintf("https://abf.io/build_lists/%v", handleId),
+		Artifacts: pkg,
+		Links: []*models.ListLink{
+			&models.ListLink{
+				Name: models.LinkMain,
+				URL:  fmt.Sprintf("%s/build_lists/%v", abfURL, handleID),
 			},
-			&models.BuildListLink{
-				Name: models.ChangelogURL,
-				Url:  changelog,
+			&models.ListLink{
+				Name: models.LinkChangelog,
+				URL:  changelog,
 			},
-			&models.BuildListLink{
-				Name: models.SCMLogURL,
-				Url:  fmt.Sprintf("https://abf.io/%v/commits/%v", handleProject, platform),
+			&models.ListLink{
+				Name: models.LinkSCM,
+				URL:  fmt.Sprintf("%s/%v/commits/%v", abfURL, handleProject, platform),
 			},
 		},
-		Packages:  pkg,
+		Changes:   changelog,
 		BuildDate: time.Unix(dig.Int64(&list, "updated_at"), 0),
-		Karma: []*models.Karma{
-			&models.Karma{
-				User:    models.FindUser(models.UserSystem),
-				Vote:    models.KARMA_NONE,
-				Comment: "Imported this build from ABF.",
+
+		StageCurrent: models.ListStageNotStarted,
+		Activity: []*models.ListActivity{
+			&models.ListActivity{
+				UserID:   models.FindUser(models.UserSystem).ID,
+				Activity: "Imported this build list from ABF.",
 			},
 		},
+
+		IntegrationName: "abf",
+		IntegrationOne:  "[" + handleID + "]",
+		IntegrationTwo:  dig.String(&list, "commit_hash"),
 	}
 
 	return &bl, nil
 }
 
-func (a *ABF) makeDiff(gitUrl, fromHash, toHash string) string {
+// makeDiff shells out to the cmd line git to get a patch. Unfortunately, this
+// may need tweaking given the modifications that OpenMandriva have done to
+// their ABF.
+func (a *ABF) makeDiff(gitURL, fromHash, toHash string) string {
 	// make sure it's not disabled
 	if !abfGitDiff {
 		return "Diff creation disabled."
@@ -407,19 +421,20 @@ func (a *ABF) makeDiff(gitUrl, fromHash, toHash string) string {
 
 	defer os.RemoveAll(tmpdir)
 
-	if strings.Contains(gitUrl, "@") {
-		gitUrl = gitUrl[:strings.Index(gitUrl, "//")+2] + gitUrl[strings.Index(gitUrl, "@")+1:]
+	if strings.Contains(gitURL, "@") {
+		gitURL = gitURL[:strings.Index(gitURL, "//")+2] + gitURL[strings.Index(gitURL, "@")+1:]
 	}
 
-	urlToUse := gitUrl
+	urlToUse := gitURL
 	if abfGitDiffSSH {
-		urlToUse = strings.Replace("git@"+gitUrl[strings.Index(gitUrl, "//")+2:], "/", ":", 1)
+		urlToUse = strings.Replace("git@"+gitURL[strings.Index(gitURL, "//")+2:], "/", ":", 1)
 	}
 
 	// reusable bytes output
 	var b bytes.Buffer
 
 	gitclonecmd := exec.Command("git", "clone", urlToUse, tmpdir)
+	gitclonecmd.Env = append(os.Environ(), "GIT_TERMINAL_PROMPT=0") // git 2.3+
 	gitclonecmd.Stderr = &b
 	gitclonecmd.Stdout = &b
 	gitclonecmd.Start()
@@ -431,13 +446,13 @@ func (a *ABF) makeDiff(gitUrl, fromHash, toHash string) string {
 	select {
 	case <-time.After(10 * time.Minute):
 		if err := gitclonecmd.Process.Kill(); err != nil {
-			fmt.Fprintf(os.Stderr, "couldn't kill git process: %s\n", err.Error())
+			log.Logger.Criticalf("abf: calling git to kill failed: %v", err)
 		}
 		<-gitresult // allow goroutine to exit
-		log.Println("process killed")
+		log.Logger.Critical("abf: git process called to kill")
 	case err := <-gitresult:
 		if err != nil { // git exited with non-zero status
-			fmt.Fprintf(os.Stderr, "git errored: %s\n", b.String())
+			log.Logger.Criticalf("abf: calling git failed: %v", err)
 			return "Repository could not be cloned for diff: " + err.Error()
 		}
 	}
@@ -448,45 +463,45 @@ func (a *ABF) makeDiff(gitUrl, fromHash, toHash string) string {
 
 		gitdiff, err := gitdiffcmd.CombinedOutput()
 		if err != nil {
-			fmt.Printf("%s", gitdiff)
+			log.Logger.Criticalf("abf: calling git diff failed: %v", err)
 			return "No diff available: " + err.Error()
 		}
 
 		return fmt.Sprintf("$ git show --format=fuller --patch-with-stat --summary %s\n\n%s", toHash, string(gitdiff))
-	} else {
-		gitdiffcmd := exec.Command("git", "diff", "--patch-with-stat", "--summary", fromHash+".."+toHash)
-		gitdiffcmd.Dir = tmpdir
-
-		gitdiff, err := gitdiffcmd.CombinedOutput()
-		if err != nil {
-			fmt.Printf("%s", gitdiff)
-			return "No diff available: " + err.Error()
-		}
-
-		return fmt.Sprintf("$ git diff --patch-with-stat --summary %s\n\n%s", fromHash+".."+toHash, string(gitdiff))
 	}
+
+	gitdiffcmd := exec.Command("git", "diff", "--patch-with-stat", "--summary", fromHash+".."+toHash)
+	gitdiffcmd.Dir = tmpdir
+
+	gitdiff, err := gitdiffcmd.CombinedOutput()
+	if err != nil {
+		fmt.Printf("%s", gitdiff)
+		return "No diff available: " + err.Error()
+	}
+
+	return fmt.Sprintf("$ git diff --patch-with-stat --summary %s\n\n%s", fromHash+".."+toHash, string(gitdiff))
 }
 
-func (a *ABF) makePkgList(json map[string]interface{}) []*models.BuildListPkg {
-	pkgs := make([]interface{}, 0)
+func (a *ABF) makePkgList(json map[string]interface{}) []*models.ListArtifact {
+	var pkgs []interface{}
 	dig.Get(&json, &pkgs, "packages")
 
-	pkg := make([]*models.BuildListPkg, 0)
+	var pkg []*models.ListArtifact
 
-	pkgrep := func(m map[string]interface{}) *models.BuildListPkg {
+	pkgrep := func(m map[string]interface{}) *models.ListArtifact {
 		pkgType := dig.String(&m, "type")
 		if strings.HasSuffix(dig.String(&m, "name"), "-debuginfo") {
 			pkgType = "debuginfo"
 		}
 
-		return &models.BuildListPkg{
+		return &models.ListArtifact{
 			Name:    dig.String(&m, "name"),
 			Type:    pkgType,
 			Epoch:   dig.Int64(&m, "epoch"),
 			Version: dig.String(&m, "version"),
 			Release: dig.String(&m, "release"),
-			Arch:    dig.String(&json, "arch", "name"),
-			Url:     dig.String(&m, "url"),
+			Variant: dig.String(&json, "arch", "name"),
+			URL:     dig.String(&m, "url"),
 		}
 	}
 
@@ -496,54 +511,4 @@ func (a *ABF) makePkgList(json map[string]interface{}) []*models.BuildListPkg {
 	}
 
 	return pkg
-}
-
-func (a *ABF) getUser(id uint64) *models.User {
-
-	o := orm.NewOrm()
-
-	var userModel *models.User
-
-	var userIntegration models.User
-	err := o.QueryTable(new(models.User)).Filter("Integration", id).One(&userIntegration)
-	if err == orm.ErrNoRows {
-
-		req, err := http.NewRequest("GET", abfURL+"/users/"+to.String(id)+".json", nil)
-		if err != nil {
-			return nil
-		}
-
-		req.SetBasicAuth(abfUser, abfAPIKey)
-
-		resp, err := abfClient.Do(req)
-		if err != nil {
-			return nil
-		}
-
-		defer resp.Body.Close()
-		body, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			return nil
-		}
-
-		var result map[string]interface{}
-
-		err = json.Unmarshal(body, &result)
-		if err != nil {
-			return nil
-		}
-
-		name := dig.String(&result, "user", "uname")
-
-		userModel = models.FindUser(name)
-		userModel.Integration = to.String(id)
-		userModel.Save()
-
-	} else if err != nil {
-		panic(err)
-	} else {
-		userModel = &userIntegration
-	}
-
-	return userModel
 }

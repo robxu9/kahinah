@@ -22,6 +22,7 @@ import (
 	"github.com/gorilla/securecookie"
 	"github.com/knq/kv"
 	"github.com/knq/sessionmw"
+	"github.com/robfig/cron"
 	"github.com/robxu9/kahinah/conf"
 	"github.com/robxu9/kahinah/controllers"
 	"github.com/robxu9/kahinah/data"
@@ -192,6 +193,9 @@ func main() {
 
 	postHandlers := map[string]goji.HandlerFunc{
 
+		// webhooks
+		"/hook/*": controllers.IntegrationHandler,
+
 		// build - specific
 		"/b/:id/": controllers.BuildPostHandler,
 
@@ -213,15 +217,17 @@ func main() {
 		mux.HandleC(pat.Post(util.GetPrefixString(k)), v)
 	}
 
-	// setup integration
-	integration.Integrate(&integration.ABF{})
-	go func() {
-		err := integration.Poll()
-		if err != nil {
-			log.Logger.Critical("integration failed to poll: %v", err)
-		}
-		time.Sleep(1 * time.Hour)
-	}()
+	// integration polling
+	integrationCron := cron.New()
+	if pollRate, ok := conf.Config.Get("integration.poll").(string); ok && pollRate != "" {
+		integrationCron.AddFunc(pollRate, func() {
+			pollAllErr := integration.PollAll()
+			for name, err := range pollAllErr {
+				log.Logger.Warnf("integration polling failed for %v: %v", name, err)
+			}
+		})
+	}
+	integrationCron.Start()
 
 	// bind and listen
 	if !flag.Parsed() {
@@ -247,4 +253,5 @@ func main() {
 	}
 
 	graceful.Wait()
+	integrationCron.Stop()
 }

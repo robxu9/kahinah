@@ -1,42 +1,31 @@
 package integration
 
 import (
-	"errors"
+	"net/http"
 
 	"github.com/robxu9/kahinah/models"
 )
 
 var (
-	ErrDisabled       = errors.New("integration: disabled")
-	ErrNotImplemented = errors.New("integration: not implemented")
+	Implementations = map[string]Integration{}
 )
 
 type Integration interface {
-	Poll() error            // poll for new updates
-	Hook(interface{}) error // receive and process a webhook from the BS
+	Poll() error          // poll for new updates
+	Hook(r *http.Request) // receive and process a webhook from the BS
 
-	Accept(*models.BuildList) error // signal to the BS to accept
-	Reject(*models.BuildList) error // signal to the BS to reject
+	Accept(*models.List) error // signal the system to accept
+	Reject(*models.List) error // signal the system to reject
 }
 
-var handler Integration
+func PollAll() map[string]error {
+	implErrors := map[string]error{}
 
-func Integrate(i Integration) {
-	handler = i
-}
+	for name, impl := range Implementations {
+		if err := impl.Poll(); err != nil {
+			implErrors[name] = err
+		}
+	}
 
-func Poll() error {
-	return handler.Poll()
-}
-
-func Hook(i interface{}) error {
-	return handler.Hook(i)
-}
-
-func Accept(l *models.BuildList) error {
-	return handler.Accept(l)
-}
-
-func Reject(l *models.BuildList) error {
-	return handler.Reject(l)
+	return implErrors
 }

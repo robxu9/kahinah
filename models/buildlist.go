@@ -43,10 +43,11 @@ type List struct {
 	StageCurrent string // either NotStarted, Finished, or the stage defined in between
 	Activity     []*ListActivity
 
-	// -- current stages
+	// -- current stages (populated during StageNotStarted)
 	Stages []*ListStage
 
 	// -- last but not least, integration stuff (five string slots for usage)
+	IntegrationName  string
 	IntegrationOne   string
 	IntegrationTwo   string
 	IntegrationThree string
@@ -112,6 +113,10 @@ type ListActivity struct {
 
 func (l *ListActivity) TableName() string {
 	return DBPrefix + "listactivities"
+}
+
+func (l *ListActivity) MailActivity() {
+	// TODO: implement
 }
 
 type ListStage struct {
