@@ -118,7 +118,7 @@ func newKarmaProcess(m *models.ListStageProcess, cfg map[string]interface{}) Pro
 }
 
 func init() {
-	Mapping.Set("karma", newKarmaProcess)
+	Mapping["karma"] = newKarmaProcess
 }
 
 // Karma represents the data for the current karma checking process. We contain

@@ -3,7 +3,6 @@ package controllers
 import (
 	"fmt"
 	"net/http"
-	"sort"
 	"strings"
 	"time"
 
@@ -12,6 +11,7 @@ import (
 	"golang.org/x/net/context"
 
 	"github.com/astaxie/beego/orm"
+	"github.com/jinzhu/gorm"
 	"github.com/knq/sessionmw"
 	"github.com/microcosm-cc/bluemonday"
 	"github.com/robxu9/kahinah/conf"
@@ -34,60 +34,53 @@ var (
 	maintainerHours = to.Int64(conf.Config.Get("karma.maintainerHours"))
 )
 
-// Sorters
-
-type sortByUpdateDate []*models.BuildList
-
-func (b sortByUpdateDate) Len() int {
-	return len(b)
-}
-func (b sortByUpdateDate) Swap(i, j int) {
-	b[i], b[j] = b[j], b[i]
-}
-func (b sortByUpdateDate) Less(i, j int) bool {
-	return b[i].Updated.Unix() > b[j].Updated.Unix()
-}
-
-type sortByBuildDate []*models.BuildList
-
-func (b sortByBuildDate) Len() int {
-	return len(b)
-}
-func (b sortByBuildDate) Swap(i, j int) {
-	b[i], b[j] = b[j], b[i]
-}
-func (b sortByBuildDate) Less(i, j int) bool {
-	return b[i].BuildDate.Unix() > b[j].BuildDate.Unix()
-}
-
 //
 // --------------------------------------------------------------------
 // LISTS
 // --------------------------------------------------------------------
 //
 
-// BuildsHandler shows the list of all available builds, paginated.
-func BuildsHandler(ctx context.Context, rw http.ResponseWriter, r *http.Request) {
+// ListsAPIHandler shows the collection of lists, with filters, paginated, JSON'ified.
+func ListsAPIHandler(ctx context.Context, rw http.ResponseWriter, r *http.Request) {
 	dataRenderer := data.FromContext(ctx)
+	dataRenderer.Type = data.DataJSON
 
-	page := to.Int64(r.FormValue("page"))
+	platform := r.FormValue("platform")
+	channel := r.FormValue("channel")
+	status := r.FormValue("status")
+
+	limit := int(to.Int64(r.FormValue("limit")))
+	if limit <= 0 {
+		limit = 50 // reasonable
+	}
+
+	page := int(to.Int64(r.FormValue("page")))
 	if page <= 0 {
 		page = 1
 	}
 
-	var packages []*models.BuildList
+	baseDB := models.DB.Model(&models.List{})
+	if platform != "" {
+		baseDB = baseDB.Where("platform = ?", platform)
+	}
 
-	o := orm.NewOrm()
+	if channel != "" {
+		baseDB = baseDB.Where("channel = ?", channel)
+	}
 
-	qt := o.QueryTable(new(models.BuildList))
+	if status == models.ListRunning || status == models.ListPending || status == models.ListSuccess || status == models.ListFailed {
+		baseDB = baseDB.Where("stage_result = ?", status)
+	} else if status != "" {
+		panic(ErrBadRequest)
+	}
 
-	cnt, err := qt.Count()
-	if err != nil {
+	var cnt int
+	if err := baseDB.Count(&cnt).Error; err != nil {
 		panic(err)
 	}
 
-	totalpages := cnt / 50
-	if cnt%50 != 0 {
+	totalpages := cnt / limit
+	if cnt%limit != 0 {
 		totalpages++
 	}
 
@@ -95,171 +88,43 @@ func BuildsHandler(ctx context.Context, rw http.ResponseWriter, r *http.Request)
 		page = totalpages
 	}
 
-	_, err = qt.Limit(50, (page-1)*50).OrderBy("-Updated").All(&packages)
-	if err != nil && err != orm.ErrNoRows {
+	var packages []*models.List
+	if err := baseDB.Limit(limit).Offset((page - 1) * limit).Order("updated_at desc").Find(&packages).Error; err != nil && err != gorm.ErrRecordNotFound {
 		panic(err)
 	}
 
-	for _, v := range packages {
-		o.LoadRelated(v, "Submitter")
-	}
-
-	sort.Sort(sortByUpdateDate(packages))
-
 	dataRenderer.Data = map[string]interface{}{
-		"Title":    "Builds",
-		"Nav":      5,
-		"Packages": packages,
-		"PrevPage": page - 1,
-		"Page":     page,
-		"NextPage": page + 1,
-		"Pages":    totalpages,
+		"lists": packages,
+		"pages": map[string]interface{}{
+			"prev":    page - 1,
+			"current": page,
+			"next":    page + 1,
+			"total":   totalpages,
+		},
 	}
-	dataRenderer.Template = "i/list_paginated"
 }
 
-// RejectedHandler shows the list of all rejected builds, paginated.
-func RejectedHandler(ctx context.Context, rw http.ResponseWriter, r *http.Request) {
+// ListsHandler shows the collection of lists (HTML).
+func ListsHandler(ctx context.Context, rw http.ResponseWriter, r *http.Request) {
 	dataRenderer := data.FromContext(ctx)
 
-	page := to.Int64(r.FormValue("page"))
-	if page <= 0 {
-		page = 1
-	}
-
-	var packages []*models.BuildList
-
-	o := orm.NewOrm()
-	qt := o.QueryTable(new(models.BuildList))
-
-	cnt, err := qt.Filter("status", models.StatusRejected).Count()
-	if err != nil {
-		panic(err)
-	}
-
-	totalpages := cnt / 50
-	if cnt%50 != 0 {
-		totalpages++
-	}
-
-	if page > totalpages {
-		page = totalpages
-	}
-
-	_, err = qt.Limit(50, (page-1)*50).OrderBy("-Updated").Filter("status", models.StatusRejected).All(&packages)
-	if err != nil && err != orm.ErrNoRows {
-		panic(err)
-	}
-
-	for _, v := range packages {
-		o.LoadRelated(v, "Submitter")
-	}
-
-	sort.Sort(sortByUpdateDate(packages))
+	// filters that will be passed on by Vue.js to the API
+	platform := r.FormValue("platform")
+	channel := r.FormValue("channel")
+	status := r.FormValue("status")
+	limit := r.FormValue("limit")
+	page := r.FormValue("page")
 
 	dataRenderer.Data = map[string]interface{}{
-		"Title":    "Rejected",
-		"Nav":      4,
-		"Packages": packages,
-		"PrevPage": page - 1,
-		"Page":     page,
-		"NextPage": page + 1,
-		"Pages":    totalpages,
-	}
-	dataRenderer.Template = "i/list_paginated"
-}
-
-// PublishedHandler shows the list of all published builds, paginated.
-func PublishedHandler(ctx context.Context, rw http.ResponseWriter, r *http.Request) {
-	dataRenderer := data.FromContext(ctx)
-
-	filterPlatform := r.FormValue("platform")
-
-	page := to.Int64(r.FormValue("page"))
-	if page <= 0 {
-		page = 1
-	}
-
-	var packages []*models.BuildList
-
-	o := orm.NewOrm()
-	qt := o.QueryTable(new(models.BuildList))
-
-	if filterPlatform != "" {
-		qt = qt.Filter("platform", filterPlatform)
-	}
-
-	cnt, err := qt.Filter("status", models.StatusPublished).Count()
-	if err != nil {
-		panic(err)
-	}
-
-	totalpages := cnt / 50
-	if cnt%50 != 0 {
-		totalpages++
-	}
-
-	if page > totalpages {
-		page = totalpages
-	}
-
-	_, err = qt.Limit(50, (page-1)*50).OrderBy("-Updated").Filter("status", models.StatusPublished).All(&packages)
-	if err != nil && err != orm.ErrNoRows {
-		panic(err)
-	}
-
-	for _, v := range packages {
-		o.LoadRelated(v, "Submitter")
-	}
-
-	sort.Sort(sortByUpdateDate(packages))
-
-	dataRenderer.Data = map[string]interface{}{
-		"Title":    "Accepted",
-		"Nav":      3,
-		"Packages": packages,
-		"PrevPage": page - 1,
-		"Page":     page,
-		"NextPage": page + 1,
-		"Pages":    totalpages,
-	}
-	dataRenderer.Template = "i/list_paginated"
-}
-
-// TestingHandler shows the list of builds that have yet to be approved, paginated.
-func TestingHandler(ctx context.Context, rw http.ResponseWriter, r *http.Request) {
-	dataRenderer := data.FromContext(ctx)
-
-	var packages []*models.BuildList
-
-	o := orm.NewOrm()
-	qt := o.QueryTable(new(models.BuildList))
-
-	num, err := qt.Filter("status", models.StatusTesting).All(&packages)
-	if err != nil && err != orm.ErrNoRows {
-		panic(err)
-	}
-
-	pkgkarma := make(map[string]string)
-
-	for _, v := range packages {
-		totalKarma := getTotalKarma(v.Id)
-
-		pkgkarma[to.String(v.Id)] = to.String(totalKarma)
-
-		o.LoadRelated(v, "Submitter")
-	}
-
-	sort.Sort(sortByBuildDate(packages))
-
-	dataRenderer.Data = map[string]interface{}{
-		"Title":    "Testing",
+		"Title":    "Lists",
 		"Nav":      2,
-		"Packages": packages,
-		"PkgKarma": pkgkarma,
-		"Entries":  num,
+		"Platform": platform,
+		"Channel":  channel,
+		"Status":   status,
+		"Limit":    limit,
+		"Page":     page,
 	}
-	dataRenderer.Template = "i/list_sortable"
+	dataRenderer.Template = "i/list"
 }
 
 //
@@ -276,28 +141,17 @@ func BuildGetHandler(ctx context.Context, rw http.ResponseWriter, r *http.Reques
 
 	id := to.Uint64(pat.Param(ctx, "id"))
 
-	var pkg models.BuildList
-
-	o := orm.NewOrm()
-	qt := o.QueryTable(new(models.BuildList))
-
-	err := qt.Filter("Id", id).One(&pkg)
-	if err == orm.ErrNoRows {
-		panic(ErrNotFound)
-	} else if err != nil {
-		panic(err)
+	var pkg models.List
+	if err := models.DB.Where("id = ?", id).First(&pkg).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			panic(ErrNotFound)
+		} else {
+			panic(err)
+		}
 	}
 
 	toRender["Title"] = "Build " + to.String(id) + ": " + pkg.Name
-	if pkg.Status == models.StatusTesting {
-		toRender["Nav"] = 2
-	} else if pkg.Status == models.StatusPublished {
-		toRender["Nav"] = 3
-	} else if pkg.Status == models.StatusRejected {
-		toRender["Nav"] = 4
-	} else {
-		toRender["Nav"] = 5
-	}
+	toRender["Nav"] = 2
 	toRender["ID"] = to.String(id)
 
 	dataRenderer.Data = toRender
@@ -320,8 +174,8 @@ type buildGetJSON struct {
 	Submitter string
 	Type      string // update type
 	Status    string // testing/published/rejected
-	Artifacts []*models.BuildListPkg
-	Links     []*models.BuildListLink
+	Artifacts []*models.ListArtifact
+	Links     []*models.ListLink
 	BuildDate time.Time
 	Updated   time.Time
 	Activity  []*buildGetJSONKarma
@@ -346,16 +200,13 @@ func BuildGetJSONHandler(ctx context.Context, rw http.ResponseWriter, r *http.Re
 	id := to.Uint64(pat.Param(ctx, "id"))
 
 	// load the requested build list
-	var pkg models.BuildList
-
-	o := orm.NewOrm()
-	qt := o.QueryTable(new(models.BuildList))
-
-	err := qt.Filter("Id", id).One(&pkg)
-	if err == orm.ErrNoRows {
-		panic(ErrNotFound)
-	} else if err != nil {
-		panic(err)
+	var pkg models.List
+	if err := models.DB.Where("id = ?", id).First(&pkg).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			panic(ErrNotFound)
+		} else {
+			panic(err)
+		}
 	}
 
 	o.LoadRelated(&pkg, "Submitter")

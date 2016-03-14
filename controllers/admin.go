@@ -25,10 +25,6 @@ func init() {
 	for _, v := range adminWhitelist {
 		adminWhitelistSet.Add(v.(string))
 	}
-
-	models.PermRegister(PermissionAdmin)
-	models.PermRegister(PermissionQA)
-	models.PermRegister(PermissionWhitelist)
 }
 
 func adminCheck(r *http.Request) {

@@ -28,7 +28,7 @@ func newAdvisoryProcess(m *models.ListStageProcess, cfg map[string]interface{}) 
 }
 
 func init() {
-	Mapping.Set("advisory", newAdvisoryProcess)
+	Mapping["advisory"] = newAdvisoryProcess
 }
 
 var (

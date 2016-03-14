@@ -27,7 +27,9 @@ import (
 	"github.com/robxu9/kahinah/controllers"
 	"github.com/robxu9/kahinah/data"
 	"github.com/robxu9/kahinah/integration"
+	"github.com/robxu9/kahinah/job"
 	"github.com/robxu9/kahinah/log"
+	"github.com/robxu9/kahinah/models"
 	"github.com/robxu9/kahinah/render"
 	"github.com/robxu9/kahinah/util"
 	urender "github.com/unrolled/render"
@@ -157,23 +159,17 @@ func main() {
 		// main page
 		"/": controllers.MainHandler,
 
-		// build - testing
-		"/i/pending/": controllers.TestingHandler,
+		// builds - json
+		"/i/list/json/": controllers.ListsAPIHandler,
 
-		// build - published
-		"/i/accepted/": controllers.PublishedHandler,
-
-		// build - rejected
-		"/i/rejected/": controllers.RejectedHandler,
+		// builds
+		"/i/list/": controllers.ListsHandler,
 
 		// build - specific
 		"/b/:id/": controllers.BuildGetHandler,
 
 		// build - specific - json
 		"/b/:id/json/": controllers.BuildGetJSONHandler,
-
-		// build - all builds
-		"/i/": controllers.BuildsHandler,
 
 		// activity - json
 		"/i/activity/json/": controllers.ActivityJSONHandler,
@@ -217,17 +213,34 @@ func main() {
 		mux.HandleC(pat.Post(util.GetPrefixString(k)), v)
 	}
 
+	// -- cronjobs ----------------------------------------------------------
+
+	cronRunner := cron.New()
+
 	// integration polling
-	integrationCron := cron.New()
 	if pollRate, ok := conf.Config.Get("integration.poll").(string); ok && pollRate != "" {
-		integrationCron.AddFunc(pollRate, func() {
+		cronRunner.AddFunc(pollRate, func() {
 			pollAllErr := integration.PollAll()
 			for name, err := range pollAllErr {
 				log.Logger.Warnf("integration polling failed for %v: %v", name, err)
 			}
 		})
 	}
-	integrationCron.Start()
+
+	// process new stages/check processes every 10 seconds
+	cronRunner.AddFunc("@every 10s", func() {
+		models.CheckAllListStages()
+	})
+
+	// run the job scheduler every minute
+	cronRunner.AddFunc("@every 1m", func() {
+		job.ProcessQueue()
+	})
+
+	// start cron
+	cronRunner.Start()
+
+	// -- server setup --------------------------------------------------------
 
 	// bind and listen
 	if !flag.Parsed() {
@@ -253,5 +266,11 @@ func main() {
 	}
 
 	graceful.Wait()
-	integrationCron.Stop()
+	cronRunner.Stop()
+
+	log.Logger.Info("processing leftover jobs...")
+	close(job.Queue)
+	for len(job.Queue) > 0 {
+		job.ProcessQueue()
+	}
 }

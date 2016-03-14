@@ -12,7 +12,7 @@
     <title>{{if .Title}}{{.Title}} | {{end}}Kahinah</title>
 
     <!-- bulma -->
-    <link href="{{url "/static/css/bulma.min.css"}}" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bulma/0.0.16/css/bulma.min.css" rel="stylesheet">
 
     <!-- Font Awesome -->
     <link href="//maxcdn.bootstrapcdn.com/font-awesome/4.5.0/css/font-awesome.min.css" rel="stylesheet" integrity="sha256-3dkvEK0WLHRJ7/Csr0BZjAWxERc5WH7bdeUya2aXxdU= sha512-+L4yy6FRcDGbXJ9mPG8MT/3UCDzwR9gPeyFNMCtInsol++5m3bk2bXWKdZjvybmohrAsn3Ua5x8gfLnbE1YkOg=="
@@ -57,10 +57,8 @@
                 </div>
                 <a class="header-tab {{if eq .Nav 0}}is-active{{end}}" href="{{url "/"}}">Dashboard</a>
                 <a class="header-tab {{if eq .Nav 1}}is-active{{end}}" href="{{url "/i/activity"}}">Recent Activity</a>
-                <a class="header-tab {{if eq .Nav 2}}is-active{{end}}" href="{{url "/i/pending"}}">Pending</a>
-                <a class="header-tab {{if eq .Nav 3}}is-active{{end}}" href="{{url "/i/accepted"}}">Accepted</a>
-                <a class="header-tab {{if eq .Nav 4}}is-active{{end}}" href="{{url "/i/rejected"}}">Rejected</a>
-                <a class="header-tab {{if eq .Nav 5}}is-active{{end}}" href="{{url "/i"}}">All</a>
+                <a class="header-tab {{if eq .Nav 2}}is-active{{end}}" href="{{url "/i/list"}}">Lists</a>
+                <a class="header-tab {{if eq .Nav 3}}is-active{{end}}" href="{{url "/i/advisories"}}">Advisories</a>
             </div>
 
             <!-- Hamburger Menu -->

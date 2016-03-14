@@ -17,7 +17,7 @@ const (
 func Authenticated(r *http.Request) string {
 	apiKey := r.Header.Get("X-Kahinah-Key")
 	if apiKey != "" {
-		user := models.FindUserAPI(apiKey)
+		user := models.FindUserByAPI(apiKey)
 		if user != nil {
 			return user.Username
 		}

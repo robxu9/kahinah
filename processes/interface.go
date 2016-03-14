@@ -2,7 +2,6 @@ package processes
 
 import (
 	"errors"
-	"sync"
 
 	"github.com/robxu9/kahinah/models"
 )
@@ -16,32 +15,9 @@ const (
 	ProcessAborted
 )
 
-type ProcessMap struct {
-	sync.RWMutex
-	mapping map[string]NewProcess
-}
-
-func newProcessMap() *ProcessMap {
-	return &ProcessMap{
-		mapping: map[string]NewProcess{},
-	}
-}
-
-func (p *ProcessMap) Get(k string) NewProcess {
-	p.RWMutex.RLock()
-	defer p.RWMutex.RUnlock()
-	return p.mapping[k]
-}
-
-func (p *ProcessMap) Set(k string, v NewProcess) {
-	p.RWMutex.Lock()
-	defer p.RWMutex.Unlock()
-	p.mapping[k] = v
-}
-
 var (
 	ErrEnded = errors.New("process: already ended")
-	Mapping  = newProcessMap()
+	Mapping  = map[string]NewProcess{}
 )
 
 // NewProcess provides a method to intialise a new process with stored model

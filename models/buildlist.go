@@ -1,16 +1,21 @@
 package models
 
 import (
+	"sync"
 	"time"
 
 	"github.com/jinzhu/gorm"
 )
 
 const (
-	ListRunning  = "running"
-	ListPending  = "pending"
-	ListAccepted = "accepted"
-	ListRejected = "rejected"
+	// ListRunning means that the list is running QA tasks
+	ListRunning = "running"
+	// ListPending means that the list is pending user intervention
+	ListPending = "pending"
+	// ListSuccess means that all tasks completed successfully
+	ListSuccess = "success"
+	// ListFailed means that the QA tasks failed to complete
+	ListFailed = "failed"
 
 	LinkMain      = "_mainURL"
 	LinkChangelog = "_changelogURL"
@@ -21,6 +26,11 @@ const (
 
 	ArtifactBinary = "binary"
 	ArtifactSource = "source"
+)
+
+var (
+	checkAllListStagesChan  = make(chan int, 1)
+	checkAllListStagesMutex = &sync.Mutex{}
 )
 
 type List struct {
@@ -41,7 +51,9 @@ type List struct {
 
 	// -- current stage and activity
 	StageCurrent string // either NotStarted, Finished, or the stage defined in between
-	Activity     []*ListActivity
+	StageResult  string // the status of the stage (running, pending, passed, failed)
+	// (this will only be set from pending or running when the whole list has finished or a stage has failed)
+	Activity []*ListActivity
 
 	// -- current stages (populated during StageNotStarted)
 	Stages []*ListStage
@@ -68,6 +80,27 @@ func (l *List) AddActivity(u *User, activity string) {
 	if err := DB.Create(newActivity).Error; err != nil {
 		panic(err) // this shouldn't really panic though..
 	}
+}
+
+// CheckStage checks the current stage of the list for completion. If so,
+// it pushes the list to the next stage and fires off tasks.
+// If the present stage is StageNotStarted, it populates the rest of the stages.
+func (l *List) CheckStage() {
+	// TODO: implement
+}
+
+// CheckAllListStages retrieves all stages that are not
+func CheckAllListStages() {
+	if len(checkAllListStagesChan) >= 1 {
+		return // we only want one at a time since this runs so frequently,
+		// and we really don't want 9000 goroutines waiting on a mutex.
+	}
+	checkAllListStagesChan <- 1
+	checkAllListStagesMutex.Lock() // double lock b/c len() >= 1 is imperfect
+	defer checkAllListStagesMutex.Unlock()
+	// TODO: implement
+	// Get all stages not currently ListSuccess or ListFailed
+	<-checkAllListStagesChan // relieve it
 }
 
 type ListArtifact struct {

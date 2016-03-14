@@ -2,12 +2,14 @@ package integration
 
 import (
 	"net/http"
+	"sync"
 
 	"github.com/robxu9/kahinah/models"
 )
 
 var (
 	Implementations = map[string]Integration{}
+	pollAllLock     = &sync.Mutex{}
 )
 
 type Integration interface {
@@ -19,6 +21,9 @@ type Integration interface {
 }
 
 func PollAll() map[string]error {
+	pollAllLock.Lock()
+	defer pollAllLock.Unlock()
+
 	implErrors := map[string]error{}
 
 	for name, impl := range Implementations {

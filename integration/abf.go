@@ -389,6 +389,7 @@ func (a *ABF) makeBuildList(list map[string]interface{}) (*models.List, error) {
 		BuildDate: time.Unix(dig.Int64(&list, "updated_at"), 0),
 
 		StageCurrent: models.ListStageNotStarted,
+		StageResult:  models.ListRunning,
 		Activity: []*models.ListActivity{
 			&models.ListActivity{
 				UserID:   models.FindUser(models.UserSystem).ID,
