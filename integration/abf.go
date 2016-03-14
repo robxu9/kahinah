@@ -371,16 +371,16 @@ func (a *ABF) makeBuildList(list map[string]interface{}) (*models.List, error) {
 		Variants: dig.String(&list, "arch", "name"),
 
 		Artifacts: pkg,
-		Links: []*models.ListLink{
-			&models.ListLink{
+		Links: []models.ListLink{
+			{
 				Name: models.LinkMain,
 				URL:  fmt.Sprintf("%s/build_lists/%v", abfURL, handleID),
 			},
-			&models.ListLink{
+			{
 				Name: models.LinkChangelog,
 				URL:  changelog,
 			},
-			&models.ListLink{
+			{
 				Name: models.LinkSCM,
 				URL:  fmt.Sprintf("%s/%v/commits/%v", abfURL, handleProject, platform),
 			},
@@ -390,8 +390,8 @@ func (a *ABF) makeBuildList(list map[string]interface{}) (*models.List, error) {
 
 		StageCurrent: models.ListStageNotStarted,
 		StageResult:  models.ListRunning,
-		Activity: []*models.ListActivity{
-			&models.ListActivity{
+		Activity: []models.ListActivity{
+			{
 				UserID:   models.FindUser(models.UserSystem).ID,
 				Activity: "Imported this build list from ABF.",
 			},
@@ -483,19 +483,19 @@ func (a *ABF) makeDiff(gitURL, fromHash, toHash string) string {
 	return fmt.Sprintf("$ git diff --patch-with-stat --summary %s\n\n%s", fromHash+".."+toHash, string(gitdiff))
 }
 
-func (a *ABF) makePkgList(json map[string]interface{}) []*models.ListArtifact {
+func (a *ABF) makePkgList(json map[string]interface{}) []models.ListArtifact {
 	var pkgs []interface{}
 	dig.Get(&json, &pkgs, "packages")
 
-	var pkg []*models.ListArtifact
+	var pkg []models.ListArtifact
 
-	pkgrep := func(m map[string]interface{}) *models.ListArtifact {
+	pkgrep := func(m map[string]interface{}) models.ListArtifact {
 		pkgType := dig.String(&m, "type")
 		if strings.HasSuffix(dig.String(&m, "name"), "-debuginfo") {
 			pkgType = "debuginfo"
 		}
 
-		return &models.ListArtifact{
+		return models.ListArtifact{
 			Name:    dig.String(&m, "name"),
 			Type:    pkgType,
 			Epoch:   dig.Int64(&m, "epoch"),
