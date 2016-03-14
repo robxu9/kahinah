@@ -43,8 +43,8 @@ type List struct {
 	Variants string // variants/architectures (split by ';')
 
 	// -- contained data
-	Artifacts  []*ListArtifact
-	Links      []*ListLink
+	Artifacts  []ListArtifact
+	Links      []ListLink
 	Changes    string // provide a field which describes changes, whether textual or diff
 	BuildDate  time.Time
 	AdvisoryID uint // link to advisory
@@ -53,10 +53,10 @@ type List struct {
 	StageCurrent string // either NotStarted, Finished, or the stage defined in between
 	StageResult  string // the status of the stage (running, pending, passed, failed)
 	// (this will only be set from pending or running when the whole list has finished or a stage has failed)
-	Activity []*ListActivity
+	Activity []ListActivity
 
 	// -- current stages (populated during StageNotStarted)
-	Stages []*ListStage
+	Stages []ListStage
 
 	// -- last but not least, integration stuff (five string slots for usage)
 	IntegrationName  string
@@ -159,7 +159,7 @@ type ListStage struct {
 	Name   string // stage name
 
 	// -- processes
-	Processes []*ListStageProcess
+	Processes []ListStageProcess
 }
 
 func (l *ListStage) TableName() string {

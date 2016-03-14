@@ -22,7 +22,7 @@ type Advisory struct {
 	Summary     string
 	Description string
 
-	Lists []*List // lists
+	Lists []List // lists
 }
 
 func (a *Advisory) TableName() string {

@@ -15,8 +15,8 @@ type User struct {
 
 	APIKey string `json:"-"`
 
-	Permissions []*UserPermission
-	Activities  []*ListActivity
+	Permissions []UserPermission
+	Activities  []ListActivity
 }
 
 func (u *User) String() string {
