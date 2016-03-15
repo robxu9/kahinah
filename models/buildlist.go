@@ -56,7 +56,8 @@ type List struct {
 	Activity []ListActivity
 
 	// -- current stages (populated during StageNotStarted)
-	Stages []ListStage
+	PlatformGitConfig string      // where we read our configuration from
+	Stages            []ListStage // the defined stages
 
 	// -- last but not least, integration stuff (five string slots for usage)
 	IntegrationName  string

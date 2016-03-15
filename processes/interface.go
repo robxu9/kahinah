@@ -55,5 +55,13 @@ type Process interface {
 	// APIMetadata returns general metadata about the current process state to
 	// the client. (The list only cares whether it's OK or not, so the rest of
 	// the data can go to the client.)
-	APIMetadata() interface{}
+	APIMetadata(user *models.User) interface{}
+}
+
+// BuildProcess takes a ListStageProcess, reads configuration from the specified
+// source defined in the parent list, then calls the corresponding NewProcess.
+// Returns an error if the process is not available.
+func BuildProcess(l *models.ListStageProcess) (Process, error) {
+	// TODO: implement
+	return nil, nil
 }

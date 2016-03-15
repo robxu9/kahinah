@@ -1,7 +1,7 @@
 package controllers
 
 import (
-	"fmt"
+	"errors"
 	"net/http"
 	"strings"
 	"time"
@@ -10,28 +10,16 @@ import (
 
 	"golang.org/x/net/context"
 
-	"github.com/astaxie/beego/orm"
 	"github.com/jinzhu/gorm"
-	"github.com/knq/sessionmw"
-	"github.com/microcosm-cc/bluemonday"
-	"github.com/robxu9/kahinah/conf"
 	"github.com/robxu9/kahinah/data"
-	"github.com/robxu9/kahinah/integration"
-	"github.com/robxu9/kahinah/log"
 	"github.com/robxu9/kahinah/models"
-	"github.com/robxu9/kahinah/util"
-	"github.com/russross/blackfriday"
+	"github.com/robxu9/kahinah/processes"
 	"menteslibres.net/gosexy/to"
 )
 
-const (
-	blockKarma = 9999
-	pushKarma  = 9999
-)
-
 var (
-	maintainerKarma = to.Int64(conf.Config.Get("karma.maintainerKarma"))
-	maintainerHours = to.Int64(conf.Config.Get("karma.maintainerHours"))
+	// ErrNoCurrentStage signals that StageCurrent doesn't exist for some reason.
+	ErrNoCurrentStage = errors.New("kahinah: couldn't find the current stage (yikes!)")
 )
 
 //
@@ -158,50 +146,44 @@ func BuildGetHandler(ctx context.Context, rw http.ResponseWriter, r *http.Reques
 	dataRenderer.Template = "builds/build"
 }
 
-type buildGetJSONKarma struct {
-	User    string
-	Karma   string
-	Comment string
-	Time    time.Time
+type buildGetJSONStage struct {
+	Name     string
+	Status   map[string]processes.ProcessStatus
+	Metadata map[string]interface{}
+	Optional map[string]bool
 }
 
 type buildGetJSON struct {
-	ID        uint64
-	Platform  string
-	Channel   string   // maps to repo
-	Arch      []string // maps to architectures
-	Name      string
-	Submitter string
-	Type      string // update type
-	Status    string // testing/published/rejected
-	Artifacts []*models.ListArtifact
-	Links     []*models.ListLink
+	ID       uint
+	Platform string
+	Channel  string   // maps to repo
+	Variants []string // maps to architectures
+	Name     string
+
+	Artifacts []models.ListArtifact
+	Links     []models.ListLink
+	Activity  []models.ListActivity
+	Changes   string
+
 	BuildDate time.Time
 	Updated   time.Time
-	Activity  []*buildGetJSONKarma
-	Diff      string
-	Advisory  *models.Advisory
 
-	TotalKarma int64
-	User       string
-	UserIsQA   bool
-	Maintainer bool
-
-	MaintainerKarma int64
-	PushKarma       int
-	BlockKarma      int
-	Acceptable      bool
-	Rejectable      bool
+	PlatformConfig string
+	Stages         []buildGetJSONStage
+	CurrentStage   string
+	Status         string
+	Advisory       uint
 }
 
 // BuildGetJSONHandler displays build information in JSON for a specific build.
 func BuildGetJSONHandler(ctx context.Context, rw http.ResponseWriter, r *http.Request) {
 	dataRenderer := data.FromContext(ctx)
 	id := to.Uint64(pat.Param(ctx, "id"))
+	user := models.FindUserNoCreate(Authenticated(r))
 
 	// load the requested build list
 	var pkg models.List
-	if err := models.DB.Where("id = ?", id).First(&pkg).Error; err != nil {
+	if err := models.DB.Where("id = ?", id).First(&pkg).Related(&pkg.Activity, "Activity").Related(&pkg.Artifacts, "Artifacts").Related(&pkg.Links, "Links").Related(&pkg.Stages, "Stages").Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			panic(ErrNotFound)
 		} else {
@@ -209,216 +191,156 @@ func BuildGetJSONHandler(ctx context.Context, rw http.ResponseWriter, r *http.Re
 		}
 	}
 
-	o.LoadRelated(&pkg, "Submitter")
-	o.LoadRelated(&pkg, "Packages")
-	o.LoadRelated(&pkg, "Links")
-	o.LoadRelated(&pkg, "Advisory")
-	o.LoadRelated(&pkg, "Karma")
+	// load stage information
+	var stageInfo []buildGetJSONStage
 
-	// load karma
-	totalKarma := getTotalKarma(id) // get total karma
-	var renderedKarma []*buildGetJSONKarma
-	for _, v := range pkg.Karma {
-		o.LoadRelated(v, "User")
-		renderedKarma = append(renderedKarma, &buildGetJSONKarma{
-			User:    v.User.Username,
-			Karma:   v.Vote,
-			Comment: string(bluemonday.UGCPolicy().SanitizeBytes(blackfriday.MarkdownCommon([]byte(v.Comment)))),
-			Time:    v.Time,
-		})
-	}
-
-	user := Authenticated(r)
-	isQA := PermCheck(r, PermissionQA)
-	maintainerAllowed := pkg.Submitter.Username == user && time.Since(pkg.BuildDate).Hours() >= float64(maintainerHours)
-
-	// check if we can accept or reject
-	acceptable := false
-	rejectable := false
-
-	if pkg.Status == models.StatusTesting {
-		upperThreshold := conf.Config.GetDefault("karma.upperKarma", 3).(int64)
-		lowerThreshold := conf.Config.GetDefault("karma.lowerKarma", -3).(int64)
-
-		if totalKarma >= upperThreshold {
-			acceptable = true
-		} else if totalKarma <= lowerThreshold {
-			rejectable = true
+	for _, v := range pkg.Stages {
+		if err := models.DB.Related(&v.Processes, "Processes").Error; err != nil && err != gorm.ErrRecordNotFound {
+			panic(err)
 		}
+
+		// get all process info
+		status := map[string]processes.ProcessStatus{}
+		metadata := map[string]interface{}{}
+		optional := map[string]bool{}
+
+		for _, p := range v.Processes {
+			process, err := processes.BuildProcess(&p)
+			if err != nil {
+				panic(err)
+			}
+
+			status[p.Name] = process.Status()
+			metadata[p.Name] = process.APIMetadata(user)
+			optional[p.Name] = p.Optional
+		}
+
+		stageInfo = append(stageInfo, buildGetJSONStage{
+			Name:     v.Name,
+			Status:   status,
+			Metadata: metadata,
+			Optional: optional,
+		})
 	}
 
 	// render the data in a nice way
 
 	dataRenderer.Data = &buildGetJSON{
-		ID:        pkg.Id,
-		Platform:  pkg.Platform,
-		Channel:   pkg.Repo,
-		Arch:      strings.Split(pkg.Architecture, ";"),
-		Name:      pkg.Name,
-		Submitter: pkg.Submitter.Username,
-		Type:      pkg.Type,
-		Status:    pkg.Status,
-		Artifacts: pkg.Packages,
+		ID:       pkg.ID,
+		Platform: pkg.Platform,
+		Channel:  pkg.Channel,
+		Variants: strings.Split(pkg.Variants, ";"),
+		Name:     pkg.Name,
+
+		Artifacts: pkg.Artifacts,
 		Links:     pkg.Links,
+		Activity:  pkg.Activity,
+		Changes:   pkg.Changes,
+
 		BuildDate: pkg.BuildDate,
-		Updated:   pkg.Updated,
-		Activity:  renderedKarma,
-		Diff:      pkg.Diff,
-		Advisory:  pkg.Advisory,
+		Updated:   pkg.UpdatedAt,
 
-		TotalKarma: totalKarma,
-		User:       user,
-		UserIsQA:   isQA,
-		Maintainer: maintainerAllowed,
-
-		MaintainerKarma: maintainerKarma,
-		PushKarma:       pushKarma,
-		BlockKarma:      blockKarma,
-		Acceptable:      acceptable,
-		Rejectable:      rejectable,
+		PlatformConfig: pkg.PlatformGitConfig,
+		Stages:         stageInfo,
+		CurrentStage:   pkg.StageCurrent,
+		Status:         pkg.StageResult,
+		Advisory:       pkg.AdvisoryID,
 	}
 	dataRenderer.Type = data.DataJSON
 }
 
-// BuildPostHandler handles post actions that occur.
+// BuildPostHandler handles post actions that occur to the current active stage.
 func BuildPostHandler(ctx context.Context, rw http.ResponseWriter, r *http.Request) {
 	// check for authentication
-	user := MustAuthenticate(r)
+	user := models.FindUser(MustAuthenticate(r))
 
-	// load parameters
+	// setup
 	dataRenderer := data.FromContext(ctx)
 
+	// read parameters
 	id := to.Uint64(pat.Param(ctx, "id"))
-	action := r.FormValue("type")
-	comment := r.FormValue("comment")
+	target := r.FormValue("target") // either activity or process
+	name := r.FormValue("name")     // activity (ignored), process - find process
+	action := r.FormValue("action") // activity (ignored), process passed on
+	value := r.FormValue("value")   // activity (comment), process passed on
 
 	// find the build list
-	var pkg models.BuildList
-
-	o := orm.NewOrm()
-	qt := o.QueryTable(new(models.BuildList))
-
-	err := qt.Filter("Id", id).One(&pkg)
-	if err == orm.ErrNoRows {
-		panic(ErrNotFound)
-	} else if err != nil {
-		panic(err)
+	var pkg models.List
+	if err := models.DB.Where("id = ?", id).First(&pkg).Related(&pkg.Stages, "Stages").Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			panic(ErrNotFound)
+		} else {
+			panic(err)
+		}
 	}
 
-	o.LoadRelated(&pkg, "Submitter")
+	var result interface{}
 
-	// FIXME: check for whitelist
-
-	switch action {
-	case "Neutral":
-	case "Up":
-	case "Down":
-	case "Maintainer":
-		if pkg.Submitter.Username != user {
-			panic(ErrForbidden)
-		}
-		if time.Since(pkg.BuildDate).Hours() < float64(maintainerHours) {
+	// act based on target
+	switch target {
+	case "activity":
+		if value == "" {
 			panic(ErrBadRequest)
 		}
-	case "QABlock":
-		fallthrough
-	case "QAPush":
-		PermAbortCheck(r, PermissionQA)
-	case "Accept":
-	case "Reject":
+		pkg.AddActivity(user, value)
+		result = map[string]interface{}{
+			"success": true,
+		}
+	case "process":
+		// load up the stage & process
+		if err := models.DB.Related(&pkg.Stages, "Stages").Error; err != nil {
+			panic(err)
+		}
+		var currentStage *models.ListStage
+		for _, v := range pkg.Stages {
+			if v.Name == pkg.StageCurrent {
+				currentStage = &v
+				break
+			}
+		}
+
+		if currentStage == nil {
+			panic(ErrNoCurrentStage)
+		}
+
+		if err := models.DB.Related(&currentStage.Processes).Error; err != nil {
+			panic(err)
+		}
+
+		var selectedProcess *models.ListStageProcess
+		for _, v := range currentStage.Processes {
+			if v.Name == name {
+				selectedProcess = &v
+				break
+			}
+		}
+
+		if selectedProcess == nil {
+			panic(ErrBadRequest)
+		}
+
+		// initialise the process
+		process, err := processes.BuildProcess(selectedProcess)
+		if err != nil {
+			panic(err)
+		}
+
+		r, err := process.APIRequest(user, action, value)
+		if err != nil {
+			result = map[string]interface{}{
+				"error":   true,
+				"message": err.Error(),
+				"result":  r,
+			}
+		} else {
+			result = r
+		}
 	default:
 		panic(ErrBadRequest)
 	}
 
-	var userkarma models.Karma
+	dataRenderer.Type = data.DataJSON
+	dataRenderer.Data = result
 
-	userkarma.List = &pkg
-	userkarma.User = models.FindUser(user)
-
-	switch action {
-	case "Up":
-		userkarma.Vote = models.KARMA_UP
-	case "Maintainer":
-		userkarma.Vote = models.KARMA_MAINTAINER
-	case "QABlock":
-		userkarma.Vote = models.KARMA_BLOCK
-	case "QAPush":
-		userkarma.Vote = models.KARMA_PUSH
-	case "Down":
-		userkarma.Vote = models.KARMA_DOWN
-	default:
-		userkarma.Vote = models.KARMA_NONE
-	}
-
-	userkarma.Comment = comment
-	o.Insert(&userkarma)
-
-	if action == "Accept" || action == "Reject" {
-		karmaTotal := getTotalKarma(id)
-
-		upperThreshold := conf.Config.GetDefault("karma.upperKarma", 3).(int64)
-		lowerThreshold := conf.Config.GetDefault("karma.lowerKarma", -3).(int64)
-
-		if karmaTotal >= upperThreshold {
-			pkg.Status = models.StatusPublished
-			o.Update(&pkg)
-			go func() {
-				err := integration.Accept(&pkg)
-				if err != nil {
-					log.Logger.Critical("Unable to accept update %v: %v", id, err)
-				}
-			}()
-		} else if karmaTotal <= lowerThreshold {
-			pkg.Status = models.StatusRejected
-			o.Update(&pkg)
-
-			go func() {
-				err := integration.Reject(&pkg)
-				if err != nil {
-					log.Logger.Critical("Unable to reject update %v: %v", id, err)
-				}
-			}()
-		}
-	}
-
-	dataRenderer.Type = data.DataNoRender
-	sessionmw.Set(ctx, data.FlashInfo, fmt.Sprintf("Committed \"%v\" with comment \"%v\".", action, comment))
-	http.Redirect(rw, r, r.URL.String(), http.StatusTemporaryRedirect)
-}
-
-func getTotalKarma(id uint64) int64 {
-	o := orm.NewOrm()
-	kt := o.QueryTable(new(models.Karma))
-
-	var karma []*models.Karma
-	kt.Filter("List__Id", id).OrderBy("-Time").All(&karma)
-
-	set := util.NewSet()
-	var totalKarma int64
-
-	// only count most recent votes
-	for _, v := range karma {
-		o.LoadRelated(v, "User")
-
-		if set.Contains(v.User.Username) {
-			continue // we've already counted this person's most recent vote
-		}
-
-		switch v.Vote {
-		case models.KARMA_UP:
-			totalKarma++
-		case models.KARMA_DOWN:
-			totalKarma--
-		case models.KARMA_MAINTAINER:
-			totalKarma += maintainerKarma
-		case models.KARMA_BLOCK:
-			totalKarma -= blockKarma
-		case models.KARMA_PUSH:
-			totalKarma += pushKarma
-		}
-
-		set.Add(v.User.Username)
-	}
-
-	return totalKarma
+	//http.Redirect(rw, r, r.URL.String(), http.StatusTemporaryRedirect)
 }

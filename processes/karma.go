@@ -230,8 +230,8 @@ func (k *Karma) getLowestHighest(kl *KarmaLabel) (int64, int64) {
 	return lowest, highest
 }
 
-// checkLabel looks for a label, and then indicates whether it can accept
-// or reject or neither.
+// checkLabel looks for a label, and then indicates whether we can vote on
+// it, as well as accept/reject (or neither)
 func (k *Karma) checkLabel(kl *KarmaLabel) int {
 	// check if it's actually already been accepted/rejected
 	if k.State[kl.Label] != KarmaStateWaiting {
@@ -353,11 +353,18 @@ func (k *Karma) APIRequest(user *models.User, action string, value string) (inte
 	return nil, ErrKarmaLabelNotFound
 }
 
-func (k *Karma) APIMetadata() interface{} {
+func (k *Karma) APIMetadata(user *models.User) interface{} {
+	// check every single label
+	votable := map[string]int{}
+	for _, v := range k.Labels {
+		votable[v.Label] = k.checkLabel(v)
+	}
+
 	// return list of karma + adding karma
 	return map[string]interface{}{
-		"votes":  k.Votes,
-		"state":  k.State,
-		"labels": k.Labels,
+		"votes":   k.Votes,
+		"state":   k.State,
+		"labels":  k.Labels,
+		"votable": votable,
 	}
 }

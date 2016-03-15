@@ -96,8 +96,8 @@ func (a *Advisory) Finalise() error {
 			Type:        a.Type,
 			Summary:     a.Summary,
 			Description: a.Description,
-			Lists: []*models.List{
-				list,
+			Lists: []models.List{
+				*list,
 			},
 		}
 
@@ -165,7 +165,7 @@ func (a *Advisory) APIRequest(user *models.User, action string, value string) (i
 	}, nil
 }
 
-func (a *Advisory) APIMetadata() interface{} {
+func (a *Advisory) APIMetadata(user *models.User) interface{} {
 	return map[string]interface{}{
 		"dialect":     a.Dialect,
 		"type":        a.Type,
