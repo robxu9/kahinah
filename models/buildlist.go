@@ -29,8 +29,8 @@ const (
 )
 
 var (
-	checkAllListStagesChan  = make(chan int, 1)
-	checkAllListStagesMutex = &sync.Mutex{}
+	checkAllListStagesMutex = &sync.RWMutex{}
+	checkAllListStagesMap   = map[uint]bool{}
 )
 
 type List struct {
@@ -90,18 +90,46 @@ func (l *List) CheckStage() {
 	// TODO: implement
 }
 
-// CheckAllListStages retrieves all stages that are not
+// CheckAllListStages retrieves all stages that are not on the "success" or
+// "failed" state. For each list, it checks the id (to make sure another
+// goroutine is not already checking it), then fires off a goroutine to
+// handle the check.
 func CheckAllListStages() {
-	if len(checkAllListStagesChan) >= 1 {
-		return // we only want one at a time since this runs so frequently,
-		// and we really don't want 9000 goroutines waiting on a mutex.
+	// first, get the list of all stages that need checking.
+	var lists []List
+	if err := DB.Where("stage_result in (?)", []string{ListRunning, ListPending}).Find(&lists).Error; err != nil && err != gorm.ErrRecordNotFound {
+		panic(err)
 	}
-	checkAllListStagesChan <- 1
-	checkAllListStagesMutex.Lock() // double lock b/c len() >= 1 is imperfect
-	defer checkAllListStagesMutex.Unlock()
-	// TODO: implement
-	// Get all stages not currently ListSuccess or ListFailed
-	<-checkAllListStagesChan // relieve it
+
+	// now go through each list, check if it's not already being checked,
+	// and fire it off if it's not.
+	checkAllListStagesMutex.RLock()
+	defer checkAllListStagesMutex.RUnlock()
+
+	for _, v := range lists {
+		if !checkAllListStagesMap[v.ID] {
+			go func() {
+				checkAllListStagesMutex.Lock()
+
+				// check if there's already an existing goroutine checking
+				if checkAllListStagesMap[v.ID] {
+					checkAllListStagesMutex.Unlock()
+					return
+				}
+
+				checkAllListStagesMap[v.ID] = true
+				checkAllListStagesMutex.Unlock()
+
+				defer func() {
+					checkAllListStagesMutex.Lock()
+					defer checkAllListStagesMutex.Unlock()
+					delete(checkAllListStagesMap, v.ID)
+				}()
+
+				v.CheckStage()
+			}()
+		}
+	}
 }
 
 type ListArtifact struct {
