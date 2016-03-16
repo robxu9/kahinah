@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strconv"
 	"time"
 
 	"menteslibres.net/gosexy/to"
@@ -92,7 +93,7 @@ func (a *Advisory) Finalise() error {
 		// and now create it
 		adv := &models.Advisory{
 			Dialect:     a.Dialect,
-			Year:        uint(time.Now().Year()),
+			Year:        strconv.Itoa(time.Now().Year()),
 			Type:        a.Type,
 			Summary:     a.Summary,
 			Description: a.Description,

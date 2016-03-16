@@ -15,7 +15,7 @@ type Advisory struct {
 	DeletedAt *time.Time
 
 	Dialect    string `gorm:"primary_key"`
-	Year       uint   `gorm:"primary_key"`
+	Year       string `gorm:"primary_key"`
 	AdvisoryID uint   `gorm:"primary_key" sql:"AUTO_INCREMENT"`
 
 	Type        string

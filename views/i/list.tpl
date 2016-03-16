@@ -6,11 +6,6 @@
                 <!-- filters... -->
                 <div class="navbar-left">
                     <div class="navbar-item">
-                        <p class="subtitle is-5">
-                            <strong>Filters</strong>
-                        </p>
-                    </div>
-                    <div class="navbar-item">
                         <p class="control is-grouped">
                             <button class="button is-primary">Platform</button>
                             <input v-model="filters.platform" debounce="500" class="input" type="text" placeholder="(all)">
@@ -48,9 +43,9 @@
                 <div class="navbar-right">
                     <div class="navbar-item">
                         <p class="control is-grouped">
-                            <button class="button" v-on:click="filters.page += 1"><span class="icon"><i class="fa fa-arrow-left"></i></span></button>
+                            <button class="button" v-on:click="filters.page -= 1"><span class="icon"><i class="fa fa-arrow-left"></i></span></button>
                             <input v-model="filters.page" debounce="500" class="input" type="number" min="1" v-bind:max="result.pages.total">
-                            <button class="button" v-on:click="filters.page -= 1"><span class="icon"><i class="fa fa-arrow-right"></i></span></button>
+                            <button class="button" v-on:click="filters.page += 1"><span class="icon"><i class="fa fa-arrow-right"></i></span></button>
                         </p>
                     </div>
                     <p class="navbar-item"><strong v-text="result.pages.total"></strong> pages</p>
@@ -120,11 +115,12 @@
             },
             watch: {
                 'filters': {
-                    handler: function(new, old) {
+                    handler: function(newData, oldData) {
                         // retrieve new data based on the filters
-                        $.getJSON("{{urldata "/i/list/json?" .}}" + $.param(data.filters), function(newData, status, jqXHR) {
-                            data.filters.page = newData.pages.current;
-                            data.result = newData;
+                        var outer = this;
+                        $.getJSON("{{urldata "/i/list/json?" .}}" + $.param(this.filters), function(newData, status, jqXHR) {
+                            outer.filters.page = newData.pages.current;
+                            outer.result = newData;
                         });
                     },
                     deep: true
