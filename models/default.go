@@ -30,9 +30,9 @@ func init() {
 	var err error
 	switch DBType {
 	case "mysql":
-		DB, err = gorm.Open("mysql", fmt.Sprintf("%s:%s@tcp(%s)/%s", DBUser, DBPass, DBHost, DBName), 30)
+		DB, err = gorm.Open("mysql", fmt.Sprintf("%s:%s@tcp(%s)/%s", DBUser, DBPass, DBHost, DBName))
 	case "sqlite3":
-		DB, err = gorm.Open("sqlite3", "file:"+DBName, 30)
+		DB, err = gorm.Open("sqlite3", "file:"+DBName)
 	case "postgres":
 		DB, err = gorm.Open("postgres", fmt.Sprintf("postgres://%s:%s@%s/%s", DBUser, DBPass, DBHost, DBName))
 	default:
