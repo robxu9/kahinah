@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/astaxie/beego/orm"
+	"github.com/jinzhu/gorm"
 	"github.com/microcosm-cc/bluemonday"
 	"github.com/robxu9/kahinah/data"
 	"github.com/robxu9/kahinah/models"
@@ -28,9 +28,8 @@ func ActivityHandler(ctx context.Context, rw http.ResponseWriter, r *http.Reques
 }
 
 type activityJSON struct {
-	ListId  uint64
+	ListId  uint
 	User    string
-	Karma   int64
 	Comment string
 	Time    time.Time
 	URL     string
@@ -39,22 +38,18 @@ type activityJSON struct {
 func ActivityJSONHandler(ctx context.Context, rw http.ResponseWriter, r *http.Request) {
 	dataRenderer := data.FromContext(ctx)
 
-	page := to.Int64(r.FormValue("page"))
+	page := int(to.Int64(r.FormValue("page")))
 	if page <= 0 {
 		page = 1
 	}
 
-	limit := to.Int64(r.FormValue("limit"))
+	limit := int(to.Int64(r.FormValue("limit")))
 	if limit <= 0 {
 		limit = 50
 	}
 
-	o := orm.NewOrm()
-	qt := o.QueryTable(new(models.Karma))
-	var karma []*models.Karma
-
-	cnt, err := qt.Count()
-	if err != nil {
+	var cnt int
+	if err := models.DB.Model(&models.ListActivity{}).Count(&cnt).Error; err != nil {
 		panic(err)
 	}
 
@@ -67,33 +62,28 @@ func ActivityJSONHandler(ctx context.Context, rw http.ResponseWriter, r *http.Re
 		page = totalpages
 	}
 
-	_, err = qt.Limit(limit, (page-1)*limit).OrderBy("-Time").All(&karma)
-	if err != nil && err != orm.ErrNoRows {
+	var activities []models.ListActivity
+	if err := models.DB.Limit(limit).Offset((page - 1) * limit).Order("created_at desc").Find(&activities).Error; err != nil && err != gorm.ErrRecordNotFound {
 		panic(err)
 	}
 
-	for _, v := range karma {
-		o.LoadRelated(v, "List")
-		o.LoadRelated(v, "User")
-	}
-
 	// render a better karma view
-	var renderedKarma []*activityJSON
-	for _, v := range karma {
-		renderedKarma = append(renderedKarma, &activityJSON{
-			ListId:  v.List.Id,
-			User:    v.User.Username,
-			Karma:   getTotalKarma(v.List.Id),
-			Comment: string(bluemonday.UGCPolicy().SanitizeBytes(blackfriday.MarkdownCommon([]byte(v.Comment)))),
-			Time:    v.Time,
-			URL:     util.GetPrefixString("/b/" + to.String(v.List.Id)),
+	var rendered []*activityJSON
+	for _, v := range activities {
+		// load the username...
+		rendered = append(rendered, &activityJSON{
+			ListId:  v.ListID,
+			User:    models.FindUserByID(v.UserID).Username,
+			Comment: string(bluemonday.UGCPolicy().SanitizeBytes(blackfriday.MarkdownCommon([]byte(v.Activity)))),
+			Time:    v.CreatedAt,
+			URL:     util.GetPrefixString("/b/" + to.String(v.ListID)),
 		})
 	}
 
 	dataRenderer.Data = map[string]interface{}{
 		"totalpages": totalpages,
 		"page":       page,
-		"activities": renderedKarma,
+		"activities": rendered,
 	}
 	dataRenderer.Type = data.DataJSON
 }

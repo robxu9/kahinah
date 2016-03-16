@@ -222,7 +222,7 @@ func main() {
 		cronRunner.AddFunc(pollRate, func() {
 			pollAllErr := integration.PollAll()
 			for name, err := range pollAllErr {
-				log.Logger.Warnf("integration polling failed for %v: %v", name, err)
+				log.Logger.Warningf("integration polling failed for %v: %v", name, err)
 			}
 		})
 	}

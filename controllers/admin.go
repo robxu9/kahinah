@@ -5,8 +5,7 @@ import (
 
 	"golang.org/x/net/context"
 
-	"github.com/astaxie/beego/orm"
-	"github.com/knq/sessionmw"
+	"github.com/jinzhu/gorm"
 	"github.com/robxu9/kahinah/conf"
 	"github.com/robxu9/kahinah/data"
 	"github.com/robxu9/kahinah/models"
@@ -55,14 +54,21 @@ func AdminGetHandler(ctx context.Context, rw http.ResponseWriter, r *http.Reques
 		toRender["User"] = userModel
 	}
 
-	perms := map[string][]string{}
-	for _, perm := range models.PermGetAll() {
-		perms[perm.Permission] = []string{}
-		for _, u := range perm.Users {
-			perms[perm.Permission] = append(perms[perm.Permission], u.Username)
-		}
+	var perms []models.UserPermission
+	if err := models.DB.Find(&perms).Error; err != nil && err != gorm.ErrRecordNotFound {
+		panic(err)
 	}
-	toRender["Permissions"] = perms
+
+	rendered := map[string][]string{}
+
+	for _, perm := range perms {
+		if _, ok := rendered[perm.Permission]; !ok {
+			rendered[perm.Permission] = []string{}
+		}
+		rendered[perm.Permission] = append(rendered[perm.Permission], models.FindUserByID(perm.UserID).Username)
+	}
+
+	toRender["Permissions"] = rendered
 
 	dataRenderer.Data = toRender
 	dataRenderer.Template = "admin"
@@ -73,38 +79,26 @@ func AdminPostHandler(ctx context.Context, rw http.ResponseWriter, r *http.Reque
 	adminCheck(r)
 
 	user := r.FormValue("username")
-	if user != "" {
-		model := models.FindUser(user)
-		o := orm.NewOrm()
-		m2m := o.QueryM2M(model, "Permissions")
+	action := r.FormValue("action")
+	permission := r.FormValue("permission")
 
-		add := r.FormValue("add")
-		rm := r.FormValue("rm")
+	if user == "" || (action != "add" && action != "rm") || permission == "" {
+		panic(ErrBadRequest)
+	}
 
-		if add != "" {
-			addpermobj := models.PermGet(add)
-			if addpermobj == nil {
-				sessionmw.Set(ctx, data.FlashErr, "No such permission "+add+"!")
-			} else {
-				if !m2m.Exist(addpermobj) {
-					_, err := m2m.Add(addpermobj)
-					if err != nil {
-						panic(err)
-					}
-				}
-			}
+	modelUser := models.FindUser(user)
+
+	if action == "add" {
+		if err := models.DB.Model(modelUser).Association("Permissions").Append(models.UserPermission{
+			Permission: permission,
+		}).Error; err != nil {
+			panic(err)
 		}
-
-		if rm != "" {
-			rmpermobj := models.PermGet(rm)
-			if rmpermobj == nil {
-				sessionmw.Set(ctx, data.FlashErr, "No such permission "+rm+"!")
-			} else {
-				_, err := m2m.Remove(rmpermobj)
-				if err != nil {
-					panic(err)
-				}
-			}
+	} else {
+		if err := models.DB.Model(modelUser).Association("Permissions").Delete(models.UserPermission{
+			Permission: permission,
+		}).Error; err != nil {
+			panic(err)
 		}
 	}
 

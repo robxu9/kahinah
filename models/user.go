@@ -35,7 +35,7 @@ type UserPermission struct {
 	gorm.Model
 
 	Permission string
-	UserID     string
+	UserID     uint
 }
 
 func (u *UserPermission) Save() {
