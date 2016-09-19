@@ -6,21 +6,22 @@ import (
 	"golang.org/x/net/context"
 
 	"github.com/jinzhu/gorm"
-	"github.com/robxu9/kahinah/conf"
+	"github.com/robxu9/kahinah/common/conf"
+	"github.com/robxu9/kahinah/common/set"
 	"github.com/robxu9/kahinah/data"
 	"github.com/robxu9/kahinah/models"
-	"github.com/robxu9/kahinah/util"
+	"github.com/robxu9/kahinah/render"
 )
 
 var (
-	adminWhitelist  = conf.Config.Get("admin.administrators").([]interface{})
-	enableWhitelist = conf.Config.Get("admin.whitelist").(bool)
+	adminWhitelist  = conf.Get("admin.administrators").([]interface{})
+	enableWhitelist = conf.Get("admin.whitelist").(bool)
 
-	adminWhitelistSet *util.Set
+	adminWhitelistSet *set.Set
 )
 
 func init() {
-	adminWhitelistSet = util.NewSet()
+	adminWhitelistSet = set.NewSet()
 	for _, v := range adminWhitelist {
 		adminWhitelistSet.Add(v.(string))
 	}
@@ -102,5 +103,5 @@ func AdminPostHandler(ctx context.Context, rw http.ResponseWriter, r *http.Reque
 		}
 	}
 
-	http.Redirect(rw, r, util.GetPrefixString("/admin"), http.StatusTemporaryRedirect)
+	http.Redirect(rw, r, render.ConvertURL("/admin"), http.StatusTemporaryRedirect)
 }

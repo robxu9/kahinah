@@ -1,6 +1,6 @@
 package job
 
-import "github.com/robxu9/kahinah/log"
+import "github.com/robxu9/kahinah/common/klog"
 
 // Job is a function that returns an error (if needed).
 type Job func() error
@@ -19,6 +19,6 @@ func ProcessQueue() {
 
 	err := next()
 	if err != nil {
-		log.Logger.Criticalf("job: unable to process job: %v", err)
+		klog.Criticalf("job: unable to process job: %v", err)
 	}
 }

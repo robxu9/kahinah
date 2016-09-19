@@ -8,7 +8,7 @@ import (
 
 	"github.com/goji/ctx-csrf"
 	"github.com/knq/sessionmw"
-	"github.com/robxu9/kahinah/conf"
+	"github.com/robxu9/kahinah/common/conf"
 	"github.com/robxu9/kahinah/render"
 
 	"golang.org/x/net/context"
@@ -35,7 +35,7 @@ const (
 )
 
 var (
-	runMode = conf.Config.GetDefault("runMode", "dev").(string)
+	runMode = conf.GetDefault("runMode", "dev").(string)
 )
 
 type Render struct {

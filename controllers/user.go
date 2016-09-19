@@ -7,7 +7,7 @@ import (
 
 	"github.com/knq/sessionmw"
 	"github.com/robxu9/kahinah/data"
-	"github.com/robxu9/kahinah/util"
+	"github.com/robxu9/kahinah/render"
 
 	"golang.org/x/net/context"
 )
@@ -38,7 +38,7 @@ func UserLoginHandler(ctx context.Context, rw http.ResponseWriter, r *http.Reque
 
 		// and redirect
 		if !has {
-			http.Redirect(rw, r, util.GetPrefixString("/"), http.StatusTemporaryRedirect)
+			http.Redirect(rw, r, render.ConvertURL("/"), http.StatusTemporaryRedirect)
 		} else {
 			http.Redirect(rw, r, referrer.(string), http.StatusTemporaryRedirect)
 		}

@@ -12,36 +12,36 @@ import (
 	"time"
 
 	"github.com/jinzhu/gorm"
-	"github.com/robxu9/kahinah/conf"
-	"github.com/robxu9/kahinah/log"
+	"github.com/robxu9/kahinah/common/conf"
+	"github.com/robxu9/kahinah/common/klog"
+	"github.com/robxu9/kahinah/common/set"
 	"github.com/robxu9/kahinah/models"
-	"github.com/robxu9/kahinah/util"
 	"menteslibres.net/gosexy/dig"
 	"menteslibres.net/gosexy/to"
 )
 
 var (
-	abfEnable        = conf.Config.GetDefault("integration.abf.enable", false).(bool)
-	abfURL           = conf.Config.GetDefault("integration.abf.host", "https://abf.io").(string)
-	abfUser          = conf.Config.Get("integration.abf.user").(string)
-	abfAPIKey        = conf.Config.Get("integration.abf.apiKey").(string)
-	abfPlatforms     = conf.Config.Get("integration.abf.readPlatforms").([]interface{})
-	abfArchWhitelist = conf.Config.Get("integration.abf.archWhitelist").([]interface{})
-	abfGitDiff       = conf.Config.Get("integration.abf.gitDiff").(bool)
-	abfGitDiffSSH    = conf.Config.Get("integration.abf.gitDiffSSH").(bool)
+	abfEnable        = conf.GetDefault("integration.abf.enable", false).(bool)
+	abfURL           = conf.GetDefault("integration.abf.host", "https://abf.io").(string)
+	abfUser          = conf.Get("integration.abf.user").(string)
+	abfAPIKey        = conf.Get("integration.abf.apiKey").(string)
+	abfPlatforms     = conf.Get("integration.abf.readPlatforms").([]interface{})
+	abfArchWhitelist = conf.Get("integration.abf.archWhitelist").([]interface{})
+	abfGitDiff       = conf.Get("integration.abf.gitDiff").(bool)
+	abfGitDiffSSH    = conf.Get("integration.abf.gitDiffSSH").(bool)
 
-	abfPlatformsSet     *util.Set
-	abfArchWhitelistSet *util.Set
+	abfPlatformsSet     *set.Set
+	abfArchWhitelistSet *set.Set
 	abfClient           *http.Client
 )
 
 func init() {
-	abfPlatformsSet = util.NewSet()
+	abfPlatformsSet = set.NewSet()
 	for _, v := range abfPlatforms {
 		abfPlatformsSet.Add(v.(string))
 	}
 
-	abfArchWhitelistSet = util.NewSet()
+	abfArchWhitelistSet = set.NewSet()
 	for _, v := range abfArchWhitelist {
 		abfArchWhitelistSet.Add(v.(string))
 	}
@@ -111,30 +111,30 @@ func (a *ABF) handleResponse(resp *http.Response, testing bool) error {
 		var num int
 		err = models.DB.Model(&models.List{}).Where("integration_name = ? AND integration_one LIKE ?", "abf", "%"+strID+"%").Count(&num).Error
 		if err != nil && err != gorm.ErrRecordNotFound {
-			log.Logger.Criticalf("abf: couldn't check db for existing (list %v): %v", id, err)
+			klog.Criticalf("abf: couldn't check db for existing (list %v): %v", id, err)
 			continue
 		}
 
 		if num != 0 {
-			log.Logger.Infof("abf: ignoring list, already processed (list %v)", id)
+			klog.Infof("abf: ignoring list, already processed (list %v)", id)
 			continue
 		}
 
 		json, err := a.getJSONList(id)
 		if err != nil {
-			log.Logger.Criticalf("abf: couldn't retrieve the build list JSON (list %v): %v", id, err)
+			klog.Criticalf("abf: couldn't retrieve the build list JSON (list %v): %v", id, err)
 			continue
 		}
 
 		// check if arch is on whitelist
 		if abfArchWhitelistSet != nil && !abfArchWhitelistSet.Contains(dig.String(&json, "arch", "name")) {
-			log.Logger.Infof("abf: ignoring list, arch not on whitelist (list %v)", id)
+			klog.Infof("abf: ignoring list, arch not on whitelist (list %v)", id)
 			continue
 		}
 
 		// check if platform is on whitelist
 		if !abfPlatformsSet.Contains(dig.String(&json, "save_to_repository", "platform", "name")) {
-			log.Logger.Infof("abf: ignoring list, platform not on whitelist (list %v)", id)
+			klog.Infof("abf: ignoring list, platform not on whitelist (list %v)", id)
 			continue
 		}
 
@@ -149,7 +149,7 @@ func (a *ABF) handleResponse(resp *http.Response, testing bool) error {
 			models.ListStageFinished).First(&duplicate).Error
 
 		if err != nil && err != gorm.ErrRecordNotFound {
-			log.Logger.Criticalf("abf: couldn't check db for duplicates (list %v): %v", id, err)
+			klog.Criticalf("abf: couldn't check db for duplicates (list %v): %v", id, err)
 			continue
 		}
 
@@ -164,7 +164,7 @@ func (a *ABF) handleResponse(resp *http.Response, testing bool) error {
 
 			err = models.DB.Save(&duplicate).Error
 			if err != nil {
-				log.Logger.Criticalf("abf: couldn't save duplicate modification to %v (list %v): %v", duplicate.ID, id, err)
+				klog.Criticalf("abf: couldn't save duplicate modification to %v (list %v): %v", duplicate.ID, id, err)
 			}
 
 			pkgs := a.makePkgList(json)
@@ -173,7 +173,7 @@ func (a *ABF) handleResponse(resp *http.Response, testing bool) error {
 
 				err = models.DB.Create(&listpkg).Error
 				if err != nil {
-					log.Logger.Criticalf("abf: couldn't save new list package to %v (list %v): %v", duplicate.ID, id, err)
+					klog.Criticalf("abf: couldn't save new list package to %v (list %v): %v", duplicate.ID, id, err)
 				}
 			}
 
@@ -184,7 +184,7 @@ func (a *ABF) handleResponse(resp *http.Response, testing bool) error {
 				URL:    fmt.Sprintf("%s/build_lists/%v", abfURL, id),
 			}
 			if err := models.DB.Create(&newLink).Error; err != nil {
-				log.Logger.Criticalf("abf: couldn't save new list link to %v (list %v): %v", duplicate.ID, id, err)
+				klog.Criticalf("abf: couldn't save new list link to %v (list %v): %v", duplicate.ID, id, err)
 			}
 
 			// ok, we're done here
@@ -193,7 +193,7 @@ func (a *ABF) handleResponse(resp *http.Response, testing bool) error {
 
 		list, err := a.makeBuildList(json)
 		if err != nil {
-			log.Logger.Criticalf("abf: couldn't make new list (list %v): %v\n", id, err)
+			klog.Criticalf("abf: couldn't make new list (list %v): %v\n", id, err)
 			continue
 		}
 
@@ -203,7 +203,7 @@ func (a *ABF) handleResponse(resp *http.Response, testing bool) error {
 		}
 
 		if err := models.DB.Create(list).Error; err != nil {
-			log.Logger.Criticalf("abf: couldn't create new list in db (list %v): %v", id, err)
+			klog.Criticalf("abf: couldn't create new list in db (list %v): %v", id, err)
 			continue
 		}
 	}
@@ -447,13 +447,13 @@ func (a *ABF) makeDiff(gitURL, fromHash, toHash string) string {
 	select {
 	case <-time.After(10 * time.Minute):
 		if err := gitclonecmd.Process.Kill(); err != nil {
-			log.Logger.Criticalf("abf: calling git to kill failed: %v", err)
+			klog.Criticalf("abf: calling git to kill failed: %v", err)
 		}
 		<-gitresult // allow goroutine to exit
-		log.Logger.Critical("abf: git process called to kill")
+		klog.Critical("abf: git process called to kill")
 	case err := <-gitresult:
 		if err != nil { // git exited with non-zero status
-			log.Logger.Criticalf("abf: calling git failed: %v", err)
+			klog.Criticalf("abf: calling git failed: %v", err)
 			return "Repository could not be cloned for diff: " + err.Error()
 		}
 	}
@@ -464,7 +464,7 @@ func (a *ABF) makeDiff(gitURL, fromHash, toHash string) string {
 
 		gitdiff, err := gitdiffcmd.CombinedOutput()
 		if err != nil {
-			log.Logger.Criticalf("abf: calling git diff failed: %v", err)
+			klog.Criticalf("abf: calling git diff failed: %v", err)
 			return "No diff available: " + err.Error()
 		}
 

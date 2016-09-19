@@ -1,7 +1,6 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"html/template"
 	"net/http"
@@ -23,29 +22,27 @@ import (
 	"github.com/knq/kv"
 	"github.com/knq/sessionmw"
 	"github.com/robfig/cron"
-	"github.com/robxu9/kahinah/conf"
+	"github.com/robxu9/kahinah/common/conf"
+	"github.com/robxu9/kahinah/common/klog"
 	"github.com/robxu9/kahinah/controllers"
 	"github.com/robxu9/kahinah/data"
 	"github.com/robxu9/kahinah/integration"
 	"github.com/robxu9/kahinah/job"
-	"github.com/robxu9/kahinah/log"
 	"github.com/robxu9/kahinah/models"
 	"github.com/robxu9/kahinah/render"
-	"github.com/robxu9/kahinah/util"
 	urender "github.com/unrolled/render"
-	"github.com/zenazn/goji/bind"
-	"github.com/zenazn/goji/graceful"
 	"github.com/zenazn/goji/web/mutil"
 	"menteslibres.net/gosexy/to"
 )
 
 func init() {
-	bind.WithFlag()
-	graceful.DoubleKickWindow(2 * time.Second)
+	http.DefaultClient = &http.Client{
+		Timeout: time.Second * 30, // we need a sane default timeout
+	}
 }
 
 func main() {
-	log.Logger.Info("starting kahinah v4")
+	klog.Info("starting kahinah v4")
 
 	// -- mux -----------------------------------------------------------------
 	mux := goji.NewMux()
@@ -55,10 +52,10 @@ func main() {
 	// logging middleware (base middleware)
 	mux.UseC(func(inner goji.Handler) goji.Handler {
 		return goji.HandlerFunc(func(ctx context.Context, rw http.ResponseWriter, r *http.Request) {
-			log.Logger.Debugf("req  (%v): path (%v), user-agent (%v), referrer (%v)", r.RemoteAddr, r.RequestURI, r.UserAgent(), r.Referer())
+			klog.Debugf("req  (%v): path (%v), user-agent (%v), referrer (%v)", r.RemoteAddr, r.RequestURI, r.UserAgent(), r.Referer())
 			wp := mutil.WrapWriter(rw) // proxy the rw for info later
 			inner.ServeHTTPC(ctx, wp, r)
-			log.Logger.Debugf("resp (%v): status (%v), bytes written (%v)", r.RemoteAddr, wp.Status(), wp.BytesWritten())
+			klog.Debugf("resp (%v): status (%v), bytes written (%v)", r.RemoteAddr, wp.Status(), wp.BytesWritten())
 		})
 	})
 
@@ -82,13 +79,13 @@ func main() {
 				"mapaccess": func(s interface{}, m map[string]string) string {
 					return m[to.String(s)]
 				},
-				"url":     util.GetPrefixString,
-				"urldata": util.GetPrefixStringWithData,
+				"url":     render.ConvertURL,
+				"urldata": render.ConvertURLWithData,
 			},
 		},
 		IndentJSON:    true,
 		IndentXML:     true,
-		IsDevelopment: conf.Config.GetDefault("runMode", "dev").(string) == "dev",
+		IsDevelopment: conf.GetDefault("runMode", "dev").(string) == "dev",
 	})
 
 	mux.UseC(func(inner goji.Handler) goji.Handler {
@@ -116,8 +113,8 @@ func main() {
 	})
 
 	// authentication (cas) middleware
-	if enable, ok := conf.Config.GetDefault("authentication.cas.enable", false).(bool); ok && enable {
-		url, _ := url.Parse(conf.Config.Get("authentication.cas.url").(string))
+	if enable, ok := conf.GetDefault("authentication.cas.enable", false).(bool); ok && enable {
+		url, _ := url.Parse(conf.Get("authentication.cas.url").(string))
 
 		casClient := cas.NewClient(&cas.Options{
 			URL: url,
@@ -201,16 +198,24 @@ func main() {
 
 	for k, v := range getHandlers {
 		if len(k) > 1 && strings.HasSuffix(k, "/") {
-			mux.HandleFunc(pat.Get(util.GetPrefixString(k[:len(k)-1])), controllers.RedirectHandler)
+			getHandlerRedirectName := render.ConvertURLRelative(k[:len(k)-1])
+			klog.Debugf("get handler setup: redirecting %v", getHandlerRedirectName)
+			mux.HandleFunc(pat.Get(getHandlerRedirectName), controllers.RedirectHandler)
 		}
-		mux.HandleC(pat.Get(util.GetPrefixString(k)), v)
+		getHandlerUseName := render.ConvertURLRelative(k)
+		klog.Debugf("get handler setup: using %v", getHandlerUseName)
+		mux.HandleC(pat.Get(getHandlerUseName), v)
 	}
 
 	for k, v := range postHandlers {
 		if len(k) > 1 && strings.HasSuffix(k, "/") {
-			mux.HandleFunc(pat.Get(util.GetPrefixString(k[:len(k)-1])), controllers.RedirectHandler)
+			postHandlerRedirectName := render.ConvertURLRelative(k[:len(k)-1])
+			klog.Debugf("post handler setup: redirecting %v", postHandlerRedirectName)
+			mux.HandleFunc(pat.Post(postHandlerRedirectName), controllers.RedirectHandler)
 		}
-		mux.HandleC(pat.Post(util.GetPrefixString(k)), v)
+		postHandlerUseName := render.ConvertURLRelative(k)
+		klog.Debugf("post handler setup: using %v", postHandlerUseName)
+		mux.HandleC(pat.Post(postHandlerUseName), v)
 	}
 
 	// -- cronjobs ----------------------------------------------------------
@@ -218,11 +223,11 @@ func main() {
 	cronRunner := cron.New()
 
 	// integration polling
-	if pollRate, ok := conf.Config.Get("integration.poll").(string); ok && pollRate != "" {
+	if pollRate, ok := conf.Get("integration.poll").(string); ok && pollRate != "" {
 		cronRunner.AddFunc(pollRate, func() {
 			pollAllErr := integration.PollAll()
 			for name, err := range pollAllErr {
-				log.Logger.Warningf("integration polling failed for %v: %v", name, err)
+				klog.Warningf("integration polling failed for %v: %v", name, err)
 			}
 		})
 	}
@@ -243,32 +248,17 @@ func main() {
 	// -- server setup --------------------------------------------------------
 
 	// bind and listen
-	if !flag.Parsed() {
-		flag.Parse()
+	listenAddr := conf.GetDefault("listenAddr", "0.0.0.0").(string)
+	listenPort := conf.GetDefault("listenPort", 3000).(int64)
+
+	klog.Infof("listening to %v:%v", listenAddr, listenPort)
+	if err := http.ListenAndServe(fmt.Sprintf("%v:%v", listenAddr, listenPort), mux); err != nil {
+		klog.Fatalf("unable to serve: %v", err)
 	}
 
-	listener := bind.Default()
-	log.Logger.Infof("binding to %v", bind.Sniff())
-	graceful.HandleSignals()
-	bind.Ready()
-
-	graceful.PreHook(func() {
-		log.Logger.Info("caught shutdown signal, stopping...")
-	})
-	graceful.PostHook(func() {
-		log.Logger.Info("http server shut down")
-	})
-
-	err := graceful.Serve(listener, mux)
-
-	if err != nil {
-		log.Logger.Fatalf("unable to serve: %v", err)
-	}
-
-	graceful.Wait()
 	cronRunner.Stop()
 
-	log.Logger.Info("processing leftover jobs...")
+	klog.Info("processing leftover jobs...")
 	close(job.Queue)
 	for len(job.Queue) > 0 {
 		job.ProcessQueue()

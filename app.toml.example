@@ -6,7 +6,7 @@ baseURL = "https://kahinah.openmandriva.org"
 # - listenAddr defines the listening address
 listenAddr = "0.0.0.0"
 # - listenPort defines the listening port
-listenPort = 3001
+listenPort = 3000
 # - runMode determines whether on panics, we should dump the stacktrace too.
 # -- it also determines whether we should reparse templates on every load.
 # -- dev means yes, prod means no.

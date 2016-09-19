@@ -5,16 +5,17 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"time"
 
 	"gopkg.in/cas.v1"
 	"gopkg.in/errors.v0"
 
 	"goji.io"
 
-	"github.com/robxu9/kahinah/conf"
-	"github.com/robxu9/kahinah/log"
+	"github.com/robxu9/kahinah/common/conf"
+	"github.com/robxu9/kahinah/common/klog"
 	"github.com/robxu9/kahinah/render"
-	"github.com/robxu9/kahinah/util"
+	"github.com/wunderlist/ttlcache"
 
 	"golang.org/x/net/context"
 )
@@ -26,11 +27,13 @@ var (
 	ErrForbidden        = errors.New("kahinah: forbidden")
 	ErrPermission       = errors.New("kahinah: permission error")
 
-	runMode = conf.Config.GetDefault("runMode", "dev").(string)
+	runMode = conf.GetDefault("runMode", "dev").(string)
 )
 
 func PanicMiddleware(inner goji.Handler) goji.Handler {
-	panicHandler := &PanicHandler{}
+	panicHandler := &PanicHandler{
+		Cache: ttlcache.NewCache(24 * time.Hour),
+	}
 
 	return goji.HandlerFunc(func(ctx context.Context, rw http.ResponseWriter, r *http.Request) {
 		defer func() {
@@ -43,7 +46,9 @@ func PanicMiddleware(inner goji.Handler) goji.Handler {
 	})
 }
 
-type PanicHandler struct{}
+type PanicHandler struct {
+	Cache *ttlcache.Cache
+}
 
 func (p *PanicHandler) ServeHTTPC(ex interface{}, ctx context.Context, rw http.ResponseWriter, r *http.Request) {
 	switch ex {
@@ -70,24 +75,24 @@ func (p *PanicHandler) Err404(ctx context.Context, rw http.ResponseWriter, r *ht
 	result["Nav"] = -1
 	result["environment"] = runMode
 	result["authenticated"] = cas.Username(r)
+	result["copyright"] = time.Now().Year()
 
-	if j, found := util.Cache.Get("404_xkcd_json"); found {
-
-		v := j.(map[string]interface{})
-		result["xkcd_today"] = v["img"]
-		result["xkcd_today_title"] = v["alt"]
-
+	if xImg, found := p.Cache.Get("404-xkcd-img"); found {
+		result["xkcd_today"] = xImg
+		xAlt, _ := p.Cache.Get("404-xkcd-alt")
+		result["xkcd_today_alt"] = xAlt
 	} else {
-		resp, err := http.Get("http://xkcd.com/info.0.json")
-		if err == nil {
+		if resp, err := http.Get("https://www.xkcd.com/info.0.json"); err == nil {
 			defer resp.Body.Close()
+
 			bte, err := ioutil.ReadAll(resp.Body)
 
 			if err == nil {
 				var v map[string]interface{}
 
 				if json.Unmarshal(bte, &v) == nil {
-					util.Cache.Set("404_xkcd_json", v, 0)
+					p.Cache.Set("404-xkcd-img", v["img"].(string))
+					p.Cache.Set("404-xkcd-alt", v["alt"].(string))
 
 					result["xkcd_today"] = v["img"]
 					result["xkcd_today_title"] = v["alt"]
@@ -107,6 +112,7 @@ func (p *PanicHandler) Err400(ctx context.Context, rw http.ResponseWriter, r *ht
 	data["Nav"] = -1
 	data["environment"] = runMode
 	data["authenticated"] = cas.Username(r)
+	data["copyright"] = time.Now().Year()
 
 	renderer.HTML(rw, 400, "errors/400", data)
 }
@@ -119,6 +125,7 @@ func (p *PanicHandler) Err403(ctx context.Context, rw http.ResponseWriter, r *ht
 	data["Nav"] = -1
 	data["environment"] = runMode
 	data["authenticated"] = cas.Username(r)
+	data["copyright"] = time.Now().Year()
 
 	renderer.HTML(rw, 403, "errors/403", data)
 }
@@ -131,6 +138,7 @@ func (p *PanicHandler) Err405(ctx context.Context, rw http.ResponseWriter, r *ht
 		"Nav":           -1,
 		"environment":   runMode,
 		"authenticated": cas.Username(r),
+		"copyright":     time.Now().Year(),
 	})
 }
 
@@ -142,14 +150,15 @@ func (p *PanicHandler) Err500(ex interface{}, ctx context.Context, rw http.Respo
 	data["Nav"] = -1
 	data["environment"] = runMode
 	data["authenticated"] = cas.Username(r)
+	data["copyright"] = time.Now().Year()
 	data["error"] = fmt.Sprintf("%v", ex)
 
 	stackTrace := errors.Wrap(ex, 4).ErrorStack()
 
-	log.Logger.Critical("err  (%v): Internal Server Error: %v", r.RemoteAddr, ex)
-	log.Logger.Critical("err  (%v): Stacktrace: %v", r.RemoteAddr, stackTrace)
+	klog.Critical("err  (%v): Internal Server Error: %v", r.RemoteAddr, ex)
+	klog.Critical("err  (%v): Stacktrace: %v", r.RemoteAddr, stackTrace)
 
-	if mode := conf.Config.GetDefault("runMode", "dev").(string); mode == "dev" {
+	if mode := conf.GetDefault("runMode", "dev").(string); mode == "dev" {
 		// dump the stacktrace out on the page too
 		data["stacktrace"] = stackTrace
 	}
@@ -166,6 +175,7 @@ func (p *PanicHandler) Err550(ctx context.Context, rw http.ResponseWriter, r *ht
 	data["Nav"] = -1
 	data["environment"] = runMode
 	data["authenticated"] = cas.Username(r)
+	data["copyright"] = time.Now().Year()
 
 	renderer.HTML(rw, 550, "errors/550", data)
 }

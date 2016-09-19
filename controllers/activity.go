@@ -8,7 +8,7 @@ import (
 	"github.com/microcosm-cc/bluemonday"
 	"github.com/robxu9/kahinah/data"
 	"github.com/robxu9/kahinah/models"
-	"github.com/robxu9/kahinah/util"
+	"github.com/robxu9/kahinah/render"
 	"github.com/russross/blackfriday"
 
 	"menteslibres.net/gosexy/to"
@@ -76,7 +76,7 @@ func ActivityJSONHandler(ctx context.Context, rw http.ResponseWriter, r *http.Re
 			User:    models.FindUserByID(v.UserID).Username,
 			Comment: string(bluemonday.UGCPolicy().SanitizeBytes(blackfriday.MarkdownCommon([]byte(v.Activity)))),
 			Time:    v.CreatedAt,
-			URL:     util.GetPrefixString("/b/" + to.String(v.ListID)),
+			URL:     render.ConvertURL("/b/" + to.String(v.ListID)),
 		})
 	}
 
