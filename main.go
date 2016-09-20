@@ -224,12 +224,16 @@ func main() {
 
 	// integration polling
 	if pollRate, ok := conf.Get("integration.poll").(string); ok && pollRate != "" {
-		cronRunner.AddFunc(pollRate, func() {
+		pollFunc := func() {
 			pollAllErr := integration.PollAll()
 			for name, err := range pollAllErr {
 				klog.Warningf("integration polling failed for %v: %v", name, err)
 			}
-		})
+		}
+		cronRunner.AddFunc(pollRate, pollFunc)
+
+		// and do an initial poll
+		pollFunc()
 	}
 
 	// process new stages/check processes every 10 seconds
